@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 
 ConfigModule.forRoot();
 
+console.log(process.env);
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'mysql',
   host: process.env.DB_HOST,
