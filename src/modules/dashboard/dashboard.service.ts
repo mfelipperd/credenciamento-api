@@ -88,4 +88,86 @@ export class DashboardService {
       checkInCount: number;
     }[];
   }
+
+  async getCheckInsToday() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const checkedInToday = await this.checkInsRepository.count({
+      where: { checkInDate: today.toISOString().split('T')[0] },
+    });
+
+    return { checkedInToday };
+  }
+
+  async getTotalVisitors() {
+    const totalVisitors = await this.visitorsRepository.count();
+    return { totalVisitors };
+  }
+
+  async getCheckedInVisitors() {
+    // Contar visitantes distintos que têm pelo menos um check-in
+    const checkedInVisitors = await this.checkInsRepository
+      .createQueryBuilder('checkin')
+      .select(
+        'COUNT(DISTINCT checkin.visitorRegistrationCode)',
+        'totalCheckedIn',
+      )
+      .getRawOne<{ totalCheckedIn: string }>();
+
+    return {
+      totalCheckedIn: parseInt(checkedInVisitors?.totalCheckedIn ?? '0', 10),
+    };
+  }
+
+  async getVisitorsByCategory() {
+    const visitorsByCategory = await this.visitorsRepository
+      .createQueryBuilder('visitor')
+      .select('visitor.category', 'category')
+      .addSelect('COUNT(visitor.registrationCode)', 'count')
+      .groupBy('visitor.category')
+      .getRawMany();
+
+    return visitorsByCategory.reduce<Record<string, number>>(
+      (acc, row: { category: string; count: string }) => {
+        acc[row.category] = parseInt(row.count, 10);
+        return acc;
+      },
+      {},
+    );
+  }
+
+  async getVisitorsByOrigin() {
+    const visitorsByOrigin = await this.visitorsRepository
+      .createQueryBuilder('visitor')
+      .select('visitor.howDidYouKnow', 'origin')
+      .addSelect('COUNT(visitor.registrationCode)', 'count')
+      .groupBy('visitor.howDidYouKnow')
+      .getRawMany();
+
+    return visitorsByOrigin.reduce<Record<string, number>>(
+      (acc, row: { origin: string; count: string }) => {
+        acc[row.origin] = parseInt(row.count, 10);
+        return acc;
+      },
+      {},
+    );
+  }
+
+  async getVisitorsBySector() {
+    const visitorsBySector = await this.visitorsRepository
+      .createQueryBuilder('visitor')
+      .select('visitor.sectors', 'sector')
+      .addSelect('COUNT(visitor.registrationCode)', 'count')
+      .groupBy('visitor.sectors')
+      .getRawMany();
+
+    return visitorsBySector.reduce<Record<string, number>>(
+      (acc, row: { sector: string; count: string }) => {
+        acc[row.sector] = parseInt(row.count, 10);
+        return acc;
+      },
+      {},
+    );
+  }
 }
