@@ -3,19 +3,29 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Visitor } from './entities/visitor.entity';
 import { Repository } from 'typeorm';
 import { CreateVisitorInputDto } from './visitors.dto';
+import { EmailsService } from '../emails/emails.service';
 
 @Injectable()
 export class VisitorsService {
   constructor(
     @InjectRepository(Visitor) private visitorRepository: Repository<Visitor>,
+    private readonly emailsService: EmailsService,
   ) {}
 
   getVisitors() {
     return this.visitorRepository.find();
   }
 
-  createVisitor(visitor: CreateVisitorInputDto) {
-    return this.visitorRepository.save(visitor);
+  async createVisitor(visitor: CreateVisitorInputDto) {
+    const result = await this.visitorRepository.save(visitor);
+    if (result) {
+      await this.emailsService.sendEmail(
+        visitor.email,
+        visitor.name,
+        visitor.registrationCode,
+      );
+    }
+    return result;
   }
 
   getVisitor(id: number) {

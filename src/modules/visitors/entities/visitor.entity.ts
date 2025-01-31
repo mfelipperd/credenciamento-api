@@ -20,10 +20,10 @@ export class Visitor {
   @Column({ length: 255 })
   company: string;
 
-  @Column({ unique: true })
+  @Column()
   email: string;
 
-  @Column({ unique: true })
+  @Column()
   cnpj: string;
 
   @Column()

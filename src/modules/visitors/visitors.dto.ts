@@ -12,6 +12,7 @@ import { ECategory } from 'src/enum/category';
 import { EHowDidYouKnow } from 'src/enum/didyouknow';
 
 export class CreateVisitorInputDto {
+  registrationCode: string;
   @IsNotEmpty()
   @IsString()
   @MaxLength(255)

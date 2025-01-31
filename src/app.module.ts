@@ -6,11 +6,16 @@ import { VisitorsModule } from './modules/visitors/visitors.module';
 import { UsersModule } from './modules/users/users.module';
 import { CheckInsModule } from './modules/checkins/checkins.module';
 import { AuthModule } from './auth/auth.module';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
+import { EmailsModule } from './modules/emails/emails.module';
+import { MySqlFilter } from './filters/mysql.filter';
 
 @Module({
-  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_FILTER, useClass: MySqlFilter },
+  ],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -20,6 +25,7 @@ import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
     UsersModule,
     CheckInsModule,
     AuthModule,
+    EmailsModule,
   ],
 })
 export class AppModule {}
