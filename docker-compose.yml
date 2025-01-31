@@ -16,5 +16,30 @@ services:
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password
 
+  api:
+    build: .
+    container_name: nest_api_credenciamento
+    restart: always
+    depends_on:
+      - mysql
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: credenciamento_db
+      JWT_SECRET: my-super-secret-key
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 465
+      SMTP_USER: felipperabelodurans@gmail.com
+      SMTP_PASSWORD: kamonrhxyugxjnxo
+      SMTP_SECURE: true
+      SMTP_LINK_QR_CODE: https://www.expomultimix.com/
+    ports:
+      - '8000:8000'
+    volumes:
+      - .:/app
+    command: npm run start:dev
+
 volumes:
   mysql_data:
