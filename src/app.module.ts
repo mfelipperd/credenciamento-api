@@ -10,6 +10,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { EmailsModule } from './modules/emails/emails.module';
 import { MySqlFilter } from './filters/mysql.filter';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   providers: [
@@ -26,6 +27,7 @@ import { MySqlFilter } from './filters/mysql.filter';
     CheckInsModule,
     AuthModule,
     EmailsModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

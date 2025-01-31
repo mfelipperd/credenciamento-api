@@ -30,7 +30,6 @@ export class EmailsService {
           if (err) {
             throw new BadRequestException('Failed to generate QR Code');
           }
-          console.log(url);
           const html = generateConfirmationEmail(
             visitorName,
             registrationCode,
