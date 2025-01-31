@@ -4,6 +4,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as qrcode from 'qrcode';
+import { generateConfirmationEmail } from 'src/utils/emailLayoutGenerator';
 
 @Injectable()
 export class EmailsService {
@@ -30,13 +31,11 @@ export class EmailsService {
             throw new BadRequestException('Failed to generate QR Code');
           }
           console.log(url);
-          const html = `
-        <h1>Welcome, ${visitorName}!</h1>
-        <p>Thank you for registering for our event.</p>
-        <p>Your QR Code: <strong>${registrationCode}</strong></p>
-        <img src="${url}" alt="QR Code" />
-        <p>Please present this QR Code at check-in.</p>
-      `;
+          const html = generateConfirmationEmail(
+            visitorName,
+            registrationCode,
+            url,
+          );
 
           const mailOptions = {
             from: `"Credenciamento" <${process.env.SMTP_USER}>`,
