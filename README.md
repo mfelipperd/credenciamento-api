@@ -1,99 +1,228 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# **Business Fair API - Documentation**
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## **📌 Overview**
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The **Business Fair API** is responsible for managing visitor registration, check-ins, and dashboard analytics for a business event. It also includes **email marketing and remarketing** features to maximize visitor engagement.
 
-## Description
+This document provides details on the available endpoints, authentication, and how to interact with the API.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## **📌 Tech Stack**
 
-```bash
-$ npm install
+- **Framework:** NestJS
+- **Database:** MySQL (using TypeORM)
+- **Authentication:** JWT
+- **Email Provider:** Google SMTP
+- **Containerization:** Docker
+
+---
+
+## **📌 Installation & Setup**
+
+### **1️⃣ Clone the repository**
+
+```sh
+git clone https://github.com/your-repo/business-fair-api.git
+cd business-fair-api
 ```
 
-## Compile and run the project
+### **2️⃣ Install dependencies**
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```sh
+npm install
 ```
 
-## Run tests
+### **3️⃣ Set up environment variables**
 
-```bash
-# unit tests
-$ npm run test
+Create a `.env` file in the project root with the following variables:
 
-# e2e tests
-$ npm run test:e2e
+```env
+# Database Config
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=yourpassword
+DB_NAME=business_fair
 
-# test coverage
-$ npm run test:cov
+# JWT Secret
+JWT_SECRET=your-secret-key
+
+# SMTP Config
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-email-password
+SMTP_SECURE=false
 ```
 
-## Deployment
+### **4️⃣ Run the application**
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g mau
-$ mau deploy
+```sh
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## **📌 API Endpoints**
 
-Check out a few resources that may come in handy when working with NestJS:
+### **🔹 Authentication**
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+✅ **Login**
 
-## Support
+```
+POST /auth/login
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+**Request:**
 
-## Stay in touch
+```json
+{
+  "email": "admin@email.com",
+  "password": "password123"
+}
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+**Response:**
 
-## License
+```json
+{
+  "access_token": "your-jwt-token"
+}
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+---
+
+### **🔹 Visitors**
+
+✅ **Register a Visitor**
+
+```
+POST /visitors
+```
+
+**Request:**
+
+```json
+{
+  "name": "John Doe",
+  "company": "Tech Corp",
+  "email": "john@email.com",
+  "cnpj": "00.000.000/0000-00",
+  "phone": "11999999999",
+  "zipCode": "01001000",
+  "category": "visitor"
+}
+```
+
+✅ **Get All Visitors**
+
+```
+GET /visitors
+```
+
+✅ **Get Visitor by Registration Code**
+
+```
+GET /visitors/:registrationCode
+```
+
+---
+
+### **🔹 Check-ins**
+
+✅ **Register a Check-in**
+
+```
+POST /checkins
+```
+
+**Request:**
+
+```json
+{
+  "registrationCode": "abc123-def456"
+}
+```
+
+✅ **Get Today's Check-ins**
+
+```
+GET /dashboard/checkins/today
+```
+
+---
+
+### **🔹 Dashboard**
+
+✅ **Event Overview**
+
+```
+GET /dashboard/overview
+```
+
+✅ **Absent Visitors**
+
+```
+GET /dashboard/absent-visitors
+```
+
+✅ **Top Frequent Visitors**
+
+```
+GET /dashboard/top-frequent-visitors
+```
+
+✅ **Total Visitors Count**
+
+```
+GET /dashboard/visitors/count
+```
+
+✅ **Visitors by Category**
+
+```
+GET /dashboard/visitors/category
+```
+
+✅ **Visitors by Origin (How They Heard About Us)**
+
+```
+GET /dashboard/visitors/origin
+```
+
+✅ **Visitors by Sector of Interest**
+
+```
+GET /dashboard/visitors/sectors
+```
+
+---
+
+### **🔹 Email Remarketing**
+
+✅ **Send Custom Remarketing Emails**
+
+```
+POST /emails/remarketing/custom
+```
+
+**Request:**
+
+```json
+{
+  "registrationCodes": ["abc123-def456", "ghi789-jkl012"],
+  "subject": "We Miss You!",
+  "html": "<h1>Hello {{name}},</h1><p>Come back to our event for more networking!</p>"
+}
+```
+
+---
+
+## **📌 Notes**
+
+- **Authentication is required** for all endpoints except `POST /visitors` (public registration).
+- Ensure the **JWT token** is included in the `Authorization` header for protected routes.
+- The application runs on **localhost:8000**.
+
+🚀 **Now you’re ready to integrate the API with the frontend!** 🎉
