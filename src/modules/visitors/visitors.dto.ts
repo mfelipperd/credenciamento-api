@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsEmail,
   IsEnum,
   IsNotEmpty,
@@ -36,26 +38,9 @@ export class CreateVisitorInputDto {
   @MaxLength(8)
   @MinLength(8)
   zipCode: string;
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
-  street: string;
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
-  neighborhood: string;
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
-  city: string;
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
-  state: string;
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
-  sectors: string;
+  @IsArray()
+  @ArrayNotEmpty()
+  sectors: string[];
   @IsNotEmpty()
   @IsEnum(EHowDidYouKnow)
   howDidYouKnow: EHowDidYouKnow;

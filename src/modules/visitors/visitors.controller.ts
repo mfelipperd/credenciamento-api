@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Request } from '@nestjs/common';
 import { VisitorsService } from './visitors.service';
 import { CreateVisitorInputDto } from './visitors.dto';
 import { IsPublicRoute } from 'src/auth/public.route';
@@ -16,5 +16,14 @@ export class VisitorsController {
   @IsPublicRoute()
   createVisitor(@Body() visitor: CreateVisitorInputDto) {
     return this.visitorsService.createVisitor(visitor);
+  }
+
+  @Post('private')
+  createVisitorPrivate(
+    @Body() visitor: CreateVisitorInputDto,
+    @Request() req: Request,
+  ) {
+    const userId = req.user.id || undefined;
+    return this.visitorsService.createVisitor(visitor, userId?.toString());
   }
 }

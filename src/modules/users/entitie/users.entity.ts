@@ -1,9 +1,11 @@
 import { EUserRole } from 'src/enum/role';
+import { Visitor } from 'src/modules/visitors/entities/visitor.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm';
 
 @Entity('users')
@@ -25,4 +27,7 @@ export class User {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @OneToMany(() => Visitor, (visitor) => visitor.createdBy)
+  visitors: Visitor[];
 }

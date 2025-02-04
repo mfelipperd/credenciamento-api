@@ -13,6 +13,7 @@ RUN npm install
 # Copia o restante do código
 COPY . .
 
+RUN npm install -g nodemon
 # Define a variável de ambiente para produção
 ARG NODE_ENV
 ENV NODE_ENV=${NODE_ENV}
@@ -33,4 +34,4 @@ RUN (crontab -l 2>/dev/null; echo "0 2 * * * /backups/backup.sh") | crontab -
 RUN (crontab -l 2>/dev/null; echo "0 3 * * * /backups/upload_to_gdrive.sh") | crontab -
 
 # Inicia o cron junto com a API
-CMD ["sh", "-c", "service dcron start && if [ \"$NODE_ENV\" = \"production\" ]; then npm run start:prod; else npm run start:dev; fi"]
+CMD ["sh", "-c", "service dcron start && if [ \"$NODE_ENV\" = \"production\" ]; then npm run start:prod; else npm run start:devcont; fi"]

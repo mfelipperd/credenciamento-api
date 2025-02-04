@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   ExecutionContext,
@@ -16,15 +12,16 @@ import { JwtService } from '@nestjs/jwt';
 export class JwtAuthGuard extends AuthGuard('jwt') {
   constructor(
     private readonly reflector: Reflector,
-    @Inject(JwtService) private readonly jwtService: JwtService, // 🔥 Adicionando Inject para garantir que o Nest reconhece a dependência
+    @Inject(JwtService) private readonly jwtService: JwtService,
   ) {
     super();
   }
 
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
+    const request = context
+      .switchToHttp()
+      .getRequest<{ headers: { authorization?: string }; user?: any }>();
 
-    // Permitir rotas públicas (caso use um decorator @Public() futuramente)
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
       context.getHandler(),
       context.getClass(),
@@ -33,14 +30,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return true;
     }
 
-    // Verifica se existe um token no header
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const authHeader = request.headers.authorization;
     if (!authHeader) {
       throw new UnauthorizedException('Missing authentication token');
     }
 
-    // Valida formato do token
     const parts = authHeader.split(' ');
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
       throw new UnauthorizedException('Invalid token format');
@@ -49,13 +43,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const token = parts[1];
 
     try {
-      // Verifica se o token é válido usando a secret
-      const decoded = this.jwtService.verify(token, {
+      const decoded = this.jwtService.verify<{ [key: string]: any }>(token, {
         secret: process.env.JWT_SECRET,
       });
-      request.user = decoded; // Adiciona os dados do usuário no request
+
+      request.user = decoded;
       return true;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
   }
