@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Visitor } from './entities/visitor.entity';
 import { Repository } from 'typeorm';
@@ -14,8 +18,20 @@ export class VisitorsService {
     private readonly emailsService: EmailsService,
   ) {}
 
-  getVisitors() {
-    return this.visitorRepository.find();
+  async getVisitors(fairId?: string) {
+    const query = this.visitorRepository.createQueryBuilder('visitor');
+
+    if (fairId) {
+      query
+        .innerJoin(
+          'fair_visitor',
+          'fv',
+          'fv.visitorsRegistrationCode = visitor.registrationCode',
+        )
+        .where('fv.fairsId = :fairId', { fairId });
+    }
+
+    return await query.getMany();
   }
 
   async createVisitor(visitor: CreateVisitorInputDto, userId?: string) {
@@ -53,5 +69,30 @@ export class VisitorsService {
 
   updateVisitor(id: number, visitor: Visitor) {
     return this.visitorRepository.update(id, visitor);
+  }
+
+  async getVisitorByRegistrationCode(registrationCode: string, fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+
+    const visitor = await this.visitorRepository
+      .createQueryBuilder('visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('visitor.registrationCode = :registrationCode', {
+        registrationCode,
+      })
+      .andWhere('fv.fairsId = :fairId', { fairId }) // ✅ Filtrando pela feira
+      .getOne();
+
+    if (!visitor) {
+      throw new NotFoundException('Visitor not found for the specified fair');
+    }
+
+    return visitor;
   }
 }
