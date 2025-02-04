@@ -1,5 +1,7 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { Visitor } from 'src/modules/visitors/entities/visitor.entity';
+import { Fair } from 'src/modules/fairs/entity/fair.entity';
 
 ConfigModule.forRoot();
 
@@ -12,4 +14,5 @@ export const databaseConfig: TypeOrmModuleOptions = {
   database: process.env.DB_NAME,
   autoLoadEntities: true,
   synchronize: true,
+  entities: [Visitor, Fair],
 };

@@ -11,6 +11,7 @@ import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { EmailsModule } from './modules/emails/emails.module';
 import { MySqlFilter } from './filters/mysql.filter';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { FairsModule } from './modules/fairs/fairs.module';
 
 @Module({
   providers: [
@@ -28,6 +29,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     AuthModule,
     EmailsModule,
     DashboardModule,
+    FairsModule,
   ],
 })
 export class AppModule {}

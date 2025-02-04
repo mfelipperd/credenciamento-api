@@ -5,12 +5,13 @@ import {
   CreateDateColumn,
   ManyToOne,
   OneToMany,
-  JoinColumn,
+  ManyToMany,
 } from 'typeorm';
 import { CheckIn } from 'src/modules/checkins/entity/checkins.entity';
 import { ECategory } from 'src/enum/category';
 import { EHowDidYouKnow } from 'src/enum/didyouknow';
 import { User } from 'src/modules/users/entitie/users.entity';
+import { Fair } from 'src/modules/fairs/entity/fair.entity';
 
 @Entity('visitors')
 export class Visitor {
@@ -48,11 +49,11 @@ export class Visitor {
   registrationDate: Date;
 
   @ManyToOne(() => User, (user) => user.visitors, { nullable: true })
-  @JoinColumn({
-    name: 'user_id',
-  })
   createdBy?: User;
 
-  @OneToMany(() => CheckIn, (checkIn: CheckIn) => checkIn.visitor)
+  @OneToMany(() => CheckIn, (checkIn) => checkIn.visitor)
   checkIns: CheckIn[];
+
+  @ManyToMany(() => Fair, (fair) => fair.fair_visitor)
+  fair_visitor: Fair[];
 }

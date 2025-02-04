@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Visitor } from '../visitors/entities/visitor.entity';
 import { CheckIn } from '../checkins/entity/checkins.entity';
+import { Fair } from '../fairs/entity/fair.entity';
 
 @Injectable()
 export class DashboardService {
@@ -12,162 +13,272 @@ export class DashboardService {
 
     @InjectRepository(CheckIn)
     private readonly checkInsRepository: Repository<CheckIn>,
+    @InjectRepository(Fair)
+    private readonly fairsRepository: Repository<Fair>,
   ) {}
 
-  async getOverview() {
-    const totalVisitors = await this.visitorsRepository.count();
+  async getOverview(fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Verifica se a feira existe
+    const fair = await this.fairsRepository.findOne({ where: { id: fairId } });
+    if (!fair) {
+      throw new BadRequestException('Invalid fair ID');
+    }
+    try {
+      const totalVisitors = await this.visitorsRepository
+        .createQueryBuilder('visitor')
+        .innerJoin(
+          'fair_visitor',
+          'fv',
+          'fv.visitorsRegistrationCode = visitor.registrationCode',
+        ) // ✅ Relacionando corretamente
+        .where('fv.fairsId = :fairId', { fairId }) // ✅ Nome correto da coluna
+        .getCount();
 
-    const checkedInToday = await this.checkInsRepository.count({
-      where: { checkInDate: today.toISOString().split('T')[0] },
+      // ✅ Ajustando a query para contar os check-ins corretamente
+      const totalCheckIns = await this.checkInsRepository
+        .createQueryBuilder('checkin')
+        .innerJoin('checkin.visitor', 'visitor')
+        .innerJoin(
+          'fair_visitor',
+          'fv',
+          'fv.visitorsRegistrationCode = visitor.registrationCode',
+        ) // ✅ Relacionando corretamente
+        .where('fv.fairsId = :fairId', { fairId }) // ✅ Nome correto da coluna
+        .getCount();
+
+      return {
+        fairId,
+        totalVisitors,
+        totalCheckIns,
+      };
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async getAbsentVisitors(fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+
+    const fairExists = await this.fairsRepository.findOne({
+      where: { id: fairId },
     });
+    if (!fairExists) {
+      throw new BadRequestException('Invalid fair ID');
+    }
 
-    const absentVisitors = totalVisitors - checkedInToday;
-
-    const checkInByHour = (await this.checkInsRepository
-      .createQueryBuilder('checkin')
-      .select(
-        "DATE_FORMAT(checkin.checkInDate, '%H:00') as hour, COUNT(*) as count",
+    const absentVisitors = await this.visitorsRepository
+      .createQueryBuilder('visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
       )
-      .groupBy('hour')
-      .orderBy('count', 'DESC')
-      .limit(1)
-      .getRawOne()) as { hour: string; count: number };
-
-    const peakCheckInHour = checkInByHour
-      ? `${checkInByHour.hour}:00`
-      : 'No check-ins today';
+      .leftJoin(
+        'checkins',
+        'c',
+        'c.visitorRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId })
+      .andWhere('c.id IS NULL') // ✅ Filtra apenas os que **NÃO** têm check-in registrado
+      .select([
+        'visitor.registrationCode',
+        'visitor.name',
+        'visitor.email',
+        'visitor.company',
+      ])
+      .getMany();
 
     return {
-      totalVisitors,
-      checkedInToday,
+      fairId,
       absentVisitors,
-      peakCheckInHour,
     };
   }
 
-  async getAbsentVisitors() {
-    const visitors = await this.visitorsRepository.find();
+  async getTopFrequentVisitors(fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
 
-    const absentVisitors = await Promise.all(
-      visitors.map(async (visitor) => {
-        const hasCheckIn = await this.checkInsRepository.findOne({
-          where: { visitor: { registrationCode: visitor.registrationCode } },
-        });
-
-        return hasCheckIn ? null : visitor;
-      }),
-    );
-
-    return absentVisitors.filter((visitor) => visitor !== null);
-  }
-
-  async getTopFrequentVisitors() {
     const topVisitors = await this.checkInsRepository
       .createQueryBuilder('checkin')
-      .innerJoinAndSelect('checkin.visitor', 'visitor')
-      .select('visitor.registrationCode', 'registrationCode')
-      .addSelect('visitor.name', 'name')
-      .addSelect('visitor.email', 'email')
-      .addSelect('visitor.company', 'company')
-      .addSelect('visitor.category', 'category')
-      .addSelect('COUNT(checkin.id)', 'checkInCount')
+      .innerJoin('checkin.visitor', 'visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId })
+      .select([
+        'visitor.registrationCode',
+        'visitor.name',
+        'visitor.email',
+        'visitor.company',
+        'COUNT(checkin.id) AS checkInCount',
+      ])
       .groupBy('visitor.registrationCode')
       .orderBy('checkInCount', 'DESC')
       .limit(10)
       .getRawMany();
 
-    return topVisitors as {
-      registrationCode: string;
-      name: string;
-      email: string;
-      company: string;
-      category: string;
-      checkInCount: number;
-    }[];
-  }
-
-  async getCheckInsToday() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const checkedInToday = await this.checkInsRepository.count({
-      where: { checkInDate: today.toISOString().split('T')[0] },
-    });
-
-    return { checkedInToday };
-  }
-
-  async getTotalVisitors() {
-    const totalVisitors = await this.visitorsRepository.count();
-    return { totalVisitors };
-  }
-
-  async getCheckedInVisitors() {
-    // Contar visitantes distintos que têm pelo menos um check-in
-    const checkedInVisitors = await this.checkInsRepository
-      .createQueryBuilder('checkin')
-      .select(
-        'COUNT(DISTINCT checkin.visitorRegistrationCode)',
-        'totalCheckedIn',
-      )
-      .getRawOne<{ totalCheckedIn: string }>();
-
     return {
-      totalCheckedIn: parseInt(checkedInVisitors?.totalCheckedIn ?? '0', 10),
+      fairId,
+      topVisitors,
     };
   }
 
-  async getVisitorsByCategory() {
+  async getCheckinsToday(fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // ✅ Define o horário para o início do dia
+
+    const totalCheckInsToday = await this.checkInsRepository
+      .createQueryBuilder('checkin')
+      .innerJoin('checkin.visitor', 'visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId })
+      .andWhere('checkin.createdAt >= :today', { today }) // ✅ Filtra apenas os check-ins de hoje
+      .getCount();
+
+    return {
+      fairId,
+      totalCheckInsToday,
+    };
+  }
+
+  async getTotalVisitors(fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+
+    const totalVisitors = await this.visitorsRepository
+      .createQueryBuilder('visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId })
+      .getCount();
+
+    return {
+      fairId,
+      totalVisitors,
+    };
+  }
+
+  async getCheckedInVisitors(fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+
+    const checkedInVisitors = await this.visitorsRepository
+      .createQueryBuilder('visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .innerJoin(
+        'checkins',
+        'checkin',
+        'checkin.visitorRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId })
+      .groupBy('visitor.registrationCode')
+      .getCount();
+
+    return {
+      fairId,
+      checkedInVisitors,
+    };
+  }
+
+  async getVisitorsByCategory(fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+
     const visitorsByCategory = await this.visitorsRepository
       .createQueryBuilder('visitor')
-      .select('visitor.category', 'category')
-      .addSelect('COUNT(visitor.registrationCode)', 'count')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId })
+      .select(['visitor.category', 'COUNT(visitor.registrationCode) AS count'])
       .groupBy('visitor.category')
       .getRawMany();
 
-    return visitorsByCategory.reduce<Record<string, number>>(
-      (acc, row: { category: string; count: string }) => {
-        acc[row.category] = parseInt(row.count, 10);
-        return acc;
-      },
-      {},
-    );
+    return {
+      fairId,
+      visitorsByCategory,
+    };
   }
 
-  async getVisitorsByOrigin() {
+  async getVisitorsByOrigin(fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+
     const visitorsByOrigin = await this.visitorsRepository
       .createQueryBuilder('visitor')
-      .select('visitor.howDidYouKnow', 'origin')
-      .addSelect('COUNT(visitor.registrationCode)', 'count')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId })
+      .select([
+        'visitor.howDidYouKnow AS origin',
+        'COUNT(visitor.registrationCode) AS count',
+      ])
       .groupBy('visitor.howDidYouKnow')
       .getRawMany();
 
-    return visitorsByOrigin.reduce<Record<string, number>>(
-      (acc, row: { origin: string; count: string }) => {
-        acc[row.origin] = parseInt(row.count, 10);
-        return acc;
-      },
-      {},
-    );
+    return {
+      fairId,
+      visitorsByOrigin,
+    };
   }
 
-  async getVisitorsBySector() {
-    const visitorsBySector = await this.visitorsRepository
+  async getVisitorsBySectors(fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+
+    // ✅ Contar visitantes agrupados por setor de interesse na feira específica
+    const visitorsBySectors = await this.visitorsRepository
       .createQueryBuilder('visitor')
-      .select('visitor.sectors', 'sector')
-      .addSelect('COUNT(visitor.registrationCode)', 'count')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId })
+      .select([
+        'visitor.sectors AS sector',
+        'COUNT(visitor.registrationCode) AS count',
+      ])
       .groupBy('visitor.sectors')
       .getRawMany();
 
-    return visitorsBySector.reduce<Record<string, number>>(
-      (acc, row: { sector: string; count: string }) => {
-        acc[row.sector] = parseInt(row.count, 10);
-        return acc;
-      },
-      {},
-    );
+    return {
+      fairId,
+      visitorsBySectors,
+    };
   }
 }

@@ -45,17 +45,20 @@ export class CheckInsService {
       throw new BadRequestException('Visitor already checked in today');
     }
 
-    // Registra o novo check-in
-    const checkIn = this.checkInsRepository.create({
-      visitor,
-      checkInDate: new Date().toISOString().split('T')[0],
-    });
+    try {
+      const checkIn = this.checkInsRepository.create({
+        visitor,
+        checkInDate: new Date().toISOString().split('T')[0],
+      });
 
-    await this.checkInsRepository.save(checkIn);
+      await this.checkInsRepository.save(checkIn);
 
-    return {
-      message: 'Check-in successful',
-      checkInTime: checkIn.checkInDate,
-    };
+      return {
+        message: 'Check-in successful',
+        checkInTime: checkIn.checkInDate,
+      };
+    } catch (e) {
+      console.log(e);
+    }
   }
 }

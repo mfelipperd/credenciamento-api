@@ -47,4 +47,6 @@ export class CreateVisitorInputDto {
   @IsNotEmpty()
   @IsEnum(ECategory)
   category: ECategory;
+  @IsNotEmpty()
+  fair_visitor: string;
 }

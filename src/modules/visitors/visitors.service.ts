@@ -29,6 +29,7 @@ export class VisitorsService {
     const newVisitor = this.visitorRepository.create({
       ...visitor,
       createdBy: createdByUser || undefined,
+      fair_visitor: [{ id: visitor.fair_visitor }],
     });
 
     const result = await this.visitorRepository.save(newVisitor);
