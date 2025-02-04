@@ -1,4 +1,11 @@
-import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  BadRequestException,
+  Get,
+  Query,
+} from '@nestjs/common';
 import { CheckInsService } from './checkins.service';
 
 @Controller('checkins')
@@ -7,17 +14,22 @@ export class CheckInsController {
 
   @Post()
   async registerCheckIn(
-    @Body() body: { visitorId?: number; registrationCode?: string },
+    @Body() body: { registrationCode?: string; fairId: string },
   ) {
-    if (!body.visitorId && !body.registrationCode) {
-      throw new BadRequestException(
-        'Either visitorId or registrationCode is required',
-      );
+    if (!body.registrationCode) {
+      throw new BadRequestException('RegistrationCode is required');
+    }
+    if (!body.fairId) {
+      throw new BadRequestException('Fair ID is required');
     }
 
     return await this.checkInsService.registerCheckIn(
-      body.visitorId,
       body.registrationCode,
+      body.fairId,
     );
+  }
+  @Get()
+  async getCheckIns(@Query('fairId') fairId: string) {
+    return await this.checkInsService.getCheckIns(fairId);
   }
 }

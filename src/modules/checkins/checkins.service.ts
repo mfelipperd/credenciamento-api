@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Visitor } from '../visitors/entities/visitor.entity';
@@ -14,51 +18,74 @@ export class CheckInsService {
     private readonly visitorsRepository: Repository<Visitor>,
   ) {}
 
-  async registerCheckIn(visitorId?: number, registrationCode?: string) {
-    let visitor: Visitor | null = null;
-
-    if (visitorId) {
-      visitor = await this.visitorsRepository.findOne({
-        where: { registrationCode: visitorId.toString() },
-      });
-    } else if (registrationCode) {
-      visitor = await this.visitorsRepository.findOne({
-        where: { registrationCode },
-      });
+  async registerCheckIn(registrationCode: string, fairId: string) {
+    if (!registrationCode || !fairId) {
+      throw new BadRequestException(
+        'RegistrationCode and Fair ID are required',
+      );
     }
+
+    const visitor = await this.visitorsRepository
+      .createQueryBuilder('visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('visitor.registrationCode = :registrationCode', {
+        registrationCode,
+      })
+      .andWhere('fv.fairsId = :fairId', { fairId })
+      .getOne();
 
     if (!visitor) {
-      throw new BadRequestException('Visitor not found');
+      throw new NotFoundException('Visitor not found for this fair');
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const existingCheckIn = await this.checkInsRepository.findOne({
-      where: {
-        visitor,
-        checkInDate: today.toISOString().split('T')[0],
-      },
+    const checkIn = this.checkInsRepository.create({
+      visitor,
+      createdAt: new Date(),
     });
 
-    if (existingCheckIn) {
-      throw new BadRequestException('Visitor already checked in today');
+    await this.checkInsRepository.save(checkIn);
+
+    return {
+      message: 'Check-in successful',
+      visitor: {
+        registrationCode: visitor.registrationCode,
+        name: visitor.name,
+        company: visitor.company,
+      },
+    };
+  }
+
+  async getCheckIns(fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
     }
 
-    try {
-      const checkIn = this.checkInsRepository.create({
-        visitor,
-        checkInDate: new Date().toISOString().split('T')[0],
-      });
+    // ✅ Buscar check-ins apenas da feira específica
+    const checkIns = await this.checkInsRepository
+      .createQueryBuilder('checkin')
+      .innerJoin('checkin.visitor', 'visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId })
+      .select([
+        'checkin.id',
+        'checkin.createdAt',
+        'visitor.registrationCode',
+        'visitor.name',
+        'visitor.company',
+      ])
+      .getMany();
 
-      await this.checkInsRepository.save(checkIn);
-
-      return {
-        message: 'Check-in successful',
-        checkInTime: checkIn.checkInDate,
-      };
-    } catch (e) {
-      console.log(e);
-    }
+    return {
+      fairId,
+      checkIns,
+    };
   }
 }

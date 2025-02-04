@@ -45,27 +45,27 @@ export class EmailsController {
   async sendCustomEmails(
     @Body()
     body: {
-      registrationCodes: string[];
+      registrationCodes?: string[]; // ✅ Agora opcional
       subject: string;
       html: string;
+      fairId: string; // ✅ Necessário para identificar a feira
     },
   ) {
-    if (!body.registrationCodes || !body.registrationCodes.length) {
-      throw new BadRequestException(
-        'At least one registrationCode is required',
-      );
-    }
-
     if (!body.subject || !body.html) {
       throw new BadRequestException(
         'Email subject and HTML content are required',
       );
     }
 
+    if (!body.fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+
     return await this.emailsService.sendCustomEmails(
-      body.registrationCodes,
+      body.registrationCodes ?? [],
       body.subject,
       body.html,
+      body.fairId,
     );
   }
 }
