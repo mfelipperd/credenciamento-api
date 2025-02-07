@@ -29,4 +29,16 @@ export class CategoriesService {
   async getCategoriesByFair(fairId: string) {
     return this.categoryRepository.find({ where: { fair: { id: fairId } } });
   }
+  async getCategoryById(id: string) {
+    return this.categoryRepository.findOne({ where: { id } });
+  }
+
+  async updateCategory(id: string, data: Partial<CreateCategoryDto>) {
+    await this.categoryRepository.update(id, data);
+    return this.getCategoryById(id);
+  }
+
+  async deleteCategory(id: string) {
+    return this.categoryRepository.delete(id);
+  }
 }

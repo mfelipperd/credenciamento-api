@@ -14,8 +14,8 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { FairsModule } from './modules/fairs/fairs.module';
 import { HowDidYouKnowModule } from './modules/how-did-you-know/how-did-you-know.module';
 import { CategoriesService } from './modules/categories/categories.service';
-import { CategoriesController } from './modules/categories/categories.controller';
 import { SectorsModule } from './modules/sectors/sectors.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 
 @Module({
   providers: [
@@ -37,7 +37,7 @@ import { SectorsModule } from './modules/sectors/sectors.module';
     FairsModule,
     HowDidYouKnowModule,
     SectorsModule,
+    CategoriesModule,
   ],
-  controllers: [CategoriesController],
 })
 export class AppModule {}

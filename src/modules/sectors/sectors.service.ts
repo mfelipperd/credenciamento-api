@@ -29,4 +29,17 @@ export class SectorsService {
   async getSectorsByFair(fairId: string) {
     return this.sectorsRepository.find({ where: { fair: { id: fairId } } });
   }
+
+  async getSectorById(id: string) {
+    return this.sectorsRepository.findOne({ where: { id } });
+  }
+
+  async updateSector(id: string, data: Partial<CreateSectorDto>) {
+    await this.sectorsRepository.update(id, data);
+    return this.getSectorById(id);
+  }
+
+  async deleteSector(id: string) {
+    return this.sectorsRepository.delete(id);
+  }
 }

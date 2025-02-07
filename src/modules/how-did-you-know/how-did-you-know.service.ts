@@ -34,4 +34,17 @@ export class HowDidYouKnowService {
       where: { fair: { id: fairId } },
     });
   }
+
+  async getHowDidYouKnowById(id: string) {
+    return this.howDidYouKnowRepository.findOne({ where: { id } });
+  }
+
+  async updateHowDidYouKnow(id: string, data: Partial<CreateHowDidYouKnowDto>) {
+    await this.howDidYouKnowRepository.update(id, data);
+    return this.getHowDidYouKnowById(id);
+  }
+
+  async deleteHowDidYouKnow(id: string) {
+    return this.howDidYouKnowRepository.delete(id);
+  }
 }

@@ -8,8 +8,6 @@ import {
   ManyToMany,
 } from 'typeorm';
 import { CheckIn } from 'src/modules/checkins/entity/checkins.entity';
-import { ECategory } from 'src/enum/category';
-import { EHowDidYouKnow } from 'src/enum/didyouknow';
 import { User } from 'src/modules/users/entitie/users.entity';
 import { Fair } from 'src/modules/fairs/entity/fair.entity';
 
@@ -39,11 +37,11 @@ export class Visitor {
   @Column({ type: 'simple-array' })
   sectors: string[];
 
-  @Column({ type: 'enum', enum: EHowDidYouKnow })
-  howDidYouKnow: EHowDidYouKnow;
+  @Column()
+  howDidYouKnow: string;
 
-  @Column({ type: 'enum', enum: ECategory })
-  category: ECategory;
+  @Column()
+  category: string;
 
   @CreateDateColumn()
   registrationDate: Date;

@@ -1,17 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
-  ArrayNotEmpty,
-  IsArray,
   IsEmail,
-  IsEnum,
   IsNotEmpty,
   IsPhoneNumber,
   IsString,
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { ECategory } from 'src/enum/category';
-import { EHowDidYouKnow } from 'src/enum/didyouknow';
 
 export class CreateVisitorInputDto {
   registrationCode: string;
@@ -38,15 +33,15 @@ export class CreateVisitorInputDto {
   @MaxLength(8)
   @MinLength(8)
   zipCode: string;
-  @IsArray()
-  @ArrayNotEmpty()
+  @IsNotEmpty()
+  @IsString()
   sectors: string[];
   @IsNotEmpty()
-  @IsEnum(EHowDidYouKnow)
-  howDidYouKnow: EHowDidYouKnow;
+  @IsString()
+  howDidYouKnow: string;
   @IsNotEmpty()
-  @IsEnum(ECategory)
-  category: ECategory;
+  @IsString()
+  category: string;
   @IsNotEmpty()
   fair_visitor: string;
 }

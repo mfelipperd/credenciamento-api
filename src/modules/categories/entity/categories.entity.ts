@@ -15,7 +15,7 @@ export class Category {
   @Column({ length: 255 })
   name: string;
 
-  @ManyToOne(() => Fair, (fair) => fair.categories, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'fairId' }) // 🔹 O TypeORM já cria a coluna `fairId`
+  @ManyToOne(() => Fair, (fair) => fair.categories, { onDelete: 'CASCADE' }) // 🔹 Confirme que a relação está correta
+  @JoinColumn({ name: 'fairId' }) // 🔹 Garante que a chave estrangeira está correta
   fair: Fair;
 }
