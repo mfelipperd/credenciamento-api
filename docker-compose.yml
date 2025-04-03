@@ -17,6 +17,15 @@ services:
     networks:
       - dev-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: dev-redis
+    restart: always
+    ports:
+      - '6379:6379'
+    networks:
+      - dev-network
+
 volumes:
   mysql_data:
 
