@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
@@ -11,7 +11,6 @@ import { generateConfirmationEmail } from 'src/utils/emailLayoutGenerator';
 import { Visitor } from '../visitors/entities/visitor.entity';
 import { Repository } from 'typeorm';
 import { CheckIn } from '../checkins/entity/checkins.entity';
-import { emailQueue } from 'src/config/bull.config';
 
 @Injectable()
 export class EmailsService {
@@ -39,29 +38,23 @@ export class EmailsService {
     html?: string,
   ) {
     try {
-      await qrcode.toDataURL(
-        'https://www.expomultimix.com/',
-        async (err, url) => {
-          if (err) {
-            throw new BadRequestException('Failed to generate QR Code');
-          }
-          const generatedHtml = generateConfirmationEmail(
-            visitorName,
-            registrationCode,
-            url as string,
-          );
+      const qrCodeUrl = await qrcode.toDataURL('https://www.expomultimix.com/');
 
-          const mailOptions = {
-            from: `"Credenciamento" <${process.env.SMTP_USER}>`,
-            to,
-            subject: 'Teste Credednciamento ',
-            html: html || generatedHtml,
-            attachDataUrls: true,
-          };
-
-          await this.transporter.sendMail(mailOptions);
-        },
+      const generatedHtml = generateConfirmationEmail(
+        visitorName,
+        registrationCode,
+        qrCodeUrl,
       );
+
+      const mailOptions = {
+        from: `"Credenciamento" <${process.env.SMTP_USER}>`,
+        to,
+        subject: 'Teste Credenciamento ',
+        html: html || generatedHtml,
+        attachDataUrls: true,
+      };
+
+      await this.transporter.sendMail(mailOptions);
 
       return { success: true, message: `Email sent to ${to}` };
     } catch (error) {
@@ -102,17 +95,15 @@ export class EmailsService {
       throw new Error('No visitors found to send emails.');
     }
 
-    console.log(`Adding ${visitors.length} emails to the queue...`);
-
     for (const visitor of visitors) {
-      await emailQueue.add('sendEmail', {
-        email: visitor.email,
-        name: visitor.name,
-        subject,
+      await this.sendEmail(
+        visitor.email,
+        visitor.name,
+        visitor.registrationCode,
         html,
-      });
+      );
     }
 
-    return { message: `Emails added to queue for ${visitors.length} visitors` };
+    return { message: `Emails sent to ${visitors.length} visitors` };
   }
 }
