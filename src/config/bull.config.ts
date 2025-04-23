@@ -1,31 +1,36 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-import { Queue } from 'bullmq';
+import nodemailer from 'nodemailer';
 import { config } from 'dotenv';
-import IORedis, { RedisOptions, Redis } from 'ioredis';
 
-config(); // Carregar variáveis do .env
+config();
 
-const redisOptions: RedisOptions = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: Number(process.env.REDIS_PORT) || 6379,
-};
-
-let redisConnection: Redis | null = null;
-
-try {
-  redisConnection = new IORedis(redisOptions);
-} catch (error) {
-  console.error('Failed to create Redis connection:', error);
-  throw error;
-}
-
-if (!redisConnection) {
-  throw new Error('Redis connection is null');
-}
-
-// Criar a fila de e-mails
-export const emailQueue = new Queue('emailQueue', {
-  connection: redisConnection,
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT),
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD,
+  },
 });
+
+export interface SendEmailPayload {
+  email: string;
+  subject: string;
+  html: string;
+}
+
+export async function sendEmail({ email, subject, html }: SendEmailPayload) {
+  console.log(`Sending email to ${email}...`);
+
+  await transporter.sendMail({
+    from: `"Expomultimix" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject,
+    html,
+  });
+
+  console.log(`Email sent to ${email}`);
+}
