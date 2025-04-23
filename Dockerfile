@@ -9,6 +9,9 @@ COPY . .
 
 RUN npm install -g nodemon
 
+# 👉 Adiciona build do NestJS
+RUN npm run build
+
 ARG NODE_ENV
 ENV NODE_ENV=${NODE_ENV}
 
