@@ -8,7 +8,6 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install
 
-# Copia o restante dos arquivos
 COPY . .
 
 # Adiciona build do NestJS
