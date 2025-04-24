@@ -18,7 +18,7 @@ WORKDIR /app
 
 # Copia apenas os arquivos de runtime + build da etapa anterior
 COPY package.json package-lock.json ./
-RUN npm install --omit=dev
+RUN npm install
 
 # Copia o resultado do build
 COPY --from=builder /app/dist ./dist
