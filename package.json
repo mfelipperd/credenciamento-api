@@ -12,7 +12,7 @@
     "start:dev": "nest start --watch",
     "start:devcont": "nodemon --watch src --exec 'node dist/main.js'",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main.js",
+    "start:prod": "node dist/src/main.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
