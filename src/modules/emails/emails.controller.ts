@@ -1,4 +1,4 @@
-import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import { EmailsService } from './emails.service';
 
 @Controller('emails')
@@ -12,14 +12,16 @@ export class EmailsController {
       visitorEmail: string;
       visitorName: string;
       registrationCode: string;
+      fairId: string;
     },
   ) {
-    const { visitorEmail, visitorName, registrationCode } = body;
+    const { visitorEmail, visitorName, registrationCode, fairId } = body;
 
-    return this.emailsService.sendEmail(
+    return this.emailsService.sendConfirmationEmail(
       visitorEmail,
       visitorName,
       registrationCode,
+      fairId,
     );
   }
 
@@ -30,42 +32,20 @@ export class EmailsController {
       subject: string;
       htmlTemplate: string;
       recipients: string[];
+      fairId: string;
     },
   ) {
-    const { subject, htmlTemplate, recipients } = body;
+    const { subject, htmlTemplate, recipients, fairId } = body;
 
     for (const recipient of recipients) {
-      await this.emailsService.sendEmail(recipient, subject, htmlTemplate);
-    }
-
-    return { success: true, message: 'Campaign emails sent successfully' };
-  }
-
-  @Post('custom')
-  async sendCustomEmails(
-    @Body()
-    body: {
-      registrationCodes?: string[]; // ✅ Agora opcional
-      subject: string;
-      html: string;
-      fairId: string; // ✅ Necessário para identificar a feira
-    },
-  ) {
-    if (!body.subject || !body.html) {
-      throw new BadRequestException(
-        'Email subject and HTML content are required',
+      await this.emailsService.sendConfirmationEmail(
+        recipient,
+        subject,
+        htmlTemplate,
+        fairId,
       );
     }
 
-    if (!body.fairId) {
-      throw new BadRequestException('Fair ID is required');
-    }
-
-    return await this.emailsService.sendCustomEmails(
-      body.registrationCodes ?? [],
-      body.subject,
-      body.html,
-      body.fairId,
-    );
+    return { success: true, message: 'Campaign emails sent successfully' };
   }
 }

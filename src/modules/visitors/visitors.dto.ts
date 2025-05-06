@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
+  IsArray,
   IsEmail,
   IsNotEmpty,
   IsPhoneNumber,
@@ -34,7 +35,7 @@ export class CreateVisitorInputDto {
   @MinLength(8)
   zipCode: string;
   @IsNotEmpty()
-  @IsString()
+  @IsArray()
   sectors: string[];
   @IsNotEmpty()
   @IsString()

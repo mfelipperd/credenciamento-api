@@ -8,5 +8,6 @@ import { Fair } from './entity/fair.entity';
   imports: [TypeOrmModule.forFeature([Fair])],
   providers: [FairsService],
   controllers: [FairsController],
+  exports: [FairsService],
 })
 export class FairsModule {}

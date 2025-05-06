@@ -13,11 +13,16 @@ export class FairsService {
     const newFair = this.fairRepository.create({
       ...fair,
     });
+
     const result = await this.fairRepository.save(newFair);
     return result;
   }
 
   getFairs() {
     return this.fairRepository.find();
+  }
+
+  async findOne(id: string): Promise<Fair | null> {
+    return this.fairRepository.findOneBy({ id });
   }
 }

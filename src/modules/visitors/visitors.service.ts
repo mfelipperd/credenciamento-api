@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -34,31 +36,39 @@ export class VisitorsService {
     return await query.getMany();
   }
 
-  async createVisitor(visitor: CreateVisitorInputDto, userId?: string) {
-    let createdByUser: User | null = null;
-    if (userId) {
-      createdByUser = await this.userRepository.findOne({
-        where: { id: Number(userId) },
-      });
-    }
-
+  async createVisitor(
+    dto: CreateVisitorInputDto,
+    userId?: string,
+  ): Promise<Visitor> {
+    // Cria nova entidade sem registrationCode (gerado pelo DB)
     const newVisitor = this.visitorRepository.create({
-      ...visitor,
-      createdBy: createdByUser || undefined,
-      fair_visitor: [{ id: visitor.fair_visitor }],
+      ...dto,
+      createdBy: userId ? { id: +userId } : undefined,
+      fair_visitor: [{ id: dto.fair_visitor }],
     });
 
-    const result = await this.visitorRepository.save(newVisitor);
-
-    if (result) {
-      await this.emailsService.sendEmail(
-        visitor.email,
-        visitor.name,
-        visitor.registrationCode,
-      );
+    let savedVisitor: Visitor;
+    try {
+      // Ao salvar, o PrimaryGeneratedColumn gera o registrationCode
+      savedVisitor = await this.visitorRepository.save(newVisitor);
+    } catch (err) {
+      throw new InternalServerErrorException('Erro ao salvar visitante');
     }
 
-    return result;
+    // Agora o savedVisitor.registrationCode contém o UUID gerado
+    try {
+      // Envia e-mail de confirmação com QR code e link do Calendar
+      await this.emailsService.sendConfirmationEmail(
+        savedVisitor.email,
+        savedVisitor.name,
+        savedVisitor.registrationCode,
+        dto.fair_visitor,
+      );
+    } catch (err) {
+      console.error('Erro enviando email:', err);
+    }
+
+    return savedVisitor;
   }
 
   getVisitor(id: number) {

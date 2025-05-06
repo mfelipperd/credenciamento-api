@@ -1,109 +1,96 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import * as nodemailer from 'nodemailer';
-import { Transporter } from 'nodemailer';
-import * as qrcode from 'qrcode';
+// src/modules/emails/emails.service.ts
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { createTransport } from 'nodemailer';
+import { ConfigService } from '@nestjs/config';
+import { FairsService } from '../fairs/fairs.service';
 import { generateConfirmationEmail } from 'src/utils/emailLayoutGenerator';
-import { Visitor } from '../visitors/entities/visitor.entity';
-import { Repository } from 'typeorm';
-import { CheckIn } from '../checkins/entity/checkins.entity';
 
 @Injectable()
 export class EmailsService {
-  private transporter: Transporter;
+  private transporter = createTransport({
+    host: this.config.get('SMTP_HOST'),
+    port: this.config.get<number>('SMTP_PORT'),
+    secure: false,
+    auth: {
+      user: this.config.get('SMTP_USER'),
+      pass: this.config.get('SMTP_PASS'),
+    },
+  });
 
   constructor(
-    @InjectRepository(Visitor)
-    private readonly visitorsRepository: Repository<Visitor>,
-  ) {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '', 10),
-      secure: process.env.SMTP_SECURE === 'true', // Usar SSL
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
-  }
+    private readonly config: ConfigService,
+    private readonly fairsService: FairsService,
+  ) {}
 
-  async sendEmail(
+  async sendConfirmationEmail(
     to: string,
     visitorName: string,
     registrationCode: string,
-    html?: string,
-  ) {
-    try {
-      const qrCodeUrl = await qrcode.toDataURL('https://www.expomultimix.com/');
-
-      const generatedHtml = generateConfirmationEmail(
-        visitorName,
-        registrationCode,
-        qrCodeUrl,
-      );
-
-      const mailOptions = {
-        from: `"Credenciamento" <${process.env.SMTP_USER}>`,
-        to,
-        subject: 'Teste Credenciamento ',
-        html: html || generatedHtml,
-        attachDataUrls: true,
-      };
-
-      await this.transporter.sendMail(mailOptions);
-
-      return { success: true, message: `Email sent to ${to}` };
-    } catch (error) {
-      console.error('Email Error:', error);
-      throw new Error('Failed to send email');
-    }
-  }
-
-  async sendCustomEmails(
-    registrationCodes: string[],
-    subject: string,
-    html: string,
     fairId: string,
   ) {
-    let visitors: Visitor[];
+    // 1) busca dados da feira
+    const fair = await this.fairsService.findOne(fairId);
+    if (!fair || !fair.date) {
+      throw new BadRequestException('Dados da feira não encontrados.');
+    }
+    const title = fair.name;
+    const location = fair.location;
+    const date = new Date(fair.date);
+    const start = new Date(date);
+    start.setHours(9, 0, 0, 0);
+    const end = new Date(date);
+    end.setHours(18, 0, 0, 0);
 
-    if (registrationCodes.length) {
-      visitors = await this.visitorsRepository.findByIds(registrationCodes);
-    } else {
-      visitors = await this.visitorsRepository
-        .createQueryBuilder('visitor')
-        .innerJoin(
-          'fair_visitor',
-          'fv',
-          'fv.visitorsRegistrationCode = visitor.registrationCode',
-        )
-        .leftJoin(
-          CheckIn,
-          'checkin',
-          'checkin.visitor = visitor.registrationCode',
-        )
-        .where('fv.fairsId = :fairId', { fairId })
-        .andWhere('checkin.id IS NULL')
-        .getMany();
+    // 2) Gera QR code como Buffer (PNG)
+    let qrBuffer: Buffer;
+    try {
+      const qr = require('qr-image');
+      qrBuffer = qr.imageSync(registrationCode, { type: 'png', size: 5 });
+    } catch (err) {
+      console.error('Erro ao gerar QR code:', err);
+      throw new BadRequestException('Falha ao gerar QR code');
     }
 
-    if (!visitors.length) {
-      throw new Error('No visitors found to send emails.');
-    }
+    // 3) Monta o HTML referenciando o CID "qrcode"
+    //    Ajuste o template para <img src="cid:qrcode" ...>
+    const html = generateConfirmationEmail(
+      visitorName,
+      registrationCode,
+      'cid:qrcode', // passa o CID em vez de URL
+      title,
+      start.toISOString(),
+      end.toISOString(),
+      location,
+    );
 
-    for (const visitor of visitors) {
-      await this.sendEmail(
-        visitor.email,
-        visitor.name,
-        visitor.registrationCode,
+    // 4) Envia o e-mail com o QR como anexo inline
+    try {
+      await this.transporter.sendMail({
+        from: `"Credenciamento" <${this.config.get('SMTP_USER')}>`,
+        to,
+        subject: `Confirmação – ${title}`,
         html,
+        attachments: [
+          {
+            filename: 'qrcode.png',
+            content: qrBuffer,
+            cid: 'qrcode', // este mesmo CID usado no <img src>
+          },
+        ],
+      });
+    } catch (err) {
+      console.error('Erro enviando e-mail de confirmação:', err);
+      throw new InternalServerErrorException(
+        'Falha ao enviar e-mail de confirmação',
       );
     }
-
-    return { message: `Emails sent to ${visitors.length} visitors` };
   }
 }

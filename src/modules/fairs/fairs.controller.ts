@@ -12,7 +12,11 @@ export class FairsController {
   }
 
   @Post()
-  createFair(@Body() fair: CreateInputFairDto) {
-    return this.fairService.createFair(fair);
+  async createFair(@Body() fair: CreateInputFairDto) {
+    try {
+      return await this.fairService.createFair(fair);
+    } catch (e) {
+      console.log(e);
+    }
   }
 }
