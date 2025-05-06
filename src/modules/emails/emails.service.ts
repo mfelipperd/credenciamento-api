@@ -49,11 +49,15 @@ export class EmailsService {
     const end = new Date(date);
     end.setHours(18, 0, 0, 0);
 
+    const data =
+      'https://credenciamento-frontend.vercel.app/visitor/checkin' +
+      registrationCode;
+
     // 2) Gera QR code como Buffer (PNG)
     let qrBuffer: Buffer;
     try {
       const qr = require('qr-image');
-      qrBuffer = qr.imageSync(registrationCode, { type: 'png', size: 5 });
+      qrBuffer = qr.imageSync(data, { type: 'png', size: 5 });
     } catch (err) {
       console.error('Erro ao gerar QR code:', err);
       throw new BadRequestException('Falha ao gerar QR code');
