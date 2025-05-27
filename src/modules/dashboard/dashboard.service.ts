@@ -260,25 +260,29 @@ export class DashboardService {
       throw new BadRequestException('Fair ID is required');
     }
 
-    // ✅ Contar visitantes agrupados por setor de interesse na feira específica
-    const visitorsBySectors = await this.visitorsRepository
-      .createQueryBuilder('visitor')
-      .innerJoin(
-        'fair_visitor',
-        'fv',
-        'fv.visitorsRegistrationCode = visitor.registrationCode',
-      )
-      .where('fv.fairsId = :fairId', { fairId })
-      .select([
-        'visitor.sectors AS sector',
-        'COUNT(visitor.registrationCode) AS count',
-      ])
-      .groupBy('visitor.sectors')
-      .getRawMany();
+    const raw = (await this.visitorsRepository.query(
+      `
+    SELECT
+      sector,
+      COUNT(*)::INT AS count
+    FROM (
+      SELECT
+        unnest(string_to_array(visitor.sectors, ',')) AS sector
+      FROM visitor
+      INNER JOIN fair_visitor fv
+        ON fv.visitorsRegistrationCode = visitor.registrationCode
+      WHERE fv.fairsId = $1
+    ) AS exploded
+    WHERE sector <> ''            -- opcional: ignora valores vazios
+    GROUP BY sector
+    ORDER BY count DESC
+    `,
+      [fairId],
+    )) as { sector: string; count: number }[];
 
     return {
       fairId,
-      visitorsBySectors,
+      visitorsBySectors: raw,
     };
   }
 }
