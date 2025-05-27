@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -44,5 +45,9 @@ export class VisitorsController {
       registrationCode,
       fairId,
     );
+  }
+  @Delete(':registrationCode')
+  async deleteVisitor(@Param('registrationCode') registrationCode: string) {
+    return await this.visitorsService.deleteVisitor(registrationCode);
   }
 }

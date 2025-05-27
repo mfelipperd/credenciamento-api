@@ -105,4 +105,21 @@ export class VisitorsService {
 
     return visitor;
   }
+
+  async deleteVisitor(id: string) {
+    const visitor = await this.visitorRepository.findOne({
+      where: { registrationCode: id.toString() },
+    });
+
+    if (!visitor) {
+      throw new NotFoundException('Visitor not found');
+    }
+
+    try {
+      await this.visitorRepository.remove(visitor);
+      return { message: 'Visitor deleted successfully' };
+    } catch (error) {
+      throw new InternalServerErrorException('Error deleting visitor');
+    }
+  }
 }
