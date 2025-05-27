@@ -259,30 +259,38 @@ export class DashboardService {
     if (!fairId) {
       throw new BadRequestException('Fair ID is required');
     }
-
-    const raw = (await this.visitorsRepository.query(
-      `
+    try {
+      // Criamos um JSON array a partir da string CSV:
+      // ex: "A,B,C" → '["A","B","C"]'
+      const raw = (await this.visitorsRepository.query(
+        `
     SELECT
-      sector,
-      COUNT(*)::INT AS count
-    FROM (
-      SELECT
-        unnest(string_to_array(visitor.sectors, ',')) AS sector
-      FROM visitor
-      INNER JOIN fair_visitor fv
-        ON fv.visitorsRegistrationCode = visitor.registrationCode
-      WHERE fv.fairsId = $1
-    ) AS exploded
-    WHERE sector <> ''            -- opcional: ignora valores vazios
-    GROUP BY sector
-    ORDER BY count DESC
+      jt.sector,
+      COUNT(*) AS count
+    FROM \`visitors\` v
+    INNER JOIN \`fair_visitor\` fv
+      ON fv.visitorsRegistrationCode = v.registrationCode
+    CROSS JOIN JSON_TABLE(
+      CONCAT('["', REPLACE(v.sectors, ',', '","'), '"]'),
+      '$[*]' COLUMNS (
+        sector VARCHAR(100) PATH '$'
+      )
+    ) AS jt
+    WHERE fv.fairsId = ?
+      AND jt.sector <> ''
+    GROUP BY jt.sector
+    ORDER BY count DESC;
     `,
-      [fairId],
-    )) as { sector: string; count: number }[];
+        [fairId],
+      )) as { sector: string; count: number }[];
 
-    return {
-      fairId,
-      visitorsBySectors: raw,
-    };
+      return {
+        fairId,
+        visitorsBySectors: raw,
+      };
+    } catch (error) {
+      console.error('Error fetching visitors by sectors:', error);
+      throw new BadRequestException('Failed to fetch visitors by sectors');
+    }
   }
 }
