@@ -32,4 +32,12 @@ export class CheckInsController {
   async getCheckIns(@Query('fairId') fairId: string) {
     return await this.checkInsService.getCheckIns(fairId);
   }
+
+  @Get('today')
+  async getCheckInsToday(@Query('fairId') fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+    return await this.checkInsService.getCheckinsPerHour(fairId);
+  }
 }

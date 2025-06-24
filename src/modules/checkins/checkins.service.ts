@@ -64,7 +64,6 @@ export class CheckInsService {
       throw new BadRequestException('Fair ID is required');
     }
 
-    // ✅ Buscar check-ins apenas da feira específica
     const checkIns = await this.checkInsRepository
       .createQueryBuilder('checkin')
       .innerJoin('checkin.visitor', 'visitor')
@@ -86,6 +85,63 @@ export class CheckInsService {
     return {
       fairId,
       checkIns,
+    };
+  }
+
+  async getCheckinsPerHour(fairId?: string) {
+    let checkins: CheckIn[];
+
+    if (fairId) {
+      checkins = await this.checkInsRepository
+        .createQueryBuilder('checkin')
+        .innerJoinAndSelect('checkin.visitor', 'visitor')
+        .innerJoin(
+          'fair_visitor',
+          'fv',
+          'fv.visitorsRegistrationCode = visitor.registrationCode',
+        )
+        .where('fv.fairsId = :fairId', { fairId })
+        .orderBy('checkin.createdAt', 'ASC')
+        .getMany();
+    } else {
+      checkins = await this.checkInsRepository.find({
+        relations: ['visitor'],
+        order: { createdAt: 'ASC' },
+      });
+    }
+
+    const groupedByDay: Record<string, number[]> = {};
+
+    const hourLabels = Array.from({ length: 11 }, (_, i) => {
+      const hour = i + 8;
+      return `${hour.toString().padStart(2, '0')}:00`;
+    });
+
+    for (const checkin of checkins) {
+      const date = new Date(checkin.createdAt);
+
+      const dayLabel = date.toLocaleDateString('pt-BR');
+      const hour = date.getHours();
+
+      if (hour < 8 || hour > 18) continue;
+
+      const hourIndex = hour - 8;
+
+      if (!groupedByDay[dayLabel]) {
+        groupedByDay[dayLabel] = new Array<number>(11).fill(0);
+      }
+
+      groupedByDay[dayLabel][hourIndex]++;
+    }
+
+    const series = Object.entries(groupedByDay).map(([day, data]) => ({
+      name: day,
+      data,
+    }));
+
+    return {
+      hours: hourLabels,
+      data: series,
     };
   }
 }
