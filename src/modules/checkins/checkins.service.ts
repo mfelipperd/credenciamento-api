@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Visitor } from '../visitors/entities/visitor.entity';
 import { CheckIn } from './entity/checkins.entity';
+import { CheckinGateway } from './checkin.gateway';
 
 @Injectable()
 export class CheckInsService {
@@ -16,6 +17,8 @@ export class CheckInsService {
 
     @InjectRepository(Visitor)
     private readonly visitorsRepository: Repository<Visitor>,
+    @InjectRepository(CheckinGateway)
+    private readonly checkinGateway: CheckinGateway,
   ) {}
 
   async registerCheckIn(registrationCode: string, fairId: string) {
@@ -48,6 +51,13 @@ export class CheckInsService {
     });
 
     await this.checkInsRepository.save(checkIn);
+
+    this.checkinGateway.sendCheckinData({
+      registrationCode: visitor.registrationCode,
+      name: visitor.name,
+      company: visitor.company,
+      // ...outros campos relevantes
+    });
 
     return {
       message: 'Check-in successful',
