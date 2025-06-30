@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Request,
@@ -11,6 +12,7 @@ import {
 import { VisitorsService } from './visitors.service';
 import { CreateVisitorInputDto } from './visitors.dto';
 import { IsPublicRoute } from 'src/auth/public.route';
+import { UpdateVisitorDto } from './update-visitor.dto';
 
 @Controller('visitors')
 export class VisitorsController {
@@ -49,5 +51,16 @@ export class VisitorsController {
   @Delete(':registrationCode')
   async deleteVisitor(@Param('registrationCode') registrationCode: string) {
     return await this.visitorsService.deleteVisitor(registrationCode);
+  }
+
+  @Patch(':registrationCode')
+  async updateVisitor(
+    @Param('registrationCode') registrationCode: string,
+    @Body() updateVisitorDto: UpdateVisitorDto,
+  ) {
+    return await this.visitorsService.updateVisitor(
+      registrationCode,
+      updateVisitorDto,
+    );
   }
 }

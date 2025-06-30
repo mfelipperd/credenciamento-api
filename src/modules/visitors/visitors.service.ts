@@ -11,12 +11,15 @@ import { Repository } from 'typeorm';
 import { CreateVisitorInputDto } from './visitors.dto';
 import { EmailsService } from '../emails/emails.service';
 import { User } from '../users/entitie/users.entity';
+import { UpdateVisitorDto } from './update-visitor.dto';
+import { Fair } from '../fairs/entity/fair.entity';
 
 @Injectable()
 export class VisitorsService {
   constructor(
     @InjectRepository(Visitor) private visitorRepository: Repository<Visitor>,
     @InjectRepository(User) private userRepository: Repository<User>,
+    @InjectRepository(Fair) private fairRepository: Repository<Fair>,
     private readonly emailsService: EmailsService,
   ) {}
 
@@ -77,10 +80,6 @@ export class VisitorsService {
     });
   }
 
-  updateVisitor(id: number, visitor: Visitor) {
-    return this.visitorRepository.update(id, visitor);
-  }
-
   async getVisitorByRegistrationCode(registrationCode: string, fairId: string) {
     if (!fairId) {
       throw new BadRequestException('Fair ID is required');
@@ -88,15 +87,16 @@ export class VisitorsService {
 
     const visitor = await this.visitorRepository
       .createQueryBuilder('visitor')
-      .innerJoin(
-        'fair_visitor',
-        'fv',
-        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      // carrega só a feira específica (filtrando por fairId)
+      .innerJoinAndSelect(
+        'visitor.fair_visitor', // propriedade da entidade
+        'fair',
+        'fair.id = :fairId',
+        { fairId },
       )
       .where('visitor.registrationCode = :registrationCode', {
         registrationCode,
       })
-      .andWhere('fv.fairsId = :fairId', { fairId }) // ✅ Filtrando pela feira
       .getOne();
 
     if (!visitor) {
@@ -121,5 +121,43 @@ export class VisitorsService {
     } catch (error) {
       throw new InternalServerErrorException('Error deleting visitor');
     }
+  }
+
+  async updateVisitor(
+    registrationCode: string,
+    updateDto: UpdateVisitorDto,
+  ): Promise<Visitor> {
+    const visitor = await this.visitorRepository.findOne({
+      where: { registrationCode },
+      relations: ['fair_visitor'],
+    });
+    if (!visitor) {
+      throw new NotFoundException('Visitor not found');
+    }
+
+    Object.assign(visitor, {
+      name: updateDto.name,
+      company: updateDto.company,
+      email: updateDto.email,
+      cnpj: updateDto.cnpj,
+      phone: updateDto.phone,
+      zipCode: updateDto.zipCode,
+      sectors: updateDto.sectors,
+      howDidYouKnow: updateDto.howDidYouKnow,
+      category: updateDto.category,
+      registrationDate: updateDto.registrationDate
+        ? new Date(updateDto.registrationDate)
+        : visitor.registrationDate,
+    });
+
+    if (updateDto.fairIds) {
+      const fairs = await this.fairRepository.findByIds(updateDto.fairIds);
+      if (fairs.length !== updateDto.fairIds.length) {
+        throw new NotFoundException('One or more fairs not found');
+      }
+      visitor.fair_visitor = fairs;
+    }
+
+    return this.visitorRepository.save(visitor);
   }
 }

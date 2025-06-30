@@ -6,6 +6,7 @@ import {
   ManyToOne,
   OneToMany,
   ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { CheckIn } from 'src/modules/checkins/entity/checkins.entity';
 import { User } from 'src/modules/users/entitie/users.entity';
@@ -53,5 +54,16 @@ export class Visitor {
   checkIns: CheckIn[];
 
   @ManyToMany(() => Fair, (fair) => fair.fair_visitor)
+  @JoinTable({
+    name: 'fair_visitor',
+    joinColumn: {
+      name: 'visitorsRegistrationCode',
+      referencedColumnName: 'registrationCode',
+    },
+    inverseJoinColumn: {
+      name: 'fairsId', // coluna que referencia Fair
+      referencedColumnName: 'id',
+    },
+  })
   fair_visitor: Fair[];
 }
