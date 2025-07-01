@@ -120,27 +120,28 @@ export class CheckInsService {
       });
     }
 
-    const groupedByDay: Record<string, number[]> = {};
-
     const hourLabels = Array.from({ length: 11 }, (_, i) => {
       const hour = i + 8;
       return `${hour.toString().padStart(2, '0')}:00`;
     });
 
+    const groupedByDay: Record<string, number[]> = {};
+
     for (const checkin of checkins) {
       const date = new Date(checkin.createdAt);
 
-      const dayLabel = date.toLocaleDateString('pt-BR');
-      const hour = date.getHours();
+      const rawHour = date.getHours();
+      const hour = (rawHour - 2 + 24) % 24;
 
       if (hour < 8 || hour > 18) continue;
 
       const hourIndex = hour - 8;
 
+      const dayLabel = date.toLocaleDateString('pt-BR');
+
       if (!groupedByDay[dayLabel]) {
         groupedByDay[dayLabel] = new Array<number>(11).fill(0);
       }
-
       groupedByDay[dayLabel][hourIndex]++;
     }
 
