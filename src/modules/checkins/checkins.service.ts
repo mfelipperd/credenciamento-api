@@ -120,7 +120,7 @@ export class CheckInsService {
       });
     }
 
-    const hourLabels = Array.from({ length: 11 }, (_, i) => {
+    const hourLabels = Array.from({ length: 14 }, (_, i) => {
       const hour = i + 8;
       return `${hour.toString().padStart(2, '0')}:00`;
     });
@@ -133,14 +133,14 @@ export class CheckInsService {
       const rawHour = date.getHours();
       const hour = (rawHour - 2 + 24) % 24;
 
-      if (hour < 8 || hour > 18) continue;
+      if (hour < 8 || hour > 21) continue;
 
       const hourIndex = hour - 8;
 
       const dayLabel = date.toLocaleDateString('pt-BR');
 
       if (!groupedByDay[dayLabel]) {
-        groupedByDay[dayLabel] = new Array<number>(11).fill(0);
+        groupedByDay[dayLabel] = new Array<number>(14).fill(0);
       }
       groupedByDay[dayLabel][hourIndex]++;
     }
