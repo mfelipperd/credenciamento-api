@@ -5,10 +5,9 @@ import { Visitor } from '../visitors/entities/visitor.entity';
 import { CheckIn } from './entity/checkins.entity';
 import { CheckInsService } from './checkins.service';
 import { CheckInsController } from './checkins.controller';
-import { CheckinGateway } from './checkin.gateway';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CheckIn, Visitor, CheckinGateway])],
+  imports: [TypeOrmModule.forFeature([CheckIn, Visitor])],
   providers: [CheckInsService],
   controllers: [CheckInsController],
 })
