@@ -89,7 +89,7 @@ export class CheckInsService {
   }
 
   async getCheckinsPerHour(fairId?: string) {
-    let checkins: CheckIn[];
+    let checkins: CheckIn[] = [];
 
     if (fairId) {
       checkins = await this.checkInsRepository
@@ -110,24 +110,30 @@ export class CheckInsService {
       });
     }
 
+    // labels de 08:00 a 21:00
     const hourLabels = Array.from({ length: 14 }, (_, i) => {
-      const hour = i + 8;
-      return `${hour.toString().padStart(2, '0')}:00`;
+      const h = i + 8;
+      return `${h.toString().padStart(2, '0')}:00`;
     });
 
     const groupedByDay: Record<string, number[]> = {};
 
     for (const checkin of checkins) {
-      const date = new Date(checkin.createdAt);
+      // 1) converte o timestamp UTC para milissegundos
+      const utcDate = new Date(checkin.createdAt).getTime();
+      // 2) subtrai 3h para chegar em UTC−3 (ms)
+      const localTs = utcDate - 3 * 60 * 60 * 1000;
+      // 3) cria novo Date já no horário de Belém
+      const localDate = new Date(localTs);
 
-      const rawHour = date.getHours();
-      const hour = (rawHour - 2 + 24) % 24;
-
+      const hour = localDate.getHours();
+      // filtra só das 08h às 21h
       if (hour < 8 || hour > 21) continue;
 
-      const hourIndex = hour - 8;
+      const hourIndex = hour - 8; // 08→0, …, 21→13
 
-      const dayLabel = date.toLocaleDateString('pt-BR');
+      // label de dia no fuso correto
+      const dayLabel = localDate.toLocaleDateString('pt-BR');
 
       if (!groupedByDay[dayLabel]) {
         groupedByDay[dayLabel] = new Array<number>(14).fill(0);
