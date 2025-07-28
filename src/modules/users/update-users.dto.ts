@@ -1,38 +1,36 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
-  IsNotEmpty,
-  IsString,
+  ArrayNotEmpty,
+  IsArray,
   IsEmail,
-  MinLength,
-  MaxLength,
   IsEnum,
   IsOptional,
-  IsArray,
-  ArrayNotEmpty,
+  IsString,
   IsUUID,
+  MaxLength,
+  MinLength,
 } from 'class-validator';
 import { EUserRole } from 'src/enum/role';
 
-export class CreateUserInputDto {
-  @IsNotEmpty()
+export class UpdateUserInputDto {
+  @IsOptional()
   @IsString()
   @MaxLength(255)
-  name: string;
+  name?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @IsEmail()
-  email: string;
+  email?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @MinLength(8)
   @MaxLength(255)
-  password: string;
+  password?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsEnum(EUserRole)
-  role: EUserRole;
+  role?: EUserRole;
 
   @IsOptional()
   @IsArray()

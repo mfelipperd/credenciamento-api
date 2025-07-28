@@ -1,3 +1,4 @@
+import { ArrayNotEmpty, IsArray, IsOptional, IsUUID } from 'class-validator';
 import { EUserRole } from 'src/enum/role';
 import { Visitor } from 'src/modules/visitors/entities/visitor.entity';
 import {
@@ -30,4 +31,10 @@ export class User {
 
   @OneToMany(() => Visitor, (visitor) => visitor.createdBy)
   visitors: Visitor[];
+  @Column({ type: 'json', nullable: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('4', { each: true })
+  fairIds?: string[];
 }

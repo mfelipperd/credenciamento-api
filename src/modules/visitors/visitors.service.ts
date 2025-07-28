@@ -13,6 +13,7 @@ import { EmailsService } from '../emails/emails.service';
 import { User } from '../users/entitie/users.entity';
 import { UpdateVisitorDto } from './update-visitor.dto';
 import { Fair } from '../fairs/entity/fair.entity';
+import { EUserRole } from 'src/enum/role';
 
 @Injectable()
 export class VisitorsService {
@@ -23,17 +24,35 @@ export class VisitorsService {
     private readonly emailsService: EmailsService,
   ) {}
 
-  async getVisitors(fairId?: string) {
-    const query = this.visitorRepository.createQueryBuilder('visitor');
+  async getVisitors(user: User, fairId?: string): Promise<Visitor[]> {
+    const query = this.visitorRepository
+      .createQueryBuilder('visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      );
 
-    if (fairId) {
-      query
-        .innerJoin(
-          'fair_visitor',
-          'fv',
-          'fv.visitorsRegistrationCode = visitor.registrationCode',
-        )
-        .where('fv.fairsId = :fairId', { fairId });
+    if (user.role === EUserRole.CONSULTANT) {
+      const allowed = user.fairIds ?? [];
+
+      if (fairId) {
+        if (!allowed.includes(fairId)) {
+          return [];
+        }
+        query.where('fv.fairsId = :fairId', { fairId });
+      } else {
+        // Sem fairId, retorna tudo que está em user.fairIds
+        if (allowed.length === 0) {
+          return [];
+        }
+        query.where('fv.fairsId IN (:...fairIds)', { fairIds: allowed });
+      }
+    } else {
+      // Outros papéis: mantém o filtro por fairId se enviado, senão traz tudo
+      if (fairId) {
+        query.where('fv.fairsId = :fairId', { fairId });
+      }
     }
 
     return await query.getMany();

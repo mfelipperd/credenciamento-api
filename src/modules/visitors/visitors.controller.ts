@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   Request,
 } from '@nestjs/common';
 import { VisitorsService } from './visitors.service';
@@ -19,8 +20,9 @@ export class VisitorsController {
   constructor(private readonly visitorsService: VisitorsService) {}
 
   @Get()
-  async getVisitors(@Query('fairId') fairId?: string) {
-    return this.visitorsService.getVisitors(fairId);
+  async getVisitors(@Req() req: Request, @Query('fairId') fairId?: string) {
+    console.log('user: ___________', req.user);
+    return this.visitorsService.getVisitors(req.user, fairId);
   }
 
   @Post()
