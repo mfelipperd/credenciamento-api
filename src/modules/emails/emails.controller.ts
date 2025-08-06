@@ -1,5 +1,6 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { EmailsService } from './emails.service';
+import { SendMarketingEmailDto } from './dto/send-marketing-email.dto';
 
 @Controller('emails')
 export class EmailsController {
@@ -47,5 +48,18 @@ export class EmailsController {
     }
 
     return { success: true, message: 'Campaign emails sent successfully' };
+  }
+
+  @Post('marketing/absent-visitors')
+  async sendMarketingToAbsentVisitors(
+    @Body() sendMarketingEmailDto: SendMarketingEmailDto,
+  ) {
+    const { subject, htmlContent, fairId } = sendMarketingEmailDto;
+
+    return await this.emailsService.sendMarketingEmailToAbsentVisitors(
+      subject,
+      htmlContent,
+      fairId,
+    );
   }
 }
