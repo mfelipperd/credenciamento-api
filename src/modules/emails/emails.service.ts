@@ -185,68 +185,68 @@ export class EmailsService {
     htmlContent: string,
     fairId: string,
   ) {
-    const BATCH_SIZE = 10; // Processa 10 emails por vez
-    const DELAY_BETWEEN_BATCHES = 2000; // 2 segundos entre lotes
-    const MAX_RETRIES = 3;
+    // 📧 CONFIGURAÇÕES OTIMIZADAS PARA GMAIL SMTP
+    const DELAY_BETWEEN_EMAILS = 30000; // 30 segundos entre emails (2 emails/minuto)
+    const DELAY_BETWEEN_HOURS = 3600000; // 1 hora = 3.600.000ms
+    const EMAILS_PER_HOUR_LIMIT = 90; // 90 emails/hora (margem de segurança)
+    const MAX_RETRIES = 5; // Mais tentativas para Gmail
 
     let successCount = 0;
     let errorCount = 0;
+    let hourlyCount = 0;
+    let hourStartTime = Date.now();
     const errors: Array<{ email: string; error: string }> = [];
 
     console.log(
-      `🚀 Iniciando processamento de ${emails.length} emails em lotes de ${BATCH_SIZE}`,
+      `🚀 [GMAIL OPTIMIZED] Iniciando processamento de ${emails.length} emails`,
+    );
+    console.log('⚙️ Configurações: 1 email a cada 30s, máximo 90/hora');
+    console.log(
+      `⏱️ Tempo estimado: ${Math.ceil((emails.length * 30) / 60)} minutos`,
     );
 
-    // Processa emails em lotes
-    for (let i = 0; i < emails.length; i += BATCH_SIZE) {
-      const batch = emails.slice(i, i + BATCH_SIZE);
-      console.log(
-        `📧 Processando lote ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(emails.length / BATCH_SIZE)}: ${batch.length} emails`,
-      );
-
-      // Processa o lote atual em paralelo
-      const batchPromises = batch.map(async (email) => {
-        return this.sendSingleEmailWithRetry(
-          email,
-          subject,
-          htmlContent,
-          MAX_RETRIES,
-        );
-      });
-
-      try {
-        const batchResults = await Promise.allSettled(batchPromises);
-
-        // Conta sucessos e erros
-        batchResults.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            successCount++;
-          } else {
-            errorCount++;
-            errors.push({
-              email: batch[index],
-              error: result.reason.message || 'Erro desconhecido',
-            });
-          }
-        });
-
-        // Log do progresso
-        console.log(
-          `✅ Lote concluído: ${successCount} sucessos, ${errorCount} erros`,
-        );
-      } catch (error) {
-        console.error('Erro no processamento do lote:', error);
-        errorCount += batch.length;
+    // Processa emails individualmente
+    // Processa emails individualmente para Gmail
+    for (let i = 0; i < emails.length; i++) {
+      const email = emails[i];
+      const currentTime = Date.now();
+      
+      // Verifica limite por hora (pausa se necessário)
+      if (hourlyCount >= EMAILS_PER_HOUR_LIMIT) {
+        const timeElapsed = currentTime - hourStartTime;
+        if (timeElapsed < DELAY_BETWEEN_HOURS) {
+          const waitTime = DELAY_BETWEEN_HOURS - timeElapsed;
+          console.log(`⏰ Limite de ${EMAILS_PER_HOUR_LIMIT} emails/hora atingido. Aguardando ${Math.ceil(waitTime / 60000)} minutos...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        hourlyCount = 0;
+        hourStartTime = Date.now();
       }
 
-      // Delay entre lotes para não sobrecarregar o SMTP
-      if (i + BATCH_SIZE < emails.length) {
+      console.log(
+        `📧 Processando email ${i + 1}/${emails.length}: ${email}`,
+      );
+
+      try {
+        await this.sendSingleEmailWithRetry(email, subject, htmlContent, MAX_RETRIES);
+        successCount++;
+        hourlyCount++;
+        console.log(`✅ Email ${i + 1} enviado com sucesso (${successCount}/${emails.length})`);
+      } catch (error) {
+        errorCount++;
+        errors.push({
+          email: email,
+          error: error.message || 'Erro desconhecido'
+        });
+        console.error(`❌ Falha no email ${i + 1}: ${error.message}`);
+      }
+
+      // Delay entre emails (exceto no último)
+      if (i < emails.length - 1) {
         console.log(
-          `⏳ Aguardando ${DELAY_BETWEEN_BATCHES}ms antes do próximo lote...`,
+          `⏳ Aguardando 30s antes do próximo email... (${i + 2}/${emails.length})`,
         );
-        await new Promise((resolve) =>
-          setTimeout(resolve, DELAY_BETWEEN_BATCHES),
-        );
+        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_EMAILS));
       }
     }
 
@@ -285,13 +285,23 @@ export class EmailsService {
       } catch (error) {
         lastError = error;
         console.warn(
-          `⚠️ Tentativa ${attempt}/${maxRetries} falhou para ${email}:`,
-          error.message,
+          `⚠️ Tentativa ${attempt}/${maxRetries} falhou para ${email}: ${error.message}`,
         );
 
         if (attempt < maxRetries) {
-          // Delay crescente entre tentativas (backoff exponencial)
-          const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s...
+          // Para Gmail, usa delays maiores e específicos
+          let delay = 60000; // 1 minuto base
+          
+          // Aumenta delay baseado no erro
+          if (error.message.includes('454 4.7.0')) {
+            delay = 300000; // 5 minutos para rate limiting
+          } else if (error.message.includes('421')) {
+            delay = 600000; // 10 minutos para service unavailable  
+          } else {
+            delay = Math.pow(2, attempt) * 30000; // 30s, 60s, 120s...
+          }
+          
+          console.log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
