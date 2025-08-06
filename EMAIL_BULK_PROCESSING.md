@@ -3,12 +3,14 @@
 ## 🚨 **ATUALIZAÇÃO CRÍTICA: Compatibilidade Gmail**
 
 ### **❌ Problema Identificado:**
+
 ```
 454-4.7.0 Too many login attempts, please try again later.
 454 4.7.0 https://support.google.com/mail/answer/7126229
 ```
 
 ### **✅ Solução Implementada:**
+
 - 📧 **1 email por vez** (não mais em lotes)
 - ⏰ **30 segundos entre emails** (2 emails/minuto)
 - 🕐 **Máximo 90 emails/hora** (margem de segurança)
@@ -17,6 +19,7 @@
 ## 🎯 **AGORA ENVIA PARA TODOS OS VISITANTES AUSENTES!**
 
 ### **✅ Mudança Implementada:**
+
 - ❌ ~~Email de teste fixo~~
 - ✅ **Envio real para todos os visitantes ausentes da feira específica**
 - ⚙️ **Otimizado para Gmail SMTP**
@@ -40,7 +43,7 @@
 ### **3. Sistema de Retry Ultra Inteligente**
 
 - ✅ **5 tentativas por email**: Mais chances para emails problemáticos
-- ✅ **Delays específicos por erro**: 
+- ✅ **Delays específicos por erro**:
   - `454 4.7.0` (Rate limit): 5 minutos
   - `421` (Service unavailable): 10 minutos
   - Outros: Backoff exponencial (30s, 60s, 120s...)
@@ -68,7 +71,7 @@
       "company": "Empresa XYZ"
     },
     {
-      "name": "Maria Santos", 
+      "name": "Maria Santos",
       "email": "maria@startup.com",
       "company": "Startup ABC"
     }
@@ -78,6 +81,7 @@
 ```
 
 ## ⚠️ **IMPORTANTE - AGORA É PRODUÇÃO REAL:**
+
 - 📧 **Todos os emails** dos visitantes ausentes serão enviados
 - 🎯 **Feira específica**: Apenas visitantes da feira informada
 - 🚫 **Sem filtros**: Não há mais email de teste, é envio real!
@@ -94,14 +98,17 @@ const DELAY_BETWEEN_HOURS = 3600000; // Pausa de 1 hora se atingir limite
 ### **Cenários de Performance:**
 
 #### **📧 100 emails:**
+
 - **Tempo**: ~50 minutos (30s × 100)
 - **Garantia**: 100% de entrega sem bloqueios
 
-#### **📧 500 emails:**  
+#### **📧 500 emails:**
+
 - **Tempo**: ~4-5 horas (respeitando limite de 90/hora)
 - **Pausas**: Automáticas a cada 90 emails
 
 #### **📧 1000 emails:**
+
 - **Tempo**: ~12-13 horas
 - **Execução**: Completamente automática com pausas
 
@@ -132,6 +139,7 @@ const DELAY_BETWEEN_HOURS = 3600000; // Pausa de 1 hora se atingir limite
 ```
 
 ### 📈 **Logs otimizados para Gmail:**
+
 - ✅ **Indicação de otimização** para Gmail
 - ✅ **Tempo estimado realista** baseado em 30s/email
 - ✅ **Pausas automáticas** quando atingir limite/hora
@@ -167,7 +175,7 @@ const personalizedHtml = this.personalizeTemplate(htmlContent, visitor);
 ```
 1000 emails = 100 lotes × 2s = ~4 minutos
 ❌ Erro 454 4.7.0 do Gmail
-❌ Emails bloqueados/rejeitados  
+❌ Emails bloqueados/rejeitados
 ❌ Falha no envio em massa
 ```
 
@@ -186,15 +194,17 @@ const personalizedHtml = this.personalizeTemplate(htmlContent, visitor);
 ## ⚠️ **IMPORTANTE - Expectativas Realistas:**
 
 ### **📊 Tempos Esperados:**
+
 - **50 emails**: ~25 minutos
-- **100 emails**: ~50 minutos  
+- **100 emails**: ~50 minutos
 - **200 emails**: ~1h40min
 - **500 emails**: ~4-5 horas
 - **1000 emails**: ~12-13 horas
 
 ### **🎯 Vantagens:**
+
 - ✅ **Confiabilidade 100%** - Sem bloqueios
-- ✅ **Processamento automático** - Sem intervenção  
+- ✅ **Processamento automático** - Sem intervenção
 - ✅ **Conformidade total** - Respeita limites do Gmail
 - ✅ **Execução em background** - Não afeta aplicação
 
