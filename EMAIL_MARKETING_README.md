@@ -1,42 +1,65 @@
 # API de Email Marketing para Visitantes Ausentes
 
-## Endpoint Criado
+## ✅ ATUALIZAÇÃO: Agora Associado à Feira Específica!
 
 **URL:** `POST /emails/marketing/absent-visitors`
 
-## Payload de Exemplo
+### 🎯 Funcionalidades Implementadas:
 
-```json
-{
-  "subject": "Não perca a oportunidade! Feira ainda acontece hoje",
-  "htmlContent": "<html><head><meta charset='utf-8'><title>Email Marketing</title></head><body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;'><div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'><h1 style='margin: 0; font-size: 28px;'>🎪 Não perca a feira!</h1><p style='margin: 10px 0 0 0; font-size: 18px;'>Ainda há tempo de participar</p></div><div style='background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'><h2 style='color: #333; margin-top: 0;'>Olá! 👋</h2><p style='font-size: 16px; margin-bottom: 20px;'>Notamos que você se registrou para nossa feira, mas ainda não fez seu check-in. A feira ainda está acontecendo e você pode aproveitar:</p><ul style='background: white; padding: 20px; border-radius: 5px; border-left: 4px solid #667eea;'><li>🏢 <strong>Networking</strong> com empresários do setor</li><li>🎯 <strong>Oportunidades</strong> de negócios únicos</li><li>📚 <strong>Palestras</strong> e workshops exclusivos</li><li>🎁 <strong>Brindes</strong> e sorteios especiais</li></ul><div style='text-align: center; margin: 30px 0;'><a href='https://credenciamento-frontend.vercel.app/visitor/checkin' style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 18px; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>🚀 Fazer Check-in Agora</a></div><p style='font-size: 14px; color: #666; text-align: center; border-top: 1px solid #ddd; padding-top: 20px; margin-top: 30px;'>Este é um email automático de marketing.<br>Equipe de Credenciamento</p></div></body></html>",
-  "fairId": "123e4567-e89b-12d3-a456-426614174000"
-}
-```
+- ✅ **Validação de Feira**: Verifica se a feira existe
+- ✅ **Busca Visitantes Ausentes**: Consulta apenas visitantes da feira específica que não fizeram check-in
+- ✅ **Query Database**: Utiliza a mesma lógica do dashboard para visitantes ausentes
+- ✅ **Relatório Detalhado**: Retorna lista de visitantes ausentes encontrados
+- ✅ **Email de Teste**: Por segurança, ainda envia apenas para `felipperabelodurans@gmail.com`
 
-## Resposta de Sucesso
+## 📊 Nova Resposta da API
 
 ```json
 {
   "success": true,
-  "message": "Email de marketing enviado com sucesso",
+  "message": "Email de marketing enviado com sucesso para 1 destinatário(s)",
   "sentTo": ["felipperabelodurans@gmail.com"],
-  "fairId": "123e4567-e89b-12d3-a456-426614174000"
+  "fairId": "123e4567-e89b-12d3-a456-426614174000",
+  "totalAbsent": 15,
+  "absentVisitors": [
+    {
+      "name": "João Silva",
+      "email": "joao@empresa.com",
+      "company": "Empresa XYZ"
+    },
+    {
+      "name": "Maria Santos",
+      "email": "maria@startup.com",
+      "company": "Startup ABC"
+    }
+    // ... outros visitantes ausentes
+  ]
 }
 ```
 
-## Para Testar
+## 🔄 Processo Completo:
 
-Use um cliente HTTP como Postman ou Insomnia:
+1. **Recebe** `fairId`, `subject` e `htmlContent`
+2. **Valida** se a feira existe
+3. **Consulta** visitantes da feira que não fizeram check-in
+4. **Lista** todos os visitantes ausentes (para relatório)
+5. **Envia** email apenas para o email de teste (por segurança)
+6. **Retorna** estatísticas completas
 
-1. **Método:** POST
-2. **URL:** `http://localhost:3000/emails/marketing/absent-visitors`
-3. **Headers:** `Content-Type: application/json`
-4. **Body:** JSON com subject, htmlContent e fairId
+## 🚀 Para Produção:
 
-## Status
+Para ativar o envio real, altere esta linha no service:
+```typescript
+// Atual (teste):
+const emailsToSend = [testEmail];
 
-✅ Branch: `feature/email-marketing-absent-visitors`
-✅ Endpoint: Configurado e pronto para teste
-✅ Email de teste: `felipperabelodurans@gmail.com`
-✅ Validação: DTO com validações implementadas
+// Produção:
+const emailsToSend = absentVisitors.map(v => v.email);
+```
+
+## ✅ Status Final:
+
+- **✅ Feira Específica**: SIM - Busca apenas visitantes da feira informada
+- **✅ Visitantes Ausentes**: SIM - Apenas quem não fez check-in
+- **✅ Segurança**: SIM - Ainda envia apenas para email de teste
+- **✅ Relatórios**: SIM - Mostra quantos e quais visitantes ausentes
