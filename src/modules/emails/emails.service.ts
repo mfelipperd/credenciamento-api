@@ -148,16 +148,15 @@ export class EmailsService {
         };
       }
 
-      // Para teste, enviar apenas para o email de teste
-      // Em produção, seria: absentVisitors.map(visitor => visitor.email)
-      const testEmail = 'felipperabelodurans@gmail.com';
-      const emailsToSend = [testEmail]; // Futuramente: absentVisitors.map(v => v.email)
+      // Coleta todos os emails dos visitantes ausentes
+      const emailsToSend = absentVisitors.map(visitor => visitor.email);
 
       // Inicia processamento em background para evitar timeout
-      this.processBulkEmails(emailsToSend, subject, htmlContent, fairId)
-        .catch(error => {
+      this.processBulkEmails(emailsToSend, subject, htmlContent, fairId).catch(
+        (error) => {
           console.error('Erro no processamento em background:', error);
-        });
+        },
+      );
 
       // Retorna imediatamente para o cliente
       return {
@@ -165,12 +164,12 @@ export class EmailsService {
         message: `Processamento de ${emailsToSend.length} email(s) iniciado em background`,
         fairId,
         totalAbsent: absentVisitors.length,
-        absentVisitors: absentVisitors.map(v => ({
+        absentVisitors: absentVisitors.map((v) => ({
           name: v.name,
           email: v.email,
-          company: v.company
+          company: v.company,
         })),
-        status: 'PROCESSING_STARTED'
+        status: 'PROCESSING_STARTED',
       };
     } catch (err) {
       console.error('Erro enviando email de marketing:', err);
@@ -192,23 +191,32 @@ export class EmailsService {
 
     let successCount = 0;
     let errorCount = 0;
-    const errors: Array<{email: string, error: string}> = [];
+    const errors: Array<{ email: string; error: string }> = [];
 
-    console.log(`🚀 Iniciando processamento de ${emails.length} emails em lotes de ${BATCH_SIZE}`);
+    console.log(
+      `🚀 Iniciando processamento de ${emails.length} emails em lotes de ${BATCH_SIZE}`,
+    );
 
     // Processa emails em lotes
     for (let i = 0; i < emails.length; i += BATCH_SIZE) {
       const batch = emails.slice(i, i + BATCH_SIZE);
-      console.log(`📧 Processando lote ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(emails.length/BATCH_SIZE)}: ${batch.length} emails`);
+      console.log(
+        `📧 Processando lote ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(emails.length / BATCH_SIZE)}: ${batch.length} emails`,
+      );
 
       // Processa o lote atual em paralelo
       const batchPromises = batch.map(async (email) => {
-        return this.sendSingleEmailWithRetry(email, subject, htmlContent, MAX_RETRIES);
+        return this.sendSingleEmailWithRetry(
+          email,
+          subject,
+          htmlContent,
+          MAX_RETRIES,
+        );
       });
 
       try {
         const batchResults = await Promise.allSettled(batchPromises);
-        
+
         // Conta sucessos e erros
         batchResults.forEach((result, index) => {
           if (result.status === 'fulfilled') {
@@ -217,14 +225,15 @@ export class EmailsService {
             errorCount++;
             errors.push({
               email: batch[index],
-              error: result.reason.message || 'Erro desconhecido'
+              error: result.reason.message || 'Erro desconhecido',
             });
           }
         });
 
         // Log do progresso
-        console.log(`✅ Lote concluído: ${successCount} sucessos, ${errorCount} erros`);
-
+        console.log(
+          `✅ Lote concluído: ${successCount} sucessos, ${errorCount} erros`,
+        );
       } catch (error) {
         console.error('Erro no processamento do lote:', error);
         errorCount += batch.length;
@@ -232,14 +241,20 @@ export class EmailsService {
 
       // Delay entre lotes para não sobrecarregar o SMTP
       if (i + BATCH_SIZE < emails.length) {
-        console.log(`⏳ Aguardando ${DELAY_BETWEEN_BATCHES}ms antes do próximo lote...`);
-        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+        console.log(
+          `⏳ Aguardando ${DELAY_BETWEEN_BATCHES}ms antes do próximo lote...`,
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, DELAY_BETWEEN_BATCHES),
+        );
       }
     }
 
     // Log final
-    console.log(`🏁 Processamento concluído: ${successCount} sucessos, ${errorCount} erros de ${emails.length} emails`);
-    
+    console.log(
+      `🏁 Processamento concluído: ${successCount} sucessos, ${errorCount} erros de ${emails.length} emails`,
+    );
+
     if (errors.length > 0) {
       console.log('❌ Erros encontrados:', errors);
     }
@@ -252,7 +267,7 @@ export class EmailsService {
     email: string,
     subject: string,
     htmlContent: string,
-    maxRetries: number
+    maxRetries: number,
   ): Promise<void> {
     let lastError: Error = new Error('Erro desconhecido');
 
@@ -264,17 +279,20 @@ export class EmailsService {
           subject: subject,
           html: htmlContent,
         });
-        
+
         // Se chegou aqui, deu certo
         return;
       } catch (error) {
         lastError = error;
-        console.warn(`⚠️ Tentativa ${attempt}/${maxRetries} falhou para ${email}:`, error.message);
-        
+        console.warn(
+          `⚠️ Tentativa ${attempt}/${maxRetries} falhou para ${email}:`,
+          error.message,
+        );
+
         if (attempt < maxRetries) {
           // Delay crescente entre tentativas (backoff exponencial)
           const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s...
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }

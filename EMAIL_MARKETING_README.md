@@ -49,12 +49,13 @@
 ## 🚀 Para Produção:
 
 Para ativar o envio real, altere esta linha no service:
+
 ```typescript
 // Atual (teste):
 const emailsToSend = [testEmail];
 
 // Produção:
-const emailsToSend = absentVisitors.map(v => v.email);
+const emailsToSend = absentVisitors.map((v) => v.email);
 ```
 
 ## ✅ Status Final:
