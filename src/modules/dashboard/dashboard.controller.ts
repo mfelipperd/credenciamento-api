@@ -48,4 +48,9 @@ export class DashboardController {
   async getVisitorsBySectors(@Query('fairId') fairId: string) {
     return await this.dashboardService.getVisitorsBySectors(fairId);
   }
+
+  @Get('conversions/how-did-you-know')
+  async getConversionsByHowDidYouKnow(@Query('fairId') fairId: string) {
+    return this.dashboardService.getConversionsByHowDidYouKnow(fairId);
+  }
 }
