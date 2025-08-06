@@ -97,4 +97,34 @@ export class EmailsService {
       );
     }
   }
+
+  async sendMarketingEmailToAbsentVisitors(
+    subject: string,
+    htmlContent: string,
+    fairId: string,
+  ) {
+    try {
+      // Para teste, apenas enviar para o email específico
+      const testEmail = 'felipperabelodurans@gmail.com';
+      
+      await this.transporter.sendMail({
+        from: `"Credenciamento - Marketing" <${this.config.get('SMTP_USER')}>`,
+        to: testEmail,
+        subject: subject,
+        html: htmlContent,
+      });
+
+      return {
+        success: true,
+        message: 'Email de marketing enviado com sucesso',
+        sentTo: [testEmail],
+        fairId,
+      };
+    } catch (err) {
+      console.error('Erro enviando email de marketing:', err);
+      throw new InternalServerErrorException(
+        'Falha ao enviar email de marketing',
+      );
+    }
+  }
 }
