@@ -1,0 +1,117 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  Index,
+} from 'typeorm';
+import { Expose } from 'class-transformer';
+import {
+  RevenueStatus,
+  PaymentMethod,
+  EntryModelType,
+  InstallmentStatus,
+} from '../../common/enums/finance.enums';
+import { Client } from '../../clients/entities/client.entity';
+import { EntryModel } from '../../entry-models/entities/entry-model.entity';
+
+@Entity('finance_revenues')
+@Index(['fairId', 'status', 'type'])
+@Index(['clientId'])
+export class Revenue {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column()
+  fairId: string;
+
+  @Column({
+    type: 'enum',
+    enum: EntryModelType,
+  })
+  type: EntryModelType;
+
+  @Column()
+  entryModelId: string;
+
+  @Column()
+  clientId: string;
+
+  @Column('bigint')
+  baseValue: number;
+
+  @Column('bigint')
+  discountCents: number;
+
+  @Column('bigint')
+  contractValue: number;
+
+  @Column({
+    type: 'enum',
+    enum: PaymentMethod,
+  })
+  paymentMethod: PaymentMethod;
+
+  @Column({ nullable: true })
+  condition: string;
+
+  @Column({
+    type: 'enum',
+    enum: RevenueStatus,
+    default: RevenueStatus.PENDENTE,
+  })
+  status: RevenueStatus;
+
+  @Column('text', { nullable: true })
+  notes: string;
+
+  @Column()
+  createdBy: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  // Relacionamentos
+  @ManyToOne(() => EntryModel)
+  @JoinColumn({ name: 'entryModelId' })
+  entryModel: EntryModel;
+
+  @ManyToOne(() => Client)
+  @JoinColumn({ name: 'clientId' })
+  client: Client;
+
+  // Relacionamentos serão adicionados depois
+  // @OneToMany(() => RevenueInstallment, (installment) => installment.revenue, { cascade: true })
+  // installments: RevenueInstallment[];
+
+  // @OneToMany(() => Attachment, (attachment) => attachment.revenue)
+  // attachments: Attachment[];
+
+  // Campos calculados (implementar depois)
+  // @Expose()
+  // get paidCents(): number {
+  //   return this.installments?.filter(i => i.status === InstallmentStatus.PAGA)
+  //     .reduce((sum, i) => sum + i.valueCents, 0) || 0;
+  // }
+
+  // @Expose()
+  // get openCents(): number {
+  //   return this.contractValue - this.paidCents;
+  // }
+
+  // @Expose()
+  // get nextDueDate(): Date | null {
+  //   const openInstallments = this.installments?.filter(
+  //     i => i.status === InstallmentStatus.A_VENCER || i.status === InstallmentStatus.VENCIDA
+  //   ).sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+    
+  //   return openInstallments?.[0]?.dueDate || null;
+  // }
+}

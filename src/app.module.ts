@@ -16,6 +16,7 @@ import { HowDidYouKnowModule } from './modules/how-did-you-know/how-did-you-know
 import { CategoriesService } from './modules/categories/categories.service';
 import { SectorsModule } from './modules/sectors/sectors.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { FinanceModule } from './modules/finance/finance.module';
 
 @Module({
   providers: [
@@ -38,6 +39,8 @@ import { CategoriesModule } from './modules/categories/categories.module';
     HowDidYouKnowModule,
     SectorsModule,
     CategoriesModule,
+    FinanceModule,
   ],
+  controllers: [],
 })
 export class AppModule {}
