@@ -5,6 +5,7 @@
 ### 🏢 Clientes (Clients)
 
 #### CreateClientDto
+
 ```typescript
 // src/modules/finance/clients/dto/create-client.dto.ts
 import { IsString, IsOptional, IsEmail, Matches } from 'class-validator';
@@ -28,6 +29,7 @@ export class CreateClientDto {
 ```
 
 #### UpdateClientDto
+
 ```typescript
 // src/modules/finance/clients/dto/update-client.dto.ts
 import { PartialType } from '@nestjs/mapped-types';
@@ -37,6 +39,7 @@ export class UpdateClientDto extends PartialType(CreateClientDto) {}
 ```
 
 #### PaginatedClientsDto
+
 ```typescript
 // src/modules/finance/clients/dto/paginated-clients.dto.ts
 import { Transform } from 'class-transformer';
@@ -67,9 +70,17 @@ export class PaginatedClientsDto {
 ### 🏗️ Modelos de Entrada (Entry Models)
 
 #### CreateEntryModelDto
+
 ```typescript
 // src/modules/finance/entry-models/dto/create-entry-model.dto.ts
-import { IsString, IsEnum, IsNumber, IsUUID, IsOptional, Min } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsNumber,
+  IsUUID,
+  IsOptional,
+  Min,
+} from 'class-validator';
 import { EntryModelType } from '../entities/entry-model.entity';
 
 export class CreateEntryModelDto {
@@ -94,17 +105,19 @@ export class CreateEntryModelDto {
 ```
 
 #### UpdateEntryModelDto
+
 ```typescript
 // src/modules/finance/entry-models/dto/update-entry-model.dto.ts
 import { PartialType, OmitType } from '@nestjs/mapped-types';
 import { CreateEntryModelDto } from './create-entry-model.dto';
 
 export class UpdateEntryModelDto extends PartialType(
-  OmitType(CreateEntryModelDto, ['fairId'] as const)
+  OmitType(CreateEntryModelDto, ['fairId'] as const),
 ) {}
 ```
 
 #### QueryEntryModelsDto
+
 ```typescript
 // src/modules/finance/entry-models/dto/query-entry-models.dto.ts
 import { IsUUID, IsOptional, IsBoolean, IsEnum } from 'class-validator';
@@ -131,11 +144,19 @@ export class QueryEntryModelsDto {
 ### 💰 Receitas (Revenues)
 
 #### CreateRevenueDto
+
 ```typescript
 // src/modules/finance/revenues/dto/create-revenue.dto.ts
-import { 
-  IsUUID, IsEnum, IsNumber, IsString, IsOptional, 
-  ValidateNested, Min, IsArray, Type 
+import {
+  IsUUID,
+  IsEnum,
+  IsNumber,
+  IsString,
+  IsOptional,
+  ValidateNested,
+  Min,
+  IsArray,
+  Type,
 } from 'class-validator';
 import { EntryModelType } from '../../entry-models/entities/entry-model.entity';
 import { PaymentMethod } from '../enums/revenue.enums';
@@ -222,6 +243,7 @@ export class CreateRevenueDto {
 ```
 
 #### UpdateRevenueDto
+
 ```typescript
 // src/modules/finance/revenues/dto/update-revenue.dto.ts
 import { PartialType, OmitType } from '@nestjs/mapped-types';
@@ -229,7 +251,7 @@ import { CreateRevenueDto } from './create-revenue.dto';
 import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateRevenueDto extends PartialType(
-  OmitType(CreateRevenueDto, ['fairId', 'type', 'installments'] as const)
+  OmitType(CreateRevenueDto, ['fairId', 'type', 'installments'] as const),
 ) {}
 
 export class CancelRevenueDto {
@@ -239,12 +261,19 @@ export class CancelRevenueDto {
 ```
 
 #### PaginatedRevenuesDto
+
 ```typescript
 // src/modules/finance/revenues/dto/paginated-revenues.dto.ts
 import { Transform } from 'class-transformer';
-import { 
-  IsUUID, IsNumber, IsOptional, IsString, IsEnum, 
-  IsDateString, Min, Max 
+import {
+  IsUUID,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsDateString,
+  Min,
+  Max,
 } from 'class-validator';
 
 export class PaginatedRevenuesDto {
@@ -291,6 +320,7 @@ export class PaginatedRevenuesDto {
 ```
 
 #### RevenueKpisDto
+
 ```typescript
 // src/modules/finance/revenues/dto/revenue-kpis.dto.ts
 import { IsUUID, IsOptional, IsDateString } from 'class-validator';
@@ -303,7 +333,7 @@ export class RevenueKpisDto {
   @IsDateString()
   from?: string; // default: início do mês corrente
 
-  @IsOptional() 
+  @IsOptional()
   @IsDateString()
   to?: string; // default: fim do mês corrente
 }
@@ -314,12 +344,18 @@ export class RevenueKpisDto {
 ### 📊 Analytics
 
 #### AnalyticsBaseDto
+
 ```typescript
 // src/modules/finance/revenues/dto/analytics.dto.ts
 import { Transform } from 'class-transformer';
-import { 
-  IsUUID, IsOptional, IsDateString, IsEnum, 
-  IsNumber, Min, Max 
+import {
+  IsUUID,
+  IsOptional,
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  Min,
+  Max,
 } from 'class-validator';
 import { EntryModelType } from '../../entry-models/entities/entry-model.entity';
 
@@ -367,6 +403,7 @@ export class PorModeloDto extends AnalyticsBaseDto {
 ### 💳 Parcelas (Installments)
 
 #### UpdateInstallmentDto
+
 ```typescript
 // src/modules/finance/revenues/dto/update-installment.dto.ts
 import { IsDateString, IsNumber, Min } from 'class-validator';
@@ -382,6 +419,7 @@ export class UpdateInstallmentDto {
 ```
 
 #### PayInstallmentDto
+
 ```typescript
 // src/modules/finance/revenues/dto/pay-installment.dto.ts
 import { IsDateString, IsOptional, IsString } from 'class-validator';
@@ -397,9 +435,17 @@ export class PayInstallmentDto {
 ```
 
 #### GenerateInstallmentsDto
+
 ```typescript
 // src/modules/finance/revenues/dto/generate-installments.dto.ts
-import { IsNumber, IsString, IsOptional, IsArray, Min, Max } from 'class-validator';
+import {
+  IsNumber,
+  IsString,
+  IsOptional,
+  IsArray,
+  Min,
+  Max,
+} from 'class-validator';
 
 export class GenerateInstallmentsDto {
   @IsNumber()
@@ -426,6 +472,7 @@ export class GenerateInstallmentsDto {
 ### 📎 Anexos (Attachments)
 
 #### CreateAttachmentDto
+
 ```typescript
 // src/modules/finance/revenues/dto/create-attachment.dto.ts
 import { IsString, IsNumber, IsIn } from 'class-validator';
@@ -458,6 +505,7 @@ export class CreateAttachmentDto {
 ### 📤 Response DTOs
 
 #### PaginatedResponseDto
+
 ```typescript
 // src/modules/finance/common/dto/paginated-response.dto.ts
 export class PaginatedResponseDto<T> {
@@ -470,6 +518,7 @@ export class PaginatedResponseDto<T> {
 ```
 
 #### RevenueKpisResponseDto
+
 ```typescript
 // src/modules/finance/revenues/dto/revenue-kpis-response.dto.ts
 export class RevenueKpisResponseDto {
@@ -481,6 +530,7 @@ export class RevenueKpisResponseDto {
 ```
 
 #### AnalyticsPerPeriodResponseDto
+
 ```typescript
 // src/modules/finance/revenues/dto/analytics-response.dto.ts
 export class AnalyticsPerPeriodResponseDto {
@@ -514,11 +564,14 @@ export class PorModeloResponseDto {
 ### 🛡️ Decoradores Customizados
 
 #### IsCentsValue (Validador personalizado)
+
 ```typescript
 // src/modules/finance/common/decorators/is-cents-value.decorator.ts
-import { 
-  registerDecorator, ValidationOptions, ValidatorConstraint, 
-  ValidatorConstraintInterface 
+import {
+  registerDecorator,
+  ValidationOptions,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 
 @ValidatorConstraint({ async: false })
@@ -546,27 +599,30 @@ export function IsCentsValue(validationOptions?: ValidationOptions) {
 ```
 
 #### IsValidCNPJ (Validador personalizado)
+
 ```typescript
 // src/modules/finance/common/decorators/is-valid-cnpj.decorator.ts
-import { 
-  registerDecorator, ValidationOptions, ValidatorConstraint, 
-  ValidatorConstraintInterface 
+import {
+  registerDecorator,
+  ValidationOptions,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 
 @ValidatorConstraint({ async: false })
 export class IsValidCNPJConstraint implements ValidatorConstraintInterface {
   validate(cnpj: string) {
     if (!cnpj) return true; // opcional
-    
+
     // Remove caracteres não numéricos
     const cleanCNPJ = cnpj.replace(/\D/g, '');
-    
+
     // Deve ter 14 dígitos
     if (cleanCNPJ.length !== 14) return false;
-    
+
     // Verifica se todos os dígitos são iguais
     if (/^(\d)\1{13}$/.test(cleanCNPJ)) return false;
-    
+
     // Validação dos dígitos verificadores
     return this.validateCNPJDigits(cleanCNPJ);
   }
@@ -574,7 +630,7 @@ export class IsValidCNPJConstraint implements ValidatorConstraintInterface {
   private validateCNPJDigits(cnpj: string): boolean {
     const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
     const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-    
+
     // Primeiro dígito verificador
     let sum = 0;
     for (let i = 0; i < 12; i++) {
@@ -582,9 +638,9 @@ export class IsValidCNPJConstraint implements ValidatorConstraintInterface {
     }
     let remainder = sum % 11;
     const digit1 = remainder < 2 ? 0 : 11 - remainder;
-    
+
     if (parseInt(cnpj[12]) !== digit1) return false;
-    
+
     // Segundo dígito verificador
     sum = 0;
     for (let i = 0; i < 13; i++) {
@@ -592,7 +648,7 @@ export class IsValidCNPJConstraint implements ValidatorConstraintInterface {
     }
     remainder = sum % 11;
     const digit2 = remainder < 2 ? 0 : 11 - remainder;
-    
+
     return parseInt(cnpj[13]) === digit2;
   }
 
@@ -619,6 +675,7 @@ export function IsValidCNPJ(validationOptions?: ValidationOptions) {
 ### 📋 Exemplo de Uso dos DTOs
 
 #### No Controller
+
 ```typescript
 // src/modules/finance/revenues/revenues.controller.ts
 import { Controller, Post, Get, Body, Query, Param } from '@nestjs/common';
@@ -642,6 +699,7 @@ export class RevenuesController {
 ```
 
 #### Configuração do ValidationPipe
+
 ```typescript
 // src/main.ts
 import { ValidationPipe } from '@nestjs/common';

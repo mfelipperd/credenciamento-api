@@ -3,6 +3,7 @@
 ## 🚀 Comandos de Geração NestJS
 
 ### Gerar Estrutura Básica
+
 ```bash
 # Módulo principal
 nest g module finance
@@ -29,6 +30,7 @@ nest g decorator auth/roles --no-spec
 ```
 
 ### Gerar Classes Específicas
+
 ```bash
 # Pipes customizados
 nest g pipe common/pipes/cents-to-currency --no-spec
@@ -118,6 +120,7 @@ src/modules/finance/
 ## 🗄️ Scripts de Migração TypeORM
 
 ### 1. Gerar Migration
+
 ```bash
 # Gerar migration para finance
 npm run typeorm:generate --name=CreateFinanceModule
@@ -127,6 +130,7 @@ npm run typeorm migration:generate -- -n CreateFinanceModule
 ```
 
 ### 2. Migration SQL (Exemplo)
+
 ```sql
 -- migrations/xxxx-create-finance-module.sql
 
@@ -139,7 +143,7 @@ CREATE TABLE finance_clients (
   phone VARCHAR(20),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  
+
   INDEX idx_clients_name (name),
   INDEX idx_clients_cnpj (cnpj)
 );
@@ -155,7 +159,7 @@ CREATE TABLE finance_entry_models (
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  
+
   INDEX idx_entry_models_fair (fair_id, type, active),
   FOREIGN KEY (fair_id) REFERENCES fairs(id) ON DELETE CASCADE
 );
@@ -177,11 +181,11 @@ CREATE TABLE finance_revenues (
   created_by VARCHAR(36) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  
+
   INDEX idx_revenues_fair_status (fair_id, status, type),
   INDEX idx_revenues_client (client_id),
   INDEX idx_revenues_created (created_at),
-  
+
   FOREIGN KEY (fair_id) REFERENCES fairs(id) ON DELETE CASCADE,
   FOREIGN KEY (entry_model_id) REFERENCES finance_entry_models(id),
   FOREIGN KEY (client_id) REFERENCES finance_clients(id),
@@ -200,11 +204,11 @@ CREATE TABLE finance_revenue_installments (
   proof_url VARCHAR(500),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  
+
   INDEX idx_installments_revenue (revenue_id, status, due_date),
   INDEX idx_installments_paid (paid_at),
   INDEX idx_installments_due (due_date, status),
-  
+
   FOREIGN KEY (revenue_id) REFERENCES finance_revenues(id) ON DELETE CASCADE
 );
 
@@ -219,14 +223,15 @@ CREATE TABLE finance_attachments (
   size_bytes INT NOT NULL,
   uploaded_by VARCHAR(36) NOT NULL,
   uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  
+
   INDEX idx_attachments_entity (entity_type, entity_id),
-  
+
   FOREIGN KEY (uploaded_by) REFERENCES users(id)
 );
 ```
 
 ### 3. Executar Migration
+
 ```bash
 npm run typeorm:run
 # ou
@@ -238,6 +243,7 @@ npm run typeorm migration:run
 ## 🧪 Scripts de Teste
 
 ### 1. Executar Testes
+
 ```bash
 # Todos os testes
 npm run test
@@ -253,6 +259,7 @@ npm run test:cov
 ```
 
 ### 2. Seeder para Dados de Teste
+
 ```typescript
 // scripts/seed-finance.ts
 import { DataSource } from 'typeorm';
@@ -269,8 +276,16 @@ async function seedFinanceData() {
   // Seed clients
   const clients = [
     { name: 'ACME S/A', cnpj: '12345678000195', email: 'contato@acme.com.br' },
-    { name: 'Beta Distribuidora', cnpj: '98765432000123', email: 'vendas@beta.com.br' },
-    { name: 'Gamma Corporation', cnpj: '11111111000111', email: 'comercial@gamma.com.br' }
+    {
+      name: 'Beta Distribuidora',
+      cnpj: '98765432000123',
+      email: 'vendas@beta.com.br',
+    },
+    {
+      name: 'Gamma Corporation',
+      cnpj: '11111111000111',
+      email: 'comercial@gamma.com.br',
+    },
   ];
 
   for (const client of clients) {
@@ -283,9 +298,24 @@ async function seedFinanceData() {
     { fairId, type: 'STAND', name: 'Stand 3x3', baseValue: 1500000 },
     { fairId, type: 'STAND', name: 'Stand 4x4', baseValue: 2400000 },
     { fairId, type: 'STAND', name: 'Stand 6x6', baseValue: 3600000 },
-    { fairId, type: 'PATROCINIO', name: 'Patrocínio Bronze', baseValue: 5000000 },
-    { fairId, type: 'PATROCINIO', name: 'Patrocínio Prata', baseValue: 8000000 },
-    { fairId, type: 'PATROCINIO', name: 'Patrocínio Ouro', baseValue: 12000000 }
+    {
+      fairId,
+      type: 'PATROCINIO',
+      name: 'Patrocínio Bronze',
+      baseValue: 5000000,
+    },
+    {
+      fairId,
+      type: 'PATROCINIO',
+      name: 'Patrocínio Prata',
+      baseValue: 8000000,
+    },
+    {
+      fairId,
+      type: 'PATROCINIO',
+      name: 'Patrocínio Ouro',
+      baseValue: 12000000,
+    },
   ];
 
   for (const model of entryModels) {
@@ -300,6 +330,7 @@ seedFinanceData().catch(console.error);
 ```
 
 ### 3. Executar Seeder
+
 ```bash
 npx ts-node scripts/seed-finance.ts
 ```
@@ -309,19 +340,22 @@ npx ts-node scripts/seed-finance.ts
 ## 🛠️ Utilitários
 
 ### 1. Converter Centavos para Real
+
 ```typescript
 // src/modules/finance/common/utils/currency.utils.ts
 export class CurrencyUtils {
   static centsToCurrency(cents: number): string {
     return (cents / 100).toLocaleString('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     });
   }
 
   static currencyToCents(currency: string): number {
     // Remove símbolos e converte para número
-    const number = parseFloat(currency.replace(/[R$\s.]/g, '').replace(',', '.'));
+    const number = parseFloat(
+      currency.replace(/[R$\s.]/g, '').replace(',', '.'),
+    );
     return Math.round(number * 100);
   }
 
@@ -332,6 +366,7 @@ export class CurrencyUtils {
 ```
 
 ### 2. Utilitários de Data
+
 ```typescript
 // src/modules/finance/common/utils/date.utils.ts
 export class DateUtils {
@@ -339,11 +374,15 @@ export class DateUtils {
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth(), 1);
     const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    
+
     return { from, to };
   }
 
-  static getPeriodBuckets(from: Date, to: Date, granularity: 'day' | 'week' | 'month'): string[] {
+  static getPeriodBuckets(
+    from: Date,
+    to: Date,
+    granularity: 'day' | 'week' | 'month',
+  ): string[] {
     const buckets: string[] = [];
     const current = new Date(from);
 
@@ -365,13 +404,14 @@ export class DateUtils {
 
   static toBelemTimezone(date: Date): Date {
     // UTC-3 (America/Belem)
-    const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-    return new Date(utc + (-3 * 3600000));
+    const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+    return new Date(utc + -3 * 3600000);
   }
 }
 ```
 
 ### 3. Pipe para Moeda
+
 ```typescript
 // src/modules/finance/common/pipes/cents-to-currency.pipe.ts
 import { PipeTransform, Injectable } from '@nestjs/common';
@@ -391,6 +431,7 @@ export class CentsToCurrencyPipe implements PipeTransform {
 ## 📊 Scripts de Analytics
 
 ### 1. Gerar Relatório de Receitas
+
 ```typescript
 // scripts/generate-revenue-report.ts
 import { DataSource } from 'typeorm';
@@ -418,25 +459,25 @@ async function generateRevenueReport(fairId: string, month: string) {
   const report = {
     periodo: month,
     totalContratos: revenues.length,
-    totalStands: revenues.filter(r => r.type === 'STAND').length,
-    totalPatrocinios: revenues.filter(r => r.type === 'PATROCINIO').length,
+    totalStands: revenues.filter((r) => r.type === 'STAND').length,
+    totalPatrocinios: revenues.filter((r) => r.type === 'PATROCINIO').length,
     valorTotal: revenues.reduce((sum, r) => sum + r.contractValue, 0),
     valorPago: revenues.reduce((sum, r) => sum + r.paidCents, 0),
-    contratos: revenues.map(r => ({
+    contratos: revenues.map((r) => ({
       id: r.id,
       cliente: r.client.name,
       tipo: r.type,
       modelo: r.entryModel.name,
       valor: r.contractValue,
       pago: r.paidCents,
-      status: r.status
-    }))
+      status: r.status,
+    })),
   };
 
   // Salvar relatório
   fs.writeFileSync(
     `reports/receitas-${fairId}-${month}.json`,
-    JSON.stringify(report, null, 2)
+    JSON.stringify(report, null, 2),
   );
 
   console.log(`Relatório gerado: receitas-${fairId}-${month}.json`);
@@ -447,6 +488,7 @@ async function generateRevenueReport(fairId: string, month: string) {
 ```
 
 ### 2. Script de Atualização de Status
+
 ```typescript
 // scripts/update-overdue-installments.ts
 import { DataSource } from 'typeorm';
@@ -461,7 +503,7 @@ async function updateOverdueInstallments() {
   await dataSource.initialize();
 
   const today = new Date();
-  
+
   const result = await dataSource
     .getRepository(RevenueInstallment)
     .createQueryBuilder()
@@ -483,6 +525,7 @@ async function updateOverdueInstallments() {
 ## 🔧 Configuração do package.json
 
 ### Scripts Adicionais
+
 ```json
 {
   "scripts": {
@@ -501,6 +544,7 @@ async function updateOverdueInstallments() {
 ## 📚 Documentação Swagger
 
 ### Tags e Exemplos
+
 ```typescript
 // src/modules/finance/revenues/revenues.controller.ts
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
@@ -508,11 +552,18 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 @ApiTags('Finance - Receitas')
 @Controller('finance/receitas')
 export class RevenuesController {
-  
   @ApiOperation({ summary: 'Listar receitas paginadas' })
   @ApiQuery({ name: 'fairId', description: 'ID da feira' })
-  @ApiQuery({ name: 'page', required: false, description: 'Página (padrão: 1)' })
-  @ApiQuery({ name: 'pageSize', required: false, description: 'Itens por página (padrão: 20)' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Página (padrão: 1)',
+  })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    description: 'Itens por página (padrão: 20)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista paginada de receitas',
@@ -525,14 +576,14 @@ export class RevenuesController {
             status: 'PENDENTE',
             contractValue: 1500000,
             paidCents: 0,
-            client: { name: 'ACME S/A' }
-          }
+            client: { name: 'ACME S/A' },
+          },
         ],
         page: 1,
         pageSize: 20,
-        total: 1
-      }
-    }
+        total: 1,
+      },
+    },
   })
   @Get()
   async findPaginated(@Query() dto: PaginatedRevenuesDto) {

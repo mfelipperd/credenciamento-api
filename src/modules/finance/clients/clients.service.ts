@@ -36,9 +36,9 @@ export class ClientsService {
 
   async update(id: string, updateClientDto: UpdateClientDto): Promise<Client> {
     const client = await this.findOne(id);
-    
+
     Object.assign(client, updateClientDto);
-    
+
     return await this.clientRepository.save(client);
   }
 

@@ -13,8 +13,8 @@ class FinanceAPI {
 
   // Helper para requisições
   private async request<T>(
-    endpoint: string, 
-    options: RequestInit = {}
+    endpoint: string,
+    options: RequestInit = {},
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const response = await fetch(url, {
@@ -92,7 +92,10 @@ class FinanceAPI {
     });
   }
 
-  async updateEntryModel(id: string, data: UpdateEntryModelDto): Promise<EntryModel> {
+  async updateEntryModel(
+    id: string,
+    data: UpdateEntryModelDto,
+  ): Promise<EntryModel> {
     return this.request<EntryModel>(`/entry-models/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -176,7 +179,7 @@ export const useClients = () => {
   const createClient = async (clientData: CreateClientDto) => {
     try {
       const newClient = await financeAPI.createClient(clientData);
-      setClients(prev => [newClient, ...prev]);
+      setClients((prev) => [newClient, ...prev]);
       return newClient;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar cliente');
@@ -187,14 +190,14 @@ export const useClients = () => {
   const updateClient = async (id: string, clientData: UpdateClientDto) => {
     try {
       const updatedClient = await financeAPI.updateClient(id, clientData);
-      setClients(prev => 
-        prev.map(client => 
-          client.id === id ? updatedClient : client
-        )
+      setClients((prev) =>
+        prev.map((client) => (client.id === id ? updatedClient : client)),
       );
       return updatedClient;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar cliente');
+      setError(
+        err instanceof Error ? err.message : 'Erro ao atualizar cliente',
+      );
       throw err;
     }
   };
@@ -202,7 +205,7 @@ export const useClients = () => {
   const deleteClient = async (id: string) => {
     try {
       await financeAPI.deleteClient(id);
-      setClients(prev => prev.filter(client => client.id !== id));
+      setClients((prev) => prev.filter((client) => client.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao deletar cliente');
       throw err;
@@ -279,7 +282,7 @@ export const useRevenues = (autoFetch = true) => {
   const createRevenue = async (revenueData: CreateRevenueDto) => {
     try {
       const newRevenue = await financeAPI.createRevenue(revenueData);
-      setRevenues(prev => [newRevenue, ...prev]);
+      setRevenues((prev) => [newRevenue, ...prev]);
       return newRevenue;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar receita');
@@ -290,14 +293,14 @@ export const useRevenues = (autoFetch = true) => {
   const updateRevenue = async (id: string, revenueData: UpdateRevenueDto) => {
     try {
       const updatedRevenue = await financeAPI.updateRevenue(id, revenueData);
-      setRevenues(prev => 
-        prev.map(revenue => 
-          revenue.id === id ? updatedRevenue : revenue
-        )
+      setRevenues((prev) =>
+        prev.map((revenue) => (revenue.id === id ? updatedRevenue : revenue)),
       );
       return updatedRevenue;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar receita');
+      setError(
+        err instanceof Error ? err.message : 'Erro ao atualizar receita',
+      );
       throw err;
     }
   };
@@ -305,7 +308,7 @@ export const useRevenues = (autoFetch = true) => {
   const deleteRevenue = async (id: string) => {
     try {
       await financeAPI.deleteRevenue(id);
-      setRevenues(prev => prev.filter(revenue => revenue.id !== id));
+      setRevenues((prev) => prev.filter((revenue) => revenue.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao deletar receita');
       throw err;
@@ -348,7 +351,7 @@ interface ClientsListProps {
 
 export const ClientsList: React.FC<ClientsListProps> = ({
   onClientSelect,
-  searchable = true
+  searchable = true,
 }) => {
   const { clients, loading, error, fetchClients } = useClients();
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -358,7 +361,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({
       setSearchTerm(term);
       fetchClients(term || undefined);
     },
-    [fetchClients]
+    [fetchClients],
   );
 
   if (loading) return <div>Carregando clientes...</div>;
@@ -375,7 +378,7 @@ export const ClientsList: React.FC<ClientsListProps> = ({
           className="search-input"
         />
       )}
-      
+
       <div className="clients-grid">
         {clients.map((client) => (
           <div
@@ -405,8 +408,14 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 
 const clientSchema = yup.object({
-  name: yup.string().required('Nome é obrigatório').max(255, 'Nome muito longo'),
-  cnpj: yup.string().optional().matches(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/, 'CNPJ inválido'),
+  name: yup
+    .string()
+    .required('Nome é obrigatório')
+    .max(255, 'Nome muito longo'),
+  cnpj: yup
+    .string()
+    .optional()
+    .matches(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/, 'CNPJ inválido'),
   email: yup.string().optional().email('Email inválido'),
   phone: yup.string().optional(),
 });
@@ -420,12 +429,12 @@ interface ClientFormProps {
 export const ClientForm: React.FC<ClientFormProps> = ({
   client,
   onSave,
-  onCancel
+  onCancel,
 }) => {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting },
   } = useForm<CreateClientDto>({
     resolver: yupResolver(clientSchema),
     defaultValues: client || {
@@ -433,7 +442,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
       cnpj: '',
       email: '',
       phone: '',
-    }
+    },
   });
 
   const onSubmit = async (data: CreateClientDto) => {
@@ -453,7 +462,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({
           {...register('name')}
           className={errors.name ? 'error' : ''}
         />
-        {errors.name && <span className="error-message">{errors.name.message}</span>}
+        {errors.name && (
+          <span className="error-message">{errors.name.message}</span>
+        )}
       </div>
 
       <div className="form-group">
@@ -464,7 +475,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({
           placeholder="00.000.000/0000-00"
           className={errors.cnpj ? 'error' : ''}
         />
-        {errors.cnpj && <span className="error-message">{errors.cnpj.message}</span>}
+        {errors.cnpj && (
+          <span className="error-message">{errors.cnpj.message}</span>
+        )}
       </div>
 
       <div className="form-group">
@@ -475,7 +488,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({
           {...register('email')}
           className={errors.email ? 'error' : ''}
         />
-        {errors.email && <span className="error-message">{errors.email.message}</span>}
+        {errors.email && (
+          <span className="error-message">{errors.email.message}</span>
+        )}
       </div>
 
       <div className="form-group">
@@ -486,7 +501,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({
           placeholder="(11) 99999-9999"
           className={errors.phone ? 'error' : ''}
         />
-        {errors.phone && <span className="error-message">{errors.phone.message}</span>}
+        {errors.phone && (
+          <span className="error-message">{errors.phone.message}</span>
+        )}
       </div>
 
       <div className="form-actions">
@@ -516,14 +533,20 @@ export const RevenueDashboard: React.FC = () => {
   const metrics = React.useMemo(() => {
     if (!revenues.length) return null;
 
-    const totalValue = revenues.reduce((sum, revenue) => sum + revenue.contractValue, 0);
-    const byStatus = revenues.reduce((acc, revenue) => {
-      acc[revenue.status] = (acc[revenue.status] || 0) + 1;
-      return acc;
-    }, {} as Record<RevenueStatus, number>);
+    const totalValue = revenues.reduce(
+      (sum, revenue) => sum + revenue.contractValue,
+      0,
+    );
+    const byStatus = revenues.reduce(
+      (acc, revenue) => {
+        acc[revenue.status] = (acc[revenue.status] || 0) + 1;
+        return acc;
+      },
+      {} as Record<RevenueStatus, number>,
+    );
 
     const paidValue = revenues
-      .filter(r => r.status === 'PAGO')
+      .filter((r) => r.status === 'PAGO')
       .reduce((sum, revenue) => sum + revenue.contractValue, 0);
 
     return {
@@ -545,15 +568,19 @@ export const RevenueDashboard: React.FC = () => {
           <h3>Valor Total</h3>
           <p className="metric-value">{formatCurrency(metrics.total)}</p>
         </div>
-        
+
         <div className="metric-card">
           <h3>Valor Pago</h3>
-          <p className="metric-value success">{formatCurrency(metrics.paidValue)}</p>
+          <p className="metric-value success">
+            {formatCurrency(metrics.paidValue)}
+          </p>
         </div>
-        
+
         <div className="metric-card">
           <h3>Valor Pendente</h3>
-          <p className="metric-value warning">{formatCurrency(metrics.pendingValue)}</p>
+          <p className="metric-value warning">
+            {formatCurrency(metrics.pendingValue)}
+          </p>
         </div>
       </div>
 
@@ -561,11 +588,15 @@ export const RevenueDashboard: React.FC = () => {
         <h3>Receitas por Status</h3>
         {Object.entries(metrics.byStatus).map(([status, count]) => (
           <div key={status} className="status-item">
-            <span 
-              className="status-indicator" 
-              style={{ backgroundColor: getStatusColor(status as RevenueStatus) }}
+            <span
+              className="status-indicator"
+              style={{
+                backgroundColor: getStatusColor(status as RevenueStatus),
+              }}
             />
-            <span>{status}: {count}</span>
+            <span>
+              {status}: {count}
+            </span>
           </div>
         ))}
       </div>
@@ -582,7 +613,7 @@ export const RevenueDashboard: React.FC = () => {
             <div className="revenue-value">
               {formatCurrency(revenue.contractValue)}
             </div>
-            <div 
+            <div
               className="revenue-status"
               style={{ color: getStatusColor(revenue.status) }}
             >
@@ -606,13 +637,16 @@ export const RevenueDashboard: React.FC = () => {
 export const formatCurrency = (cents: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
   }).format(cents / 100);
 };
 
 export const formatCNPJ = (cnpj: string): string => {
   const digits = cnpj.replace(/\D/g, '');
-  return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  return digits.replace(
+    /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+    '$1.$2.$3/$4-$5',
+  );
 };
 
 export const formatPhone = (phone: string): string => {
@@ -632,7 +666,7 @@ export const getStatusColor = (status: RevenueStatus): string => {
     EM_ANDAMENTO: '#3b82f6',
     EM_ATRASO: '#ef4444',
     PAGO: '#10b981',
-    CANCELADO: '#6b7280'
+    CANCELADO: '#6b7280',
   };
   return colors[status] || '#6b7280';
 };
@@ -643,7 +677,7 @@ export const getStatusLabel = (status: RevenueStatus): string => {
     EM_ANDAMENTO: 'Em Andamento',
     EM_ATRASO: 'Em Atraso',
     PAGO: 'Pago',
-    CANCELADO: 'Cancelado'
+    CANCELADO: 'Cancelado',
   };
   return labels[status] || status;
 };
@@ -656,30 +690,27 @@ export const getStatusLabel = (status: RevenueStatus): string => {
 
 export const validateCNPJ = (cnpj: string): boolean => {
   const digits = cnpj.replace(/\D/g, '');
-  
+
   if (digits.length !== 14) return false;
-  
+
   // Validação básica de CNPJ
   const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
   const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  
+
   const calculateDigit = (digits: string, weights: number[]): number => {
     const sum = digits
       .split('')
       .slice(0, weights.length)
       .reduce((acc, digit, index) => acc + parseInt(digit) * weights[index], 0);
-    
+
     const remainder = sum % 11;
     return remainder < 2 ? 0 : 11 - remainder;
   };
-  
+
   const digit1 = calculateDigit(digits, weights1);
   const digit2 = calculateDigit(digits, weights2);
-  
-  return (
-    parseInt(digits[12]) === digit1 &&
-    parseInt(digits[13]) === digit2
-  );
+
+  return parseInt(digits[12]) === digit1 && parseInt(digits[13]) === digit2;
 };
 
 export const validateEmail = (email: string): boolean => {
@@ -714,7 +745,10 @@ type FinanceAction =
   | { type: 'DELETE_REVENUE'; payload: string }
   | { type: 'SET_SELECTED_REVENUE'; payload: Revenue | null };
 
-const financeReducer = (state: FinanceState, action: FinanceAction): FinanceState => {
+const financeReducer = (
+  state: FinanceState,
+  action: FinanceAction,
+): FinanceState => {
   switch (action.type) {
     case 'SET_CLIENTS':
       return { ...state, clients: action.payload };
@@ -723,14 +757,14 @@ const financeReducer = (state: FinanceState, action: FinanceAction): FinanceStat
     case 'UPDATE_CLIENT':
       return {
         ...state,
-        clients: state.clients.map(client =>
-          client.id === action.payload.id ? action.payload : client
-        )
+        clients: state.clients.map((client) =>
+          client.id === action.payload.id ? action.payload : client,
+        ),
       };
     case 'DELETE_CLIENT':
       return {
         ...state,
-        clients: state.clients.filter(client => client.id !== action.payload)
+        clients: state.clients.filter((client) => client.id !== action.payload),
       };
     case 'SET_SELECTED_CLIENT':
       return { ...state, selectedClient: action.payload };
@@ -745,7 +779,9 @@ const FinanceContext = createContext<{
   dispatch: React.Dispatch<FinanceAction>;
 } | null>(null);
 
-export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [state, dispatch] = useReducer(financeReducer, {
     clients: [],
     entryModels: [],
@@ -803,7 +839,7 @@ export const useFinanceContext = () => {
 }
 
 .client-card:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .form-group {
@@ -860,9 +896,15 @@ export const useFinanceContext = () => {
   margin: 0.5rem 0;
 }
 
-.metric-value.success { color: #10b981; }
-.metric-value.warning { color: #fbbf24; }
-.metric-value.error { color: #ef4444; }
+.metric-value.success {
+  color: #10b981;
+}
+.metric-value.warning {
+  color: #fbbf24;
+}
+.metric-value.error {
+  color: #ef4444;
+}
 ```
 
 ---

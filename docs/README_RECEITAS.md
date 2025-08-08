@@ -19,13 +19,13 @@ O Módulo de Receitas é um submódulo do sistema financeiro que gerencia contra
 
 ### 📖 Documentos Principais
 
-| Documento | Descrição | Status |
-|-----------|-----------|--------|
-| **[RECEITAS_MODULE.md](./RECEITAS_MODULE.md)** | Especificação completa do módulo | ✅ Completo |
-| **[IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)** | Guia passo-a-passo de implementação | ✅ Completo |
-| **[API_EXAMPLES.md](./API_EXAMPLES.md)** | Exemplos de requests/responses das APIs | ✅ Completo |
-| **[DTOS.md](./DTOS.md)** | Todos os DTOs com validações | ✅ Completo |
-| **[SCRIPTS_AND_COMMANDS.md](./SCRIPTS_AND_COMMANDS.md)** | Scripts, migrations e comandos úteis | ✅ Completo |
+| Documento                                                | Descrição                               | Status      |
+| -------------------------------------------------------- | --------------------------------------- | ----------- |
+| **[RECEITAS_MODULE.md](./RECEITAS_MODULE.md)**           | Especificação completa do módulo        | ✅ Completo |
+| **[IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)** | Guia passo-a-passo de implementação     | ✅ Completo |
+| **[API_EXAMPLES.md](./API_EXAMPLES.md)**                 | Exemplos de requests/responses das APIs | ✅ Completo |
+| **[DTOS.md](./DTOS.md)**                                 | Todos os DTOs com validações            | ✅ Completo |
+| **[SCRIPTS_AND_COMMANDS.md](./SCRIPTS_AND_COMMANDS.md)** | Scripts, migrations e comandos úteis    | ✅ Completo |
 
 ### 🔍 Links Rápidos
 
@@ -39,11 +39,13 @@ O Módulo de Receitas é um submódulo do sistema financeiro que gerencia contra
 ## 🚀 Quick Start
 
 ### 1. Criar Branch
+
 ```bash
 git checkout -b feature/receitas-module
 ```
 
 ### 2. Gerar Estrutura NestJS
+
 ```bash
 # Módulos
 nest g module finance
@@ -58,34 +60,40 @@ nest g service finance/clients --no-spec
 ```
 
 ### 3. Implementar na Ordem
+
 1. **Clientes** (independente)
 2. **Modelos de Entrada** (depende de feira)
 3. **Receitas** (depende de clientes e modelos)
 4. **Analytics** (depende de receitas)
 
 ### 4. Testar APIs
+
 Usar exemplos do arquivo [API_EXAMPLES.md](./API_EXAMPLES.md)
 
 ## 🎨 Características Técnicas
 
 ### 💰 Sistema Financeiro
+
 - **Valores**: Armazenados em centavos (Int) para precisão
 - **Moeda**: Real brasileiro (R$) com 2 casas decimais
 - **Timezone**: America/Belem
 - **Validações**: CNPJ, valores, datas e parcelas
 
 ### 📊 Status Inteligente
+
 - **Derivação Automática**: Status calculado baseado nas parcelas
 - **Atualização Temporal**: Parcelas vencidas identificadas automaticamente
 - **Ordenação Fixa**: Pendente → Em andamento → Em atraso → Pago
 
 ### 🔍 Busca e Filtros
+
 - **Paginação**: page (1-based) + pageSize (máx 100)
 - **Busca**: Por nome da empresa com LIKE
 - **Filtros**: Tipo, status, período e campo de data
 - **Ordenação**: Por status, vencimento e empresa
 
 ### 📈 Analytics para ApexCharts
+
 - **Gráficos de Linha**: Contratos e recebimentos por período
 - **Gráficos de Pizza**: Distribuição por tipo e modelo
 - **Ranking**: Top empresas por valor contratado/pago
@@ -94,11 +102,13 @@ Usar exemplos do arquivo [API_EXAMPLES.md](./API_EXAMPLES.md)
 ## 🛡️ Segurança
 
 ### 🔐 Autenticação
+
 - **Guard**: JwtAuthGuard + RoleGuard
 - **Permissão**: Apenas ADMIN acessa este módulo
 - **Auditoria**: Log de operações críticas (opcional)
 
 ### ✅ Validações
+
 - **DTOs**: Validação automática com class-validator
 - **Business Rules**: Validações de negócio no service
 - **Upload**: Apenas PDF/JPG até 10MB
@@ -106,8 +116,9 @@ Usar exemplos do arquivo [API_EXAMPLES.md](./API_EXAMPLES.md)
 ## 🧪 Testes
 
 ### 📋 Casos Essenciais
+
 - [x] Criar receita com parcelas → status PENDENTE
-- [x] Baixar parcela → status EM_ANDAMENTO  
+- [x] Baixar parcela → status EM_ANDAMENTO
 - [x] Vencer parcela → status EM_ATRASO
 - [x] Baixar todas → status PAGO
 - [x] Ordenação por status funcionando
@@ -115,6 +126,7 @@ Usar exemplos do arquivo [API_EXAMPLES.md](./API_EXAMPLES.md)
 - [x] Analytics com granularidade correta
 
 ### 🔧 Scripts de Teste
+
 ```bash
 npm run test -- --testPathPattern=finance
 npm run test:e2e
@@ -124,17 +136,19 @@ npm run test:cov
 ## 📱 Frontend Integration
 
 ### 🎨 ApexCharts Ready
+
 Todas as APIs de analytics retornam dados no formato adequado para ApexCharts:
 
 ```javascript
 // Exemplo: Contratos por período
 const chartData = {
-  series: [{ name: "Valor", data: [128000, 192000, 96000] }],
-  categories: ["Jun 2025", "Jul 2025", "Ago 2025"]
-}
+  series: [{ name: 'Valor', data: [128000, 192000, 96000] }],
+  categories: ['Jun 2025', 'Jul 2025', 'Ago 2025'],
+};
 ```
 
 ### 📊 Components Sugeridos
+
 - **Revenue List**: Tabela paginada com filtros
 - **Revenue Form**: Formulário de criação/edição
 - **Revenue Detail**: Modal com parcelas e anexos
@@ -144,26 +158,31 @@ const chartData = {
 ## 🔄 Fluxo de Desenvolvimento
 
 ### 1. 📖 Estudar Documentação
+
 - Ler [RECEITAS_MODULE.md](./RECEITAS_MODULE.md) completo
 - Revisar [API_EXAMPLES.md](./API_EXAMPLES.md)
 - Entender [DTOS.md](./DTOS.md)
 
 ### 2. 🏗️ Implementar Backend
+
 - Seguir [IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)
 - Usar [SCRIPTS_AND_COMMANDS.md](./SCRIPTS_AND_COMMANDS.md)
 - Implementar na ordem: Clientes → Entry Models → Revenues
 
 ### 3. 🧪 Testar APIs
+
 - Criar dados de teste com seeders
 - Testar todos os endpoints
 - Validar analytics e KPIs
 
 ### 4. 📱 Integrar Frontend
+
 - Usar dados das APIs de exemplo
 - Implementar componentes visuais
 - Integrar com ApexCharts
 
 ### 5. 🚀 Deploy
+
 - Executar migrations
 - Configurar variáveis de ambiente
 - Monitorar performance
@@ -171,6 +190,7 @@ const chartData = {
 ## 🎯 Metas do MVP
 
 ### ✅ Backend Core
+
 - [x] **Entidades**: Client, EntryModel, Revenue, Installment, Attachment
 - [x] **APIs**: CRUD completo + paginação + filtros
 - [x] **Analytics**: 5 endpoints para gráficos
@@ -178,6 +198,7 @@ const chartData = {
 - [x] **Segurança**: Guards + permissions
 
 ### ✅ Features Principais
+
 - [x] **Clientes globais** com autocomplete
 - [x] **Modelos por feira** configuráveis
 - [x] **Contratos** com parcelamento flexível
@@ -187,6 +208,7 @@ const chartData = {
 - [x] **Analytics** para ApexCharts
 
 ### 🎨 Frontend (Próxima Sprint)
+
 - [ ] **Listagem** de receitas com filtros
 - [ ] **Formulários** de criação/edição
 - [ ] **Dashboard** com KPIs e gráficos
@@ -198,19 +220,22 @@ const chartData = {
 ### 💬 Perguntas Frequentes
 
 **Q: Como converter centavos para reais?**
+
 ```typescript
 const reais = centavos / 100;
 const formatado = (centavos / 100).toLocaleString('pt-BR', {
-  style: 'currency', currency: 'BRL'
+  style: 'currency',
+  currency: 'BRL',
 });
 ```
 
 **Q: Como ordenar por status?**
+
 ```sql
 ORDER BY
   CASE status
     WHEN 'PENDENTE' THEN 1
-    WHEN 'EM_ANDAMENTO' THEN 2  
+    WHEN 'EM_ANDAMENTO' THEN 2
     WHEN 'EM_ATRASO' THEN 3
     WHEN 'PAGO' THEN 4
     WHEN 'CANCELADO' THEN 5
@@ -218,18 +243,21 @@ ORDER BY
 ```
 
 **Q: Como calcular status derivado?**
+
 ```typescript
 if (todasPagas) return 'PAGO';
-if (algumaVencida) return 'EM_ATRASO';  
+if (algumaVencida) return 'EM_ATRASO';
 if (algumaPaga && algumaAberta) return 'EM_ANDAMENTO';
 return 'PENDENTE';
 ```
 
 ### 🐛 Issues Conhecidos
+
 - Nenhum issue conhecido no momento
 - Reportar problemas na issue do GitHub
 
 ### 📚 Referências
+
 - [NestJS Docs](https://docs.nestjs.com/)
 - [TypeORM Docs](https://typeorm.io/)
 - [Class Validator](https://github.com/typestack/class-validator)
@@ -243,7 +271,7 @@ Esta documentação fornece tudo o necessário para implementar o módulo de rec
 
 - **🚀 Performante**: Índices otimizados e paginação eficiente
 - **🔒 Seguro**: Validações robustas e controle de acesso
-- **📊 Analítico**: KPIs e gráficos prontos para ApexCharts  
+- **📊 Analítico**: KPIs e gráficos prontos para ApexCharts
 - **🛠️ Flexível**: Parcelamento customizável e anexos
 - **📱 Frontend-Ready**: APIs padronizadas e bem documentadas
 
@@ -251,6 +279,6 @@ Esta documentação fornece tudo o necessário para implementar o módulo de rec
 
 ---
 
-*Documentação gerada em: 8 de agosto de 2025*  
-*Versão: 1.0.0*  
-*Módulo: Finance → Receitas*
+_Documentação gerada em: 8 de agosto de 2025_  
+_Versão: 1.0.0_  
+_Módulo: Finance → Receitas_

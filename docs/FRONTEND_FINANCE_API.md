@@ -16,6 +16,7 @@ O módulo Finance é responsável pelo gerenciamento financeiro de receitas, cli
 ## 🌐 APIs Disponíveis
 
 ### Base URL
+
 ```
 http://localhost:3000/finance
 ```
@@ -28,17 +29,18 @@ http://localhost:3000/finance
 
 ```typescript
 interface Client {
-  id: string;                    // UUID do cliente
-  name: string;                  // Nome do cliente (obrigatório)
-  cnpj?: string;                // CNPJ (opcional)
-  email?: string;               // Email (opcional)
-  phone?: string;               // Telefone (opcional)
-  createdAt: Date;              // Data de criação
-  updatedAt: Date;              // Data de atualização
+  id: string; // UUID do cliente
+  name: string; // Nome do cliente (obrigatório)
+  cnpj?: string; // CNPJ (opcional)
+  email?: string; // Email (opcional)
+  phone?: string; // Telefone (opcional)
+  createdAt: Date; // Data de criação
+  updatedAt: Date; // Data de atualização
 }
 ```
 
 ### 🔹 Criar Cliente
+
 ```http
 POST /finance/clients
 Content-Type: application/json
@@ -52,6 +54,7 @@ Content-Type: application/json
 ```
 
 **Resposta (201):**
+
 ```json
 {
   "id": "uuid-v4",
@@ -65,16 +68,19 @@ Content-Type: application/json
 ```
 
 ### 🔹 Listar Clientes
+
 ```http
 GET /finance/clients
 ```
 
 **Com busca por nome:**
+
 ```http
 GET /finance/clients?search=empresa
 ```
 
 **Resposta (200):**
+
 ```json
 [
   {
@@ -90,11 +96,13 @@ GET /finance/clients?search=empresa
 ```
 
 ### 🔹 Buscar Cliente por ID
+
 ```http
 GET /finance/clients/{id}
 ```
 
 ### 🔹 Atualizar Cliente
+
 ```http
 PATCH /finance/clients/{id}
 Content-Type: application/json
@@ -106,6 +114,7 @@ Content-Type: application/json
 ```
 
 ### 🔹 Remover Cliente
+
 ```http
 DELETE /finance/clients/{id}
 ```
@@ -113,11 +122,13 @@ DELETE /finance/clients/{id}
 **Resposta (204): Sem conteúdo**
 
 ### 🔹 Buscar por Email
+
 ```http
 GET /finance/clients/email/{email}
 ```
 
 ### 🔹 Buscar por CNPJ
+
 ```http
 GET /finance/clients/cnpj/{cnpj}
 ```
@@ -130,21 +141,22 @@ GET /finance/clients/cnpj/{cnpj}
 
 ```typescript
 interface EntryModel {
-  id: string;                    // UUID do modelo
-  name: string;                  // Nome do modelo (obrigatório)
-  type: EntryModelType;          // Tipo: 'STAND' | 'PATROCINIO'
-  description?: string;          // Descrição (opcional)
-  createdAt: Date;              // Data de criação
-  updatedAt: Date;              // Data de atualização
+  id: string; // UUID do modelo
+  name: string; // Nome do modelo (obrigatório)
+  type: EntryModelType; // Tipo: 'STAND' | 'PATROCINIO'
+  description?: string; // Descrição (opcional)
+  createdAt: Date; // Data de criação
+  updatedAt: Date; // Data de atualização
 }
 
 enum EntryModelType {
   STAND = 'STAND',
-  PATROCINIO = 'PATROCINIO'
+  PATROCINIO = 'PATROCINIO',
 }
 ```
 
 ### 🔹 Criar Modelo
+
 ```http
 POST /finance/entry-models
 Content-Type: application/json
@@ -157,6 +169,7 @@ Content-Type: application/json
 ```
 
 **Resposta (201):**
+
 ```json
 {
   "id": "uuid-v4",
@@ -169,21 +182,25 @@ Content-Type: application/json
 ```
 
 ### 🔹 Listar Modelos
+
 ```http
 GET /finance/entry-models
 ```
 
 **Com filtro por tipo:**
+
 ```http
 GET /finance/entry-models?type=STAND
 ```
 
 ### 🔹 Buscar Modelo por ID
+
 ```http
 GET /finance/entry-models/{id}
 ```
 
 ### 🔹 Atualizar Modelo
+
 ```http
 PATCH /finance/entry-models/{id}
 Content-Type: application/json
@@ -195,6 +212,7 @@ Content-Type: application/json
 ```
 
 ### 🔹 Remover Modelo
+
 ```http
 DELETE /finance/entry-models/{id}
 ```
@@ -207,21 +225,21 @@ DELETE /finance/entry-models/{id}
 
 ```typescript
 interface Revenue {
-  id: string;                    // UUID da receita
-  fairId: string;               // ID da feira
-  type: EntryModelType;         // Tipo: 'STAND' | 'PATROCINIO'
-  entryModelId: string;         // ID do modelo de lançamento
-  clientId: string;             // ID do cliente
-  baseValue: number;            // Valor base em centavos
-  discountCents: number;        // Desconto em centavos
-  contractValue: number;        // Valor do contrato em centavos
+  id: string; // UUID da receita
+  fairId: string; // ID da feira
+  type: EntryModelType; // Tipo: 'STAND' | 'PATROCINIO'
+  entryModelId: string; // ID do modelo de lançamento
+  clientId: string; // ID do cliente
+  baseValue: number; // Valor base em centavos
+  discountCents: number; // Desconto em centavos
+  contractValue: number; // Valor do contrato em centavos
   paymentMethod: PaymentMethod; // Método de pagamento
-  condition?: string;           // Condições especiais
-  status: RevenueStatus;        // Status da receita
-  notes?: string;              // Observações
-  createdBy: string;           // Usuário que criou
-  createdAt: Date;             // Data de criação
-  updatedAt: Date;             // Data de atualização
+  condition?: string; // Condições especiais
+  status: RevenueStatus; // Status da receita
+  notes?: string; // Observações
+  createdBy: string; // Usuário que criou
+  createdAt: Date; // Data de criação
+  updatedAt: Date; // Data de atualização
 }
 
 enum PaymentMethod {
@@ -229,7 +247,7 @@ enum PaymentMethod {
   BOLETO = 'BOLETO',
   CARTAO = 'CARTAO',
   TED = 'TED',
-  DINHEIRO = 'DINHEIRO'
+  DINHEIRO = 'DINHEIRO',
 }
 
 enum RevenueStatus {
@@ -237,11 +255,12 @@ enum RevenueStatus {
   EM_ANDAMENTO = 'EM_ANDAMENTO',
   EM_ATRASO = 'EM_ATRASO',
   PAGO = 'PAGO',
-  CANCELADO = 'CANCELADO'
+  CANCELADO = 'CANCELADO',
 }
 ```
 
 ### 🔹 Criar Receita
+
 ```http
 POST /finance/revenues
 Content-Type: application/json
@@ -261,6 +280,7 @@ Content-Type: application/json
 ```
 
 **Resposta (201):**
+
 ```json
 {
   "id": "uuid-v4",
@@ -282,11 +302,13 @@ Content-Type: application/json
 ```
 
 ### 🔹 Listar Receitas
+
 ```http
 GET /finance/revenues
 ```
 
 **Resposta inclui relacionamentos:**
+
 ```json
 [
   {
@@ -312,11 +334,13 @@ GET /finance/revenues
 ```
 
 ### 🔹 Buscar Receita por ID
+
 ```http
 GET /finance/revenues/{id}
 ```
 
 ### 🔹 Atualizar Receita
+
 ```http
 PATCH /finance/revenues/{id}
 Content-Type: application/json
@@ -328,16 +352,19 @@ Content-Type: application/json
 ```
 
 ### 🔹 Remover Receita
+
 ```http
 DELETE /finance/revenues/{id}
 ```
 
 ### 🔹 Buscar por Cliente
+
 ```http
 GET /finance/revenues/client/{clientId}
 ```
 
 ### 🔹 Buscar por Status
+
 ```http
 GET /finance/revenues/status/{status}
 ```
@@ -347,6 +374,7 @@ GET /finance/revenues/status/{status}
 ## 🎨 Componentes Frontend Sugeridos
 
 ### 1. Lista de Clientes
+
 ```tsx
 interface ClientsListProps {
   onClientSelect?: (client: Client) => void;
@@ -360,6 +388,7 @@ interface ClientsListProps {
 ```
 
 ### 2. Formulário de Cliente
+
 ```tsx
 interface ClientFormProps {
   client?: Client;
@@ -374,6 +403,7 @@ interface ClientFormProps {
 ```
 
 ### 3. Dashboard de Receitas
+
 ```tsx
 interface RevenueDashboardProps {
   fairId?: string;
@@ -388,6 +418,7 @@ interface RevenueDashboardProps {
 ```
 
 ### 4. Seletor de Modelos
+
 ```tsx
 interface EntryModelSelectorProps {
   type?: EntryModelType;
@@ -401,15 +432,18 @@ interface EntryModelSelectorProps {
 ## 🔍 Filtros e Busca
 
 ### Clientes
+
 - **Nome**: Busca parcial case-insensitive
 - **Email**: Busca exata
 - **CNPJ**: Busca exata
 
 ### Modelos
+
 - **Tipo**: Filtro por STAND ou PATROCINIO
 - **Nome**: Ordenação alfabética
 
 ### Receitas
+
 - **Status**: Filtro por status específico
 - **Cliente**: Todas as receitas de um cliente
 - **Data**: Ordenação por data de criação
@@ -419,28 +453,31 @@ interface EntryModelSelectorProps {
 ## 💡 Dicas de UX
 
 ### 1. **Formatação de Valores**
+
 ```typescript
 // Valores são em centavos, converter para exibição
 const formatCurrency = (cents: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
   }).format(cents / 100);
 };
 ```
 
 ### 2. **Status com Cores**
+
 ```typescript
 const statusColors = {
-  PENDENTE: '#fbbf24',      // Amarelo
+  PENDENTE: '#fbbf24', // Amarelo
   EM_ANDAMENTO: '#3b82f6', // Azul
-  EM_ATRASO: '#ef4444',    // Vermelho
-  PAGO: '#10b981',         // Verde
-  CANCELADO: '#6b7280'     // Cinza
+  EM_ATRASO: '#ef4444', // Vermelho
+  PAGO: '#10b981', // Verde
+  CANCELADO: '#6b7280', // Cinza
 };
 ```
 
 ### 3. **Validação de CNPJ**
+
 ```typescript
 const validateCNPJ = (cnpj: string) => {
   // Implementar validação de CNPJ
@@ -453,6 +490,7 @@ const validateCNPJ = (cnpj: string) => {
 ## 🚨 Tratamento de Erros
 
 ### Códigos de Status HTTP
+
 - **200**: Sucesso
 - **201**: Criado com sucesso
 - **204**: Removido com sucesso
@@ -461,13 +499,11 @@ const validateCNPJ = (cnpj: string) => {
 - **500**: Erro interno do servidor
 
 ### Exemplo de Resposta de Erro
+
 ```json
 {
   "statusCode": 400,
-  "message": [
-    "name should not be empty",
-    "email must be an email"
-  ],
+  "message": ["name should not be empty", "email must be an email"],
   "error": "Bad Request"
 }
 ```
@@ -485,7 +521,7 @@ const useClients = () => {
   const fetchClients = async (search?: string) => {
     setLoading(true);
     try {
-      const url = search 
+      const url = search
         ? `/finance/clients?search=${encodeURIComponent(search)}`
         : '/finance/clients';
       const response = await api.get(url);
@@ -500,7 +536,7 @@ const useClients = () => {
   const createClient = async (clientData: CreateClientDto) => {
     try {
       const response = await api.post('/finance/clients', clientData);
-      setClients(prev => [response.data, ...prev]);
+      setClients((prev) => [response.data, ...prev]);
       return response.data;
     } catch (error) {
       throw error;
@@ -516,11 +552,13 @@ const useClients = () => {
 ## 🔗 Integrações
 
 ### Com outros módulos
+
 - **Feiras**: `fairId` nas receitas
 - **Usuários**: `createdBy` nas receitas
 - **Categorias**: Possível classificação de clientes
 
 ### Banco de dados
+
 - Todas as entidades usam **UUID** como chave primária
 - **Soft delete** recomendado para clientes e receitas
 - **Índices** em campos de busca frequente (email, cnpj, status)

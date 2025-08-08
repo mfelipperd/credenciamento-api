@@ -11,7 +11,11 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { RevenueStatus, PaymentMethod } from '../common/enums/finance.enums';
+import {
+  RevenueStatus,
+  PaymentMethod,
+  InstallmentStatus,
+} from '../common/enums/finance.enums';
 
 export class CreateRevenueDto {
   @ApiProperty({ description: 'ID da feira' })
@@ -41,12 +45,17 @@ export class CreateRevenueDto {
   @Min(0)
   contractValue: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Método de pagamento',
     enum: PaymentMethod,
   })
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
+
+  @ApiProperty({ description: 'Número de parcelas', minimum: 1, default: 1 })
+  @IsNumber()
+  @Min(1)
+  numberOfInstallments: number;
 
   @ApiPropertyOptional({ description: 'Condições', maxLength: 500 })
   @IsOptional()
@@ -165,30 +174,33 @@ export class CreateRevenueWithInstallmentsDto extends CreateRevenueDto {
   installments: CreateInstallmentDto[];
 }
 
-export class RevenueResponseDto {
+export class InstallmentResponseDto {
+  @ApiProperty({ description: 'ID da parcela' })
+  id: string;
+
   @ApiProperty({ description: 'ID da receita' })
-  id: number;
+  revenueId: string;
 
-  @ApiProperty({ description: 'ID do cliente' })
-  clientId: number;
+  @ApiProperty({ description: 'Número da parcela' })
+  n: number;
 
-  @ApiProperty({ description: 'ID do modelo de lançamento' })
-  entryModelId: number;
-
-  @ApiProperty({ description: 'Descrição da receita' })
-  description: string;
-
-  @ApiProperty({ description: 'Valor total da receita' })
-  totalValue: number;
+  @ApiProperty({ description: 'Valor da parcela em centavos' })
+  valueCents: number;
 
   @ApiProperty({ description: 'Data de vencimento' })
   dueDate: Date;
 
-  @ApiProperty({ description: 'Status da receita', enum: RevenueStatus })
-  status: RevenueStatus;
+  @ApiProperty({ description: 'Data de pagamento', required: false })
+  paidAt?: Date;
 
-  @ApiProperty({ description: 'Observações', required: false })
-  notes?: string;
+  @ApiProperty({
+    description: 'Status da parcela',
+    enum: InstallmentStatus,
+  })
+  status: InstallmentStatus;
+
+  @ApiProperty({ description: 'URL do comprovante', required: false })
+  proofUrl?: string;
 
   @ApiProperty({ description: 'Data de criação' })
   createdAt: Date;
@@ -197,44 +209,88 @@ export class RevenueResponseDto {
   updatedAt: Date;
 }
 
-export class InstallmentResponseDto {
-  @ApiProperty({ description: 'ID da parcela' })
-  id: number;
-
+export class RevenueResponseDto {
   @ApiProperty({ description: 'ID da receita' })
-  revenueId: number;
+  id: string;
 
-  @ApiProperty({ description: 'Número da parcela' })
-  installmentNumber: number;
+  @ApiProperty({ description: 'ID da feira' })
+  fairId: string;
 
-  @ApiProperty({ description: 'Valor da parcela' })
-  value: number;
+  @ApiProperty({ description: 'Tipo do modelo', enum: ['STAND', 'PATROCINIO'] })
+  type: string;
 
-  @ApiProperty({ description: 'Data de vencimento' })
-  dueDate: Date;
+  @ApiProperty({ description: 'ID do modelo de lançamento' })
+  entryModelId: string;
 
-  @ApiProperty({ description: 'Data de pagamento', required: false })
-  paymentDate?: Date;
+  @ApiProperty({ description: 'ID do cliente' })
+  clientId: string;
 
-  @ApiProperty({
-    description: 'Método de pagamento',
-    enum: PaymentMethod,
-    required: false,
-  })
-  paymentMethod?: PaymentMethod;
+  @ApiProperty({ description: 'Valor base' })
+  baseValue: number;
 
-  @ApiProperty({ description: 'Descrição da parcela', required: false })
-  description?: string;
+  @ApiProperty({ description: 'Desconto em centavos' })
+  discountCents: number;
 
-  @ApiProperty({
-    description: 'Observações sobre o pagamento',
-    required: false,
-  })
-  paymentNotes?: string;
+  @ApiProperty({ description: 'Valor do contrato' })
+  contractValue: number;
+
+  @ApiProperty({ description: 'Método de pagamento', enum: PaymentMethod })
+  paymentMethod: PaymentMethod;
+
+  @ApiProperty({ description: 'Número de parcelas' })
+  numberOfInstallments: number;
+
+  @ApiProperty({ description: 'Condições', required: false })
+  condition?: string;
+
+  @ApiProperty({ description: 'Status da receita', enum: RevenueStatus })
+  status: RevenueStatus;
+
+  @ApiProperty({ description: 'Observações', required: false })
+  notes?: string;
+
+  @ApiProperty({ description: 'Criado por' })
+  createdBy: string;
 
   @ApiProperty({ description: 'Data de criação' })
   createdAt: Date;
 
   @ApiProperty({ description: 'Data de atualização' })
   updatedAt: Date;
+
+  @ApiProperty({ description: 'Cliente relacionado', required: false })
+  client?: {
+    id: string;
+    name: string;
+    email?: string;
+    cnpj?: string;
+  };
+
+  @ApiProperty({
+    description: 'Modelo de lançamento relacionado',
+    required: false,
+  })
+  entryModel?: {
+    id: string;
+    name: string;
+    type: string;
+  };
+
+  @ApiProperty({
+    description: 'Parcelas da receita',
+    type: [InstallmentResponseDto],
+  })
+  installments: InstallmentResponseDto[];
+}
+
+export class ConfirmInstallmentPaymentDto {
+  @ApiProperty({ description: 'Data de pagamento' })
+  @IsDateString()
+  paidAt: Date;
+
+  @ApiPropertyOptional({ description: 'URL do comprovante', maxLength: 500 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  proofUrl?: string;
 }

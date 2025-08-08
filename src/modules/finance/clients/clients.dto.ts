@@ -1,9 +1,4 @@
-import {
-  IsString,
-  IsEmail,
-  IsOptional,
-  MaxLength,
-} from 'class-validator';
+import { IsString, IsEmail, IsOptional, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateClientDto {

@@ -9,11 +9,13 @@
 ## 🏢 Clientes (Globais)
 
 ### 1. Autocomplete de Clientes
+
 ```http
 GET /api/finance/clients/autocomplete?q=acme
 ```
 
 **Response 200:**
+
 ```json
 [
   {
@@ -22,7 +24,7 @@ GET /api/finance/clients/autocomplete?q=acme
     "cnpj": "12345678000195"
   },
   {
-    "id": "client_2", 
+    "id": "client_2",
     "name": "ACME Distribuidora",
     "cnpj": "98765432000123"
   }
@@ -30,6 +32,7 @@ GET /api/finance/clients/autocomplete?q=acme
 ```
 
 ### 2. Criar Cliente
+
 ```http
 POST /api/finance/clients
 Content-Type: application/json
@@ -43,12 +46,13 @@ Content-Type: application/json
 ```
 
 **Response 201:**
+
 ```json
 {
   "id": "client_abc123",
   "name": "ACME Corporation S/A",
   "cnpj": "12345678000195",
-  "email": "contato@acme.com.br", 
+  "email": "contato@acme.com.br",
   "phone": "11999887766",
   "createdAt": "2025-08-08T10:00:00.000Z",
   "updatedAt": "2025-08-08T10:00:00.000Z"
@@ -56,11 +60,13 @@ Content-Type: application/json
 ```
 
 ### 3. Listar Clientes Paginado
+
 ```http
 GET /api/finance/clients/paginated?page=1&pageSize=20&q=acme
 ```
 
 **Response 200:**
+
 ```json
 {
   "items": [
@@ -84,11 +90,13 @@ GET /api/finance/clients/paginated?page=1&pageSize=20&q=acme
 ## 🏗️ Modelos de Entrada
 
 ### 1. Listar Modelos por Feira
+
 ```http
 GET /api/finance/entry-models?fairId=fair_123&active=true
 ```
 
 **Response 200:**
+
 ```json
 [
   {
@@ -101,7 +109,7 @@ GET /api/finance/entry-models?fairId=fair_123&active=true
     "active": true
   },
   {
-    "id": "model_2", 
+    "id": "model_2",
     "fairId": "fair_123",
     "type": "PATROCINIO",
     "name": "Patrocínio Gold",
@@ -113,6 +121,7 @@ GET /api/finance/entry-models?fairId=fair_123&active=true
 ```
 
 ### 2. Criar Modelo
+
 ```http
 POST /api/finance/entry-models
 Content-Type: application/json
@@ -127,10 +136,11 @@ Content-Type: application/json
 ```
 
 **Response 201:**
+
 ```json
 {
   "id": "model_new",
-  "fairId": "fair_123", 
+  "fairId": "fair_123",
   "type": "STAND",
   "name": "Stand 3x3 Premium",
   "baseValue": 1800000,
@@ -145,11 +155,13 @@ Content-Type: application/json
 ## 💰 Receitas (Contratos)
 
 ### 1. Listar Receitas Paginadas
+
 ```http
 GET /api/finance/receitas?fairId=fair_123&page=1&pageSize=20&type=all&status=all&sortBy=status
 ```
 
 **Response 200:**
+
 ```json
 {
   "items": [
@@ -177,7 +189,7 @@ GET /api/finance/receitas?fairId=fair_123&page=1&pageSize=20&type=all&status=all
     },
     {
       "id": "revenue_2",
-      "type": "STAND", 
+      "type": "STAND",
       "status": "EM_ANDAMENTO",
       "fairId": "fair_123",
       "client": {
@@ -185,7 +197,7 @@ GET /api/finance/receitas?fairId=fair_123&page=1&pageSize=20&type=all&status=all
         "name": "Beta Distribuidora"
       },
       "entryModel": {
-        "id": "model_1", 
+        "id": "model_1",
         "name": "Stand 3x3"
       },
       "baseValue": 1500000,
@@ -206,6 +218,7 @@ GET /api/finance/receitas?fairId=fair_123&page=1&pageSize=20&type=all&status=all
 ```
 
 ### 2. Criar Receita (Contrato)
+
 ```http
 POST /api/finance/receitas
 Content-Type: application/json
@@ -230,6 +243,7 @@ Content-Type: application/json
 ```
 
 **Response 201:**
+
 ```json
 {
   "id": "revenue_new",
@@ -246,7 +260,7 @@ Content-Type: application/json
       "status": "A_VENCER"
     },
     {
-      "id": "inst_2", 
+      "id": "inst_2",
       "n": 2,
       "dueDate": "2025-10-10T00:00:00-03:00",
       "valueCents": 466667,
@@ -254,7 +268,7 @@ Content-Type: application/json
     },
     {
       "id": "inst_3",
-      "n": 3, 
+      "n": 3,
       "dueDate": "2025-11-10T00:00:00-03:00",
       "valueCents": 466667,
       "status": "A_VENCER"
@@ -265,11 +279,13 @@ Content-Type: application/json
 ```
 
 ### 3. Detalhar Receita
+
 ```http
 GET /api/finance/receitas/revenue_1
 ```
 
 **Response 200:**
+
 ```json
 {
   "id": "revenue_1",
@@ -306,7 +322,7 @@ GET /api/finance/receitas/revenue_1
     },
     {
       "id": "inst_2",
-      "n": 2, 
+      "n": 2,
       "dueDate": "2025-10-10T00:00:00-03:00",
       "valueCents": 466667,
       "status": "A_VENCER",
@@ -316,7 +332,7 @@ GET /api/finance/receitas/revenue_1
     {
       "id": "inst_3",
       "n": 3,
-      "dueDate": "2025-11-10T00:00:00-03:00", 
+      "dueDate": "2025-11-10T00:00:00-03:00",
       "valueCents": 466667,
       "status": "A_VENCER",
       "paidAt": null,
@@ -337,11 +353,13 @@ GET /api/finance/receitas/revenue_1
 ```
 
 ### 4. KPIs (Cards da Tela)
+
 ```http
 GET /api/finance/receitas/kpis?fairId=fair_123&from=2025-08-01&to=2025-08-31
 ```
 
 **Response 200:**
+
 ```json
 {
   "totalStandsVendidos": 15600000,
@@ -356,11 +374,13 @@ GET /api/finance/receitas/kpis?fairId=fair_123&from=2025-08-01&to=2025-08-31
 ## 📊 Analytics (Gráficos ApexCharts)
 
 ### 1. Contratos por Período
+
 ```http
 GET /api/finance/receitas/analytics/contratos-por-periodo?fairId=fair_123&from=2025-06-01&to=2025-08-31&granularity=month
 ```
 
 **Response 200:**
+
 ```json
 [
   {
@@ -369,7 +389,7 @@ GET /api/finance/receitas/analytics/contratos-por-periodo?fairId=fair_123&from=2
     "totalContrato": 12800000
   },
   {
-    "period": "2025-07-01", 
+    "period": "2025-07-01",
     "qtd": 12,
     "totalContrato": 19200000
   },
@@ -382,29 +402,32 @@ GET /api/finance/receitas/analytics/contratos-por-periodo?fairId=fair_123&from=2
 ```
 
 **Para ApexCharts:**
+
 ```javascript
 // Transformar para ApexCharts
 const chartData = {
   series: [
     {
-      name: "Quantidade",
-      data: [8, 12, 6]
+      name: 'Quantidade',
+      data: [8, 12, 6],
     },
     {
-      name: "Valor (R$)",
-      data: [128000, 192000, 96000] // convertido para reais
-    }
+      name: 'Valor (R$)',
+      data: [128000, 192000, 96000], // convertido para reais
+    },
   ],
-  categories: ["Jun 2025", "Jul 2025", "Ago 2025"]
-}
+  categories: ['Jun 2025', 'Jul 2025', 'Ago 2025'],
+};
 ```
 
 ### 2. Recebido por Período
+
 ```http
 GET /api/finance/receitas/analytics/recebido-por-periodo?fairId=fair_123&from=2025-06-01&to=2025-08-31&granularity=month
 ```
 
 **Response 200:**
+
 ```json
 [
   {
@@ -416,18 +439,20 @@ GET /api/finance/receitas/analytics/recebido-por-periodo?fairId=fair_123&from=20
     "totalRecebido": 7800000
   },
   {
-    "period": "2025-08-01", 
+    "period": "2025-08-01",
     "totalRecebido": 3200000
   }
 ]
 ```
 
 ### 3. Top Empresas
+
 ```http
 GET /api/finance/receitas/analytics/top-empresas?fairId=fair_123&metric=contratado&limit=5
 ```
 
 **Response 200:**
+
 ```json
 [
   {
@@ -437,7 +462,7 @@ GET /api/finance/receitas/analytics/top-empresas?fairId=fair_123&metric=contrata
   },
   {
     "clientId": "client_2",
-    "client": "Beta Distribuidora", 
+    "client": "Beta Distribuidora",
     "totalContrato": 6200000
   },
   {
@@ -449,22 +474,27 @@ GET /api/finance/receitas/analytics/top-empresas?fairId=fair_123&metric=contrata
 ```
 
 **Para ApexCharts (Horizontal Bar):**
+
 ```javascript
 const topEmpresasChart = {
-  series: [{
-    name: "Valor Contratado",
-    data: [85000, 62000, 48000] // em reais
-  }],
-  categories: ["ACME S/A", "Beta Distribuidora", "Gamma Corporation"]
-}
+  series: [
+    {
+      name: 'Valor Contratado',
+      data: [85000, 62000, 48000], // em reais
+    },
+  ],
+  categories: ['ACME S/A', 'Beta Distribuidora', 'Gamma Corporation'],
+};
 ```
 
 ### 4. Distribuição por Tipo (Pizza)
+
 ```http
 GET /api/finance/receitas/analytics/por-tipo?fairId=fair_123&from=2025-06-01&to=2025-08-31
 ```
 
 **Response 200:**
+
 ```json
 [
   {
@@ -479,19 +509,22 @@ GET /api/finance/receitas/analytics/por-tipo?fairId=fair_123&from=2025-06-01&to=
 ```
 
 **Para ApexCharts (Pie/Donut):**
+
 ```javascript
 const tipoChart = {
   series: [286000, 124000], // em reais
-  labels: ["Stands", "Patrocínios"]
-}
+  labels: ['Stands', 'Patrocínios'],
+};
 ```
 
 ### 5. Distribuição por Modelo
+
 ```http
 GET /api/finance/receitas/analytics/por-modelo?fairId=fair_123&tipo=STAND
 ```
 
 **Response 200:**
+
 ```json
 [
   {
@@ -501,7 +534,7 @@ GET /api/finance/receitas/analytics/por-modelo?fairId=fair_123&tipo=STAND
   },
   {
     "modeloId": "model_2",
-    "nome": "Stand 4x4", 
+    "nome": "Stand 4x4",
     "totalContrato": 10400000
   },
   {
@@ -517,6 +550,7 @@ GET /api/finance/receitas/analytics/por-modelo?fairId=fair_123&tipo=STAND
 ## 💳 Operações de Parcelas
 
 ### 1. Baixar Parcela (Marcar como Paga)
+
 ```http
 PATCH /api/finance/parcelas/inst_2/baixa
 Content-Type: application/json
@@ -528,6 +562,7 @@ Content-Type: application/json
 ```
 
 **Response 200:**
+
 ```json
 {
   "id": "inst_2",
@@ -535,7 +570,7 @@ Content-Type: application/json
   "revenueId": "revenue_1",
   "valueCents": 466667,
   "dueDate": "2025-10-10T00:00:00-03:00",
-  "status": "PAGA", 
+  "status": "PAGA",
   "paidAt": "2025-08-08T15:30:00-03:00",
   "proofUrl": "https://storage.example.com/comprovante2.pdf",
   "revenue": {
@@ -546,6 +581,7 @@ Content-Type: application/json
 ```
 
 ### 2. Editar Parcela
+
 ```http
 PUT /api/finance/parcelas/inst_3
 Content-Type: application/json
@@ -557,6 +593,7 @@ Content-Type: application/json
 ```
 
 **Response 200:**
+
 ```json
 {
   "id": "inst_3",
@@ -568,6 +605,7 @@ Content-Type: application/json
 ```
 
 ### 3. Regenerar Parcelas
+
 ```http
 POST /api/finance/receitas/revenue_1/parcelas/generate
 Content-Type: application/json
@@ -580,6 +618,7 @@ Content-Type: application/json
 ```
 
 **Response 200:**
+
 ```json
 {
   "message": "Parcelas regeneradas com sucesso",
@@ -594,7 +633,7 @@ Content-Type: application/json
     {
       "id": "inst_new_2",
       "n": 2,
-      "dueDate": "2025-10-15T00:00:00-03:00", 
+      "dueDate": "2025-10-15T00:00:00-03:00",
       "valueCents": 350000,
       "status": "A_VENCER"
     },
@@ -621,6 +660,7 @@ Content-Type: application/json
 ## 📎 Upload de Anexos
 
 ### 1. Upload de Anexo para Contrato
+
 ```http
 POST /api/finance/receitas/revenue_1/attachments
 Content-Type: multipart/form-data
@@ -630,6 +670,7 @@ filename: "contrato_assinado.pdf"
 ```
 
 **Response 201:**
+
 ```json
 {
   "id": "att_new",
@@ -644,6 +685,7 @@ filename: "contrato_assinado.pdf"
 ```
 
 ### 2. Upload de Anexo para Parcela
+
 ```http
 POST /api/finance/parcelas/inst_1/attachments
 Content-Type: multipart/form-data
@@ -653,10 +695,11 @@ filename: "comprovante_pagamento.jpg"
 ```
 
 **Response 201:**
+
 ```json
 {
   "id": "att_inst_1",
-  "entityType": "installment", 
+  "entityType": "installment",
   "entityId": "inst_1",
   "filename": "comprovante_pagamento.jpg",
   "url": "https://storage.example.com/finance/installments/inst_1/comprovante_pagamento.jpg",
@@ -671,6 +714,7 @@ filename: "comprovante_pagamento.jpg"
 ## ❌ Exemplos de Erros
 
 ### 1. Erro de Validação
+
 ```http
 POST /api/finance/receitas
 Content-Type: application/json
@@ -684,6 +728,7 @@ Content-Type: application/json
 ```
 
 **Response 400:**
+
 ```json
 {
   "statusCode": 400,
@@ -693,12 +738,14 @@ Content-Type: application/json
 ```
 
 ### 2. Não Autorizado
+
 ```http
 GET /api/finance/receitas
 Authorization: Bearer invalid_token
 ```
 
 **Response 401:**
+
 ```json
 {
   "statusCode": 401,
@@ -708,12 +755,14 @@ Authorization: Bearer invalid_token
 ```
 
 ### 3. Permissão Negada
+
 ```http
-GET /api/finance/receitas  
+GET /api/finance/receitas
 Authorization: Bearer valid_token_but_not_admin
 ```
 
 **Response 403:**
+
 ```json
 {
   "statusCode": 403,
@@ -723,15 +772,17 @@ Authorization: Bearer valid_token_but_not_admin
 ```
 
 ### 4. Recurso Não Encontrado
+
 ```http
 GET /api/finance/receitas/invalid_id
 ```
 
 **Response 404:**
+
 ```json
 {
   "statusCode": 404,
-  "message": "Receita não encontrada", 
+  "message": "Receita não encontrada",
   "error": "Not Found"
 }
 ```
@@ -752,6 +803,7 @@ GET /api/finance/receitas/invalid_id
 - **pageSize**: Itens por página (default: 20, max: 100)
 
 ### Ordenação FIXA:
+
 1. Status (Pendente → Em andamento → Em atraso → Pago → Cancelado)
 2. Próximo vencimento (ASC)
 3. Nome da empresa (A-Z)

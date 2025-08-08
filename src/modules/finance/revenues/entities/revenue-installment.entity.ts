@@ -5,11 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
-  OneToMany,
   JoinColumn,
   Index,
 } from 'typeorm';
 import { InstallmentStatus } from '../../common/enums/finance.enums';
+import { Revenue } from './revenue.entity';
 
 @Entity('finance_revenue_installments')
 @Index(['revenueId', 'status', 'dueDate'])
@@ -51,9 +51,9 @@ export class RevenueInstallment {
   updatedAt: Date;
 
   // Relacionamentos serão adicionados depois
-  // @ManyToOne(() => Revenue, (revenue) => revenue.installments)
-  // @JoinColumn({ name: 'revenueId' })
-  // revenue: Revenue;
+  @ManyToOne(() => Revenue, (revenue) => revenue.installments)
+  @JoinColumn({ name: 'revenueId' })
+  revenue: Revenue;
 
   // @OneToMany(() => Attachment, (attachment) => attachment.installment)
   // attachments: Attachment[];

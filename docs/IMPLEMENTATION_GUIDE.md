@@ -5,12 +5,14 @@
 ### 1. Setup Inicial
 
 #### 1.1 Instalar Dependências
+
 ```bash
 npm install class-validator class-transformer @nestjs/typeorm typeorm
 npm install --save-dev @types/multer
 ```
 
 #### 1.2 Criar Estrutura de Pastas
+
 ```
 src/modules/finance/
 ├── finance.module.ts
@@ -24,9 +26,18 @@ src/modules/finance/
 #### 2.1 Módulo de Clientes (Primeiro - Independente)
 
 **Entidade Client**
+
 ```typescript
 // src/modules/finance/clients/entities/client.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  Index,
+} from 'typeorm';
 import { Revenue } from '../../revenues/entities/revenue.entity';
 
 @Entity('finance_clients')
@@ -53,12 +64,13 @@ export class Client {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToMany(() => Revenue, revenue => revenue.client)
+  @OneToMany(() => Revenue, (revenue) => revenue.client)
   revenues: Revenue[];
 }
 ```
 
 **DTO Client**
+
 ```typescript
 // src/modules/finance/clients/dto/create-client.dto.ts
 import { IsString, IsOptional, IsEmail, Matches } from 'class-validator';
@@ -104,6 +116,7 @@ export class PaginatedClientsDto {
 ```
 
 **Service Client**
+
 ```typescript
 // src/modules/finance/clients/clients.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -129,12 +142,9 @@ export class ClientsService {
     if (!query || query.length < 2) return [];
 
     return await this.clientRepository.find({
-      where: [
-        { name: Like(`%${query}%`) },
-        { cnpj: Like(`%${query}%`) }
-      ],
+      where: [{ name: Like(`%${query}%`) }, { cnpj: Like(`%${query}%`) }],
       take: 10,
-      order: { name: 'ASC' }
+      order: { name: 'ASC' },
     });
   }
 
@@ -144,7 +154,7 @@ export class ClientsService {
 
     if (q && q.trim()) {
       query.where('client.name LIKE :search OR client.cnpj LIKE :search', {
-        search: `%${q.trim()}%`
+        search: `%${q.trim()}%`,
       });
     }
 
@@ -161,7 +171,7 @@ export class ClientsService {
       page,
       pageSize,
       total,
-      totalPages: Math.ceil(total / pageSize)
+      totalPages: Math.ceil(total / pageSize),
     };
   }
 
@@ -176,9 +186,18 @@ export class ClientsService {
 ```
 
 **Controller Client**
+
 ```typescript
 // src/modules/finance/clients/clients.controller.ts
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { PaginatedClientsDto } from './dto/paginated-clients.dto';
@@ -218,14 +237,23 @@ export class ClientsController {
 #### 2.2 Módulo de Modelos de Entrada (Entry Models)
 
 **Entidade EntryModel**
+
 ```typescript
 // src/modules/finance/entry-models/entities/entry-model.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  Index,
+} from 'typeorm';
 import { Revenue } from '../../revenues/entities/revenue.entity';
 
 export enum EntryModelType {
   STAND = 'STAND',
-  PATROCINIO = 'PATROCINIO'
+  PATROCINIO = 'PATROCINIO',
 }
 
 @Entity('finance_entry_models')
@@ -239,7 +267,7 @@ export class EntryModel {
 
   @Column({
     type: 'enum',
-    enum: EntryModelType
+    enum: EntryModelType,
   })
   type: EntryModelType;
 
@@ -261,7 +289,7 @@ export class EntryModel {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToMany(() => Revenue, revenue => revenue.entryModel)
+  @OneToMany(() => Revenue, (revenue) => revenue.entryModel)
   revenues: Revenue[];
 }
 ```
@@ -269,6 +297,7 @@ export class EntryModel {
 #### 2.3 Módulo de Receitas (Principal)
 
 **Enums para Receitas**
+
 ```typescript
 // src/modules/finance/revenues/enums/revenue.enums.ts
 export enum RevenueStatus {
@@ -276,14 +305,14 @@ export enum RevenueStatus {
   EM_ANDAMENTO = 'EM_ANDAMENTO',
   EM_ATRASO = 'EM_ATRASO',
   PAGO = 'PAGO',
-  CANCELADO = 'CANCELADO'
+  CANCELADO = 'CANCELADO',
 }
 
 export enum InstallmentStatus {
   A_VENCER = 'A_VENCER',
   VENCIDA = 'VENCIDA',
   PAGA = 'PAGA',
-  CANCELADA = 'CANCELADA'
+  CANCELADA = 'CANCELADA',
 }
 
 export enum PaymentMethod {
@@ -291,23 +320,38 @@ export enum PaymentMethod {
   BOLETO = 'BOLETO',
   CARTAO = 'CARTAO',
   TED = 'TED',
-  DINHEIRO = 'DINHEIRO'
+  DINHEIRO = 'DINHEIRO',
 }
 ```
 
 **Entidade Revenue Principal**
+
 ```typescript
 // src/modules/finance/revenues/entities/revenue.entity.ts
-import { 
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn,
-  ManyToOne, OneToMany, JoinColumn, Index 
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  Index,
 } from 'typeorm';
 import { Expose } from 'class-transformer';
 import { Client } from '../../clients/entities/client.entity';
-import { EntryModel, EntryModelType } from '../../entry-models/entities/entry-model.entity';
+import {
+  EntryModel,
+  EntryModelType,
+} from '../../entry-models/entities/entry-model.entity';
 import { RevenueInstallment } from './revenue-installment.entity';
 import { Attachment } from './attachment.entity';
-import { RevenueStatus, PaymentMethod, InstallmentStatus } from '../enums/revenue.enums';
+import {
+  RevenueStatus,
+  PaymentMethod,
+  InstallmentStatus,
+} from '../enums/revenue.enums';
 
 @Entity('finance_revenues')
 @Index(['fairId', 'status', 'type'])
@@ -321,7 +365,7 @@ export class Revenue {
 
   @Column({
     type: 'enum',
-    enum: EntryModelType
+    enum: EntryModelType,
   })
   type: EntryModelType;
 
@@ -342,7 +386,7 @@ export class Revenue {
 
   @Column({
     type: 'enum',
-    enum: PaymentMethod
+    enum: PaymentMethod,
   })
   paymentMethod: PaymentMethod;
 
@@ -352,7 +396,7 @@ export class Revenue {
   @Column({
     type: 'enum',
     enum: RevenueStatus,
-    default: RevenueStatus.PENDENTE
+    default: RevenueStatus.PENDENTE,
   })
   status: RevenueStatus;
 
@@ -369,25 +413,30 @@ export class Revenue {
   updatedAt: Date;
 
   // Relacionamentos
-  @ManyToOne(() => EntryModel, entryModel => entryModel.revenues)
+  @ManyToOne(() => EntryModel, (entryModel) => entryModel.revenues)
   @JoinColumn({ name: 'entryModelId' })
   entryModel: EntryModel;
 
-  @ManyToOne(() => Client, client => client.revenues)
+  @ManyToOne(() => Client, (client) => client.revenues)
   @JoinColumn({ name: 'clientId' })
   client: Client;
 
-  @OneToMany(() => RevenueInstallment, installment => installment.revenue, { cascade: true })
+  @OneToMany(() => RevenueInstallment, (installment) => installment.revenue, {
+    cascade: true,
+  })
   installments: RevenueInstallment[];
 
-  @OneToMany(() => Attachment, attachment => attachment.revenue)
+  @OneToMany(() => Attachment, (attachment) => attachment.revenue)
   attachments: Attachment[];
 
   // Campos calculados (usar em DTOs ou services)
   @Expose()
   get paidCents(): number {
-    return this.installments?.filter(i => i.status === InstallmentStatus.PAGA)
-      .reduce((sum, i) => sum + i.valueCents, 0) || 0;
+    return (
+      this.installments
+        ?.filter((i) => i.status === InstallmentStatus.PAGA)
+        .reduce((sum, i) => sum + i.valueCents, 0) || 0
+    );
   }
 
   @Expose()
@@ -397,10 +446,14 @@ export class Revenue {
 
   @Expose()
   get nextDueDate(): Date | null {
-    const openInstallments = this.installments?.filter(
-      i => i.status === InstallmentStatus.A_VENCER || i.status === InstallmentStatus.VENCIDA
-    ).sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
-    
+    const openInstallments = this.installments
+      ?.filter(
+        (i) =>
+          i.status === InstallmentStatus.A_VENCER ||
+          i.status === InstallmentStatus.VENCIDA,
+      )
+      .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+
     return openInstallments?.[0]?.dueDate || null;
   }
 }
@@ -409,80 +462,95 @@ export class Revenue {
 #### 2.4 Service Principal com Lógica de Negócio
 
 **Utils para Status**
+
 ```typescript
 // src/modules/finance/revenues/utils/status.utils.ts
 import { RevenueStatus, InstallmentStatus } from '../enums/revenue.enums';
 import { RevenueInstallment } from '../entities/revenue-installment.entity';
 
-export function deriveRevenueStatus(installments: RevenueInstallment[]): RevenueStatus {
+export function deriveRevenueStatus(
+  installments: RevenueInstallment[],
+): RevenueStatus {
   if (!installments || installments.length === 0) {
     return RevenueStatus.PENDENTE;
   }
 
-  const anyPaid = installments.some(i => i.status === InstallmentStatus.PAGA);
-  const anyOpen = installments.some(i => 
-    i.status === InstallmentStatus.A_VENCER || i.status === InstallmentStatus.VENCIDA
+  const anyPaid = installments.some((i) => i.status === InstallmentStatus.PAGA);
+  const anyOpen = installments.some(
+    (i) =>
+      i.status === InstallmentStatus.A_VENCER ||
+      i.status === InstallmentStatus.VENCIDA,
   );
-  const anyLate = installments.some(i => i.status === InstallmentStatus.VENCIDA);
+  const anyLate = installments.some(
+    (i) => i.status === InstallmentStatus.VENCIDA,
+  );
 
-  if (installments.every(i => i.status === InstallmentStatus.PAGA)) {
+  if (installments.every((i) => i.status === InstallmentStatus.PAGA)) {
     return RevenueStatus.PAGO;
   }
-  
+
   if (anyLate) {
     return RevenueStatus.EM_ATRASO;
   }
-  
+
   if (anyPaid && anyOpen) {
     return RevenueStatus.EM_ANDAMENTO;
   }
-  
+
   return RevenueStatus.PENDENTE;
 }
 
 export function generateInstallmentDates(
-  count: number, 
-  firstDate: Date, 
-  periodicity: string = 'MENSAL'
+  count: number,
+  firstDate: Date,
+  periodicity: string = 'MENSAL',
 ): Date[] {
   const dates: Date[] = [];
-  
+
   for (let i = 0; i < count; i++) {
     const date = new Date(firstDate);
-    
+
     if (periodicity === 'MENSAL') {
       date.setMonth(date.getMonth() + i);
     } else if (periodicity === 'SEMANAL') {
-      date.setDate(date.getDate() + (i * 7));
+      date.setDate(date.getDate() + i * 7);
     } else if (periodicity === 'QUINZENAL') {
-      date.setDate(date.getDate() + (i * 15));
+      date.setDate(date.getDate() + i * 15);
     }
-    
+
     dates.push(date);
   }
-  
+
   return dates;
 }
 
-export function distributeValueInInstallments(totalValue: number, count: number): number[] {
+export function distributeValueInInstallments(
+  totalValue: number,
+  count: number,
+): number[] {
   const baseValue = Math.floor(totalValue / count);
   const remainder = totalValue % count;
-  
+
   const values: number[] = [];
   for (let i = 0; i < count; i++) {
     // Adiciona o resto na última parcela
     const value = i === count - 1 ? baseValue + remainder : baseValue;
     values.push(value);
   }
-  
+
   return values;
 }
 ```
 
 **Service Principal de Receitas**
+
 ```typescript
 // src/modules/finance/revenues/revenues.service.ts
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Revenue } from './entities/revenue.entity';
@@ -490,7 +558,11 @@ import { RevenueInstallment } from './entities/revenue-installment.entity';
 import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { PaginatedRevenuesDto } from './dto/paginated-revenues.dto';
 import { User } from '../../users/entitie/users.entity';
-import { deriveRevenueStatus, generateInstallmentDates, distributeValueInInstallments } from './utils/status.utils';
+import {
+  deriveRevenueStatus,
+  generateInstallmentDates,
+  distributeValueInInstallments,
+} from './utils/status.utils';
 import { RevenueStatus, InstallmentStatus } from './enums/revenue.enums';
 
 @Injectable()
@@ -502,7 +574,10 @@ export class RevenuesService {
     private installmentRepository: Repository<RevenueInstallment>,
   ) {}
 
-  async create(createRevenueDto: CreateRevenueDto, user: User): Promise<Revenue> {
+  async create(
+    createRevenueDto: CreateRevenueDto,
+    user: User,
+  ): Promise<Revenue> {
     // Validações
     this.validateRevenueData(createRevenueDto);
 
@@ -516,14 +591,18 @@ export class RevenuesService {
     const savedRevenue = await this.revenueRepository.save(revenue);
 
     // Gerar parcelas
-    await this.generateInstallments(savedRevenue.id, createRevenueDto.installments);
+    await this.generateInstallments(
+      savedRevenue.id,
+      createRevenueDto.installments,
+    );
 
     // Retornar com parcelas
     return await this.findOneWithInstallments(savedRevenue.id);
   }
 
   async findPaginated(dto: PaginatedRevenuesDto) {
-    const { fairId, page, pageSize, type, status, q, dateField, from, to } = dto;
+    const { fairId, page, pageSize, type, status, q, dateField, from, to } =
+      dto;
 
     const query = this.revenueRepository
       .createQueryBuilder('revenue')
@@ -543,7 +622,9 @@ export class RevenuesService {
       query.andWhere('revenue.status = :status', { status: statusEnum });
     } else {
       // Por padrão, ocultar cancelados
-      query.andWhere('revenue.status != :cancelado', { cancelado: RevenueStatus.CANCELADO });
+      query.andWhere('revenue.status != :cancelado', {
+        cancelado: RevenueStatus.CANCELADO,
+      });
     }
 
     if (q && q.trim()) {
@@ -556,7 +637,8 @@ export class RevenuesService {
     }
 
     // Ordenação FIXA por status
-    query.addSelect(`
+    query.addSelect(
+      `
       CASE revenue.status
         WHEN '${RevenueStatus.PENDENTE}' THEN 1
         WHEN '${RevenueStatus.EM_ANDAMENTO}' THEN 2
@@ -565,7 +647,9 @@ export class RevenuesService {
         WHEN '${RevenueStatus.CANCELADO}' THEN 5
         ELSE 6
       END
-    `, 'status_order');
+    `,
+      'status_order',
+    );
 
     query.orderBy('status_order', 'ASC');
     query.addOrderBy('client.name', 'ASC');
@@ -578,7 +662,7 @@ export class RevenuesService {
       .getMany();
 
     // Calcular campos derivados
-    const enhancedItems = items.map(revenue => ({
+    const enhancedItems = items.map((revenue) => ({
       ...revenue,
       paidCents: revenue.paidCents,
       openCents: revenue.openCents,
@@ -590,19 +674,29 @@ export class RevenuesService {
       page,
       pageSize,
       total,
-      totalPages: Math.ceil(total / pageSize)
+      totalPages: Math.ceil(total / pageSize),
     };
   }
 
-  private async generateInstallments(revenueId: string, installmentsConfig: any): Promise<void> {
-    const { count, firstDueDate, periodicity, customDates } = installmentsConfig;
-    const revenue = await this.revenueRepository.findOne({ where: { id: revenueId } });
+  private async generateInstallments(
+    revenueId: string,
+    installmentsConfig: any,
+  ): Promise<void> {
+    const { count, firstDueDate, periodicity, customDates } =
+      installmentsConfig;
+    const revenue = await this.revenueRepository.findOne({
+      where: { id: revenueId },
+    });
 
     let dates: Date[];
     if (customDates && customDates.length === count) {
       dates = customDates.map((d: string) => new Date(d));
     } else {
-      dates = generateInstallmentDates(count, new Date(firstDueDate), periodicity);
+      dates = generateInstallmentDates(
+        count,
+        new Date(firstDueDate),
+        periodicity,
+      );
     }
 
     const values = distributeValueInInstallments(revenue.contractValue, count);
@@ -620,28 +714,37 @@ export class RevenuesService {
 
   private validateRevenueData(dto: CreateRevenueDto): void {
     if (dto.discountCents > dto.baseValue) {
-      throw new BadRequestException('Desconto não pode ser maior que o valor base');
+      throw new BadRequestException(
+        'Desconto não pode ser maior que o valor base',
+      );
     }
 
     const calculatedContractValue = dto.baseValue - dto.discountCents;
-    if (calculatedContractValue !== dto.contractValue || dto.contractValue < 0) {
+    if (
+      calculatedContractValue !== dto.contractValue ||
+      dto.contractValue < 0
+    ) {
       throw new BadRequestException('Valor do contrato inválido');
     }
   }
 
   private getDateColumnForFilter(dateField: string): string {
     switch (dateField) {
-      case 'contrato': return 'revenue.createdAt';
-      case 'vencimento': return 'installments.dueDate';
-      case 'pagamento': return 'installments.paidAt';
-      default: return 'revenue.createdAt';
+      case 'contrato':
+        return 'revenue.createdAt';
+      case 'vencimento':
+        return 'installments.dueDate';
+      case 'pagamento':
+        return 'installments.paidAt';
+      default:
+        return 'revenue.createdAt';
     }
   }
 
   private async findOneWithInstallments(id: string): Promise<Revenue> {
     return await this.revenueRepository.findOne({
       where: { id },
-      relations: ['client', 'entryModel', 'installments', 'attachments']
+      relations: ['client', 'entryModel', 'installments', 'attachments'],
     });
   }
 }
@@ -653,7 +756,7 @@ export class RevenuesService {
 # Gerar módulos
 nest g module finance
 nest g module finance/clients
-nest g module finance/entry-models  
+nest g module finance/entry-models
 nest g module finance/revenues
 
 # Gerar controllers
@@ -689,11 +792,7 @@ import { EntryModelsModule } from './entry-models/entry-models.module';
 import { RevenuesModule } from './revenues/revenues.module';
 
 @Module({
-  imports: [
-    ClientsModule,
-    EntryModelsModule,
-    RevenuesModule,
-  ],
+  imports: [ClientsModule, EntryModelsModule, RevenuesModule],
 })
 export class FinanceModule {}
 ```

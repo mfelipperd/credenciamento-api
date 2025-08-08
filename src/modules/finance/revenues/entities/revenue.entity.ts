@@ -9,15 +9,14 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { Expose } from 'class-transformer';
 import {
   RevenueStatus,
   PaymentMethod,
   EntryModelType,
-  InstallmentStatus,
 } from '../../common/enums/finance.enums';
 import { Client } from '../../clients/entities/client.entity';
 import { EntryModel } from '../../entry-models/entities/entry-model.entity';
+import { RevenueInstallment } from './revenue-installment.entity';
 
 @Entity('finance_revenues')
 @Index(['fairId', 'status', 'type'])
@@ -56,6 +55,9 @@ export class Revenue {
   })
   paymentMethod: PaymentMethod;
 
+  @Column({ default: 1 })
+  numberOfInstallments: number;
+
   @Column({ nullable: true })
   condition: string;
 
@@ -87,10 +89,12 @@ export class Revenue {
   @JoinColumn({ name: 'clientId' })
   client: Client;
 
-  // Relacionamentos serão adicionados depois
-  // @OneToMany(() => RevenueInstallment, (installment) => installment.revenue, { cascade: true })
-  // installments: RevenueInstallment[];
+  @OneToMany(() => RevenueInstallment, (installment) => installment.revenue, {
+    cascade: true,
+  })
+  installments: RevenueInstallment[];
 
+  // Relacionamentos serão adicionados depois
   // @OneToMany(() => Attachment, (attachment) => attachment.revenue)
   // attachments: Attachment[];
 
@@ -111,7 +115,7 @@ export class Revenue {
   //   const openInstallments = this.installments?.filter(
   //     i => i.status === InstallmentStatus.A_VENCER || i.status === InstallmentStatus.VENCIDA
   //   ).sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
-    
+
   //   return openInstallments?.[0]?.dueDate || null;
   // }
 }

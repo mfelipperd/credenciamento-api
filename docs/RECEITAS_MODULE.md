@@ -1,26 +1,31 @@
 # Módulo Financeiro → Receitas
 
 ## 📋 Objetivo
+
 Registrar vendas de stands e patrocínios por feira a partir de modelos de entrada configurados por feira. Controlar parcelas (a receber), baixas e comprovantes. Expor KPIs e gráficos (analytics) para análise.
 
 ## 🎯 Premissas & Padrões
 
 ### Financeiro
+
 - **Moeda**: Armazenar em centavos (Int) e exibir com 2 casas decimais
 - **Timezone**: America/Belem
 - **Juros/Multa**: Não implementar no MVP
 
 ### Autenticação
+
 - **Permissão**: Somente admin acessa este submódulo
 - **Auth Guard**: Aplicar `@UseGuards(JwtAuthGuard, RoleGuard)` com role ADMIN
 
 ### Regras de Negócio
+
 - **Clientes**: Globais (não possuem fairId)
 - **Modelos de entrada**: Por feira (stands/patrocínios)
 - **Parcelamento**: Permitir mensal por padrão, mas com datas editáveis
 - **Anexos**: PDF/JPG, até 10 MB por arquivo (múltiplos por receita e por parcela)
 
 ### Status de Receita (derivado das parcelas)
+
 1. **PENDENTE** - Nenhuma parcela paga
 2. **EM_ANDAMENTO** - Algumas pagas, outras a vencer
 3. **EM_ATRASO** - Alguma parcela vencida não paga
@@ -28,6 +33,7 @@ Registrar vendas de stands e patrocínios por feira a partir de modelos de entra
 5. **CANCELADO** - Cancelamento manual
 
 ### Ordenação da Listagem (FIXA)
+
 ```sql
 ORDER BY
   CASE revenue.status
@@ -43,6 +49,7 @@ ORDER BY
 ```
 
 ### Paginação
+
 - **page**: 1-based (padrão: 1)
 - **pageSize**: Padrão 20, máximo 100
 - **Cancelados**: Ocultos por padrão (filtro explícito para exibir)
@@ -50,25 +57,26 @@ ORDER BY
 ## 🗄️ Modelagem de Dados
 
 ### Enums
+
 ```typescript
 enum EntryModelType {
   STAND = 'STAND',
-  PATROCINIO = 'PATROCINIO'
+  PATROCINIO = 'PATROCINIO',
 }
 
 enum RevenueStatus {
   PENDENTE = 'PENDENTE',
-  EM_ANDAMENTO = 'EM_ANDAMENTO', 
+  EM_ANDAMENTO = 'EM_ANDAMENTO',
   EM_ATRASO = 'EM_ATRASO',
   PAGO = 'PAGO',
-  CANCELADO = 'CANCELADO'
+  CANCELADO = 'CANCELADO',
 }
 
 enum InstallmentStatus {
   A_VENCER = 'A_VENCER',
   VENCIDA = 'VENCIDA',
   PAGA = 'PAGA',
-  CANCELADA = 'CANCELADA'
+  CANCELADA = 'CANCELADA',
 }
 
 enum PaymentMethod {
@@ -76,13 +84,14 @@ enum PaymentMethod {
   BOLETO = 'BOLETO',
   CARTAO = 'CARTAO',
   TED = 'TED',
-  DINHEIRO = 'DINHEIRO'
+  DINHEIRO = 'DINHEIRO',
 }
 ```
 
 ### Entidades TypeORM
 
 #### EntryModel (Modelos de Entrada)
+
 ```typescript
 @Entity('entry_models')
 export class EntryModel {
@@ -94,7 +103,7 @@ export class EntryModel {
 
   @Column({
     type: 'enum',
-    enum: EntryModelType
+    enum: EntryModelType,
   })
   type: EntryModelType;
 
@@ -117,12 +126,13 @@ export class EntryModel {
   updatedAt: Date;
 
   // Relacionamentos
-  @OneToMany(() => Revenue, revenue => revenue.entryModel)
+  @OneToMany(() => Revenue, (revenue) => revenue.entryModel)
   revenues: Revenue[];
 }
 ```
 
 #### Client (Clientes Globais)
+
 ```typescript
 @Entity('clients')
 export class Client {
@@ -148,12 +158,13 @@ export class Client {
   updatedAt: Date;
 
   // Relacionamentos
-  @OneToMany(() => Revenue, revenue => revenue.client)
+  @OneToMany(() => Revenue, (revenue) => revenue.client)
   revenues: Revenue[];
 }
 ```
 
 #### Revenue (Contratos de Receita)
+
 ```typescript
 @Entity('revenues')
 export class Revenue {
@@ -165,7 +176,7 @@ export class Revenue {
 
   @Column({
     type: 'enum',
-    enum: EntryModelType
+    enum: EntryModelType,
   })
   type: EntryModelType;
 
@@ -186,7 +197,7 @@ export class Revenue {
 
   @Column({
     type: 'enum',
-    enum: PaymentMethod
+    enum: PaymentMethod,
   })
   paymentMethod: PaymentMethod;
 
@@ -196,7 +207,7 @@ export class Revenue {
   @Column({
     type: 'enum',
     enum: RevenueStatus,
-    default: RevenueStatus.PENDENTE
+    default: RevenueStatus.PENDENTE,
   })
   status: RevenueStatus;
 
@@ -213,25 +224,30 @@ export class Revenue {
   updatedAt: Date;
 
   // Relacionamentos
-  @ManyToOne(() => EntryModel, entryModel => entryModel.revenues)
+  @ManyToOne(() => EntryModel, (entryModel) => entryModel.revenues)
   @JoinColumn({ name: 'entryModelId' })
   entryModel: EntryModel;
 
-  @ManyToOne(() => Client, client => client.revenues)
+  @ManyToOne(() => Client, (client) => client.revenues)
   @JoinColumn({ name: 'clientId' })
   client: Client;
 
-  @OneToMany(() => RevenueInstallment, installment => installment.revenue, { cascade: true })
+  @OneToMany(() => RevenueInstallment, (installment) => installment.revenue, {
+    cascade: true,
+  })
   installments: RevenueInstallment[];
 
-  @OneToMany(() => Attachment, attachment => attachment.revenue)
+  @OneToMany(() => Attachment, (attachment) => attachment.revenue)
   attachments: Attachment[];
 
   // Campos calculados
   @Expose()
   get paidCents(): number {
-    return this.installments?.filter(i => i.status === InstallmentStatus.PAGA)
-      .reduce((sum, i) => sum + i.valueCents, 0) || 0;
+    return (
+      this.installments
+        ?.filter((i) => i.status === InstallmentStatus.PAGA)
+        .reduce((sum, i) => sum + i.valueCents, 0) || 0
+    );
   }
 
   @Expose()
@@ -241,16 +257,21 @@ export class Revenue {
 
   @Expose()
   get nextDueDate(): Date | null {
-    const openInstallments = this.installments?.filter(
-      i => i.status === InstallmentStatus.A_VENCER || i.status === InstallmentStatus.VENCIDA
-    ).sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
-    
+    const openInstallments = this.installments
+      ?.filter(
+        (i) =>
+          i.status === InstallmentStatus.A_VENCER ||
+          i.status === InstallmentStatus.VENCIDA,
+      )
+      .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+
     return openInstallments?.[0]?.dueDate || null;
   }
 }
 ```
 
 #### RevenueInstallment (Parcelas)
+
 ```typescript
 @Entity('revenue_installments')
 export class RevenueInstallment {
@@ -272,7 +293,7 @@ export class RevenueInstallment {
   @Column({
     type: 'enum',
     enum: InstallmentStatus,
-    default: InstallmentStatus.A_VENCER
+    default: InstallmentStatus.A_VENCER,
   })
   status: InstallmentStatus;
 
@@ -289,16 +310,17 @@ export class RevenueInstallment {
   updatedAt: Date;
 
   // Relacionamentos
-  @ManyToOne(() => Revenue, revenue => revenue.installments)
+  @ManyToOne(() => Revenue, (revenue) => revenue.installments)
   @JoinColumn({ name: 'revenueId' })
   revenue: Revenue;
 
-  @OneToMany(() => Attachment, attachment => attachment.installment)
+  @OneToMany(() => Attachment, (attachment) => attachment.installment)
   attachments: Attachment[];
 }
 ```
 
 #### Attachment (Anexos)
+
 ```typescript
 @Entity('attachments')
 export class Attachment {
@@ -330,11 +352,17 @@ export class Attachment {
   uploadedAt: Date;
 
   // Relacionamentos
-  @ManyToOne(() => Revenue, revenue => revenue.attachments, { nullable: true })
+  @ManyToOne(() => Revenue, (revenue) => revenue.attachments, {
+    nullable: true,
+  })
   @JoinColumn({ name: 'entityId' })
   revenue: Revenue;
 
-  @ManyToOne(() => RevenueInstallment, installment => installment.attachments, { nullable: true })
+  @ManyToOne(
+    () => RevenueInstallment,
+    (installment) => installment.attachments,
+    { nullable: true },
+  )
   @JoinColumn({ name: 'entityId' })
   installment: RevenueInstallment;
 }
@@ -343,40 +371,48 @@ export class Attachment {
 ## 🔄 Regras de Negócio Essenciais
 
 ### 1. Derivação Automática do Status da Receita
+
 ```typescript
-export function deriveRevenueStatus(installments: RevenueInstallment[]): RevenueStatus {
+export function deriveRevenueStatus(
+  installments: RevenueInstallment[],
+): RevenueStatus {
   if (!installments || installments.length === 0) {
     return RevenueStatus.PENDENTE;
   }
 
-  const anyPaid = installments.some(i => i.status === InstallmentStatus.PAGA);
-  const anyOpen = installments.some(i => 
-    i.status === InstallmentStatus.A_VENCER || i.status === InstallmentStatus.VENCIDA
+  const anyPaid = installments.some((i) => i.status === InstallmentStatus.PAGA);
+  const anyOpen = installments.some(
+    (i) =>
+      i.status === InstallmentStatus.A_VENCER ||
+      i.status === InstallmentStatus.VENCIDA,
   );
-  const anyLate = installments.some(i => i.status === InstallmentStatus.VENCIDA);
+  const anyLate = installments.some(
+    (i) => i.status === InstallmentStatus.VENCIDA,
+  );
 
-  if (installments.every(i => i.status === InstallmentStatus.PAGA)) {
+  if (installments.every((i) => i.status === InstallmentStatus.PAGA)) {
     return RevenueStatus.PAGO;
   }
-  
+
   if (anyLate) {
     return RevenueStatus.EM_ATRASO;
   }
-  
+
   if (anyPaid && anyOpen) {
     return RevenueStatus.EM_ANDAMENTO;
   }
-  
+
   return RevenueStatus.PENDENTE;
 }
 ```
 
 ### 2. Atualização Automática de Parcelas Vencidas
+
 ```typescript
 // Cron diário ou a cada busca
 export async function updateOverdueInstallments(): Promise<void> {
   const today = new Date();
-  
+
   await this.installmentRepository
     .createQueryBuilder()
     .update(RevenueInstallment)
@@ -388,6 +424,7 @@ export async function updateOverdueInstallments(): Promise<void> {
 ```
 
 ### 3. Validações Críticas
+
 ```typescript
 // Validação de desconto
 if (discountCents > baseValue) {
@@ -401,15 +438,21 @@ if (calculatedContractValue !== contractValue || contractValue < 0) {
 }
 
 // Validação de parcelas
-const totalInstallments = installments.reduce((sum, i) => sum + i.valueCents, 0);
+const totalInstallments = installments.reduce(
+  (sum, i) => sum + i.valueCents,
+  0,
+);
 if (totalInstallments !== contractValue) {
-  throw new BadRequestException('Soma das parcelas deve ser igual ao valor do contrato');
+  throw new BadRequestException(
+    'Soma das parcelas deve ser igual ao valor do contrato',
+  );
 }
 ```
 
 ## 📱 DTOs (Data Transfer Objects)
 
 ### CreateRevenueDto
+
 ```typescript
 export class CreateRevenueDto {
   @IsUUID()
@@ -479,6 +522,7 @@ export class InstallmentsConfigDto {
 ```
 
 ### PaginatedRevenuesDto
+
 ```typescript
 export class PaginatedRevenuesDto {
   @IsUUID()
@@ -524,6 +568,7 @@ export class PaginatedRevenuesDto {
 ```
 
 ### RevenueKpisDto
+
 ```typescript
 export class RevenueKpisDto {
   @IsUUID()
@@ -540,6 +585,7 @@ export class RevenueKpisDto {
 ```
 
 ### AnalyticsDto
+
 ```typescript
 export class AnalyticsDto {
   @IsUUID()
@@ -621,6 +667,7 @@ src/modules/finance/
 ### Prefixo Base: `/api/finance`
 
 #### 1. Receitas (Contratos)
+
 ```typescript
 // Listar receitas (paginada + ordenada por status)
 GET /receitas?fairId&page&pageSize&type&status&q&dateField&from&to
@@ -649,6 +696,7 @@ DELETE /receitas/:id/attachments/:attachmentId
 ```
 
 #### 2. Parcelas
+
 ```typescript
 // Editar parcela
 PUT /parcelas/:installmentId
@@ -665,6 +713,7 @@ DELETE /parcelas/:installmentId/attachments/:attachmentId
 ```
 
 #### 3. Analytics (ApexCharts)
+
 ```typescript
 // Contratos por período (quantidade e valor)
 GET /receitas/analytics/contratos-por-periodo?fairId&from&to&granularity
@@ -683,6 +732,7 @@ GET /receitas/analytics/por-modelo?fairId&from&to&tipo
 ```
 
 #### 4. Modelos de Entrada
+
 ```typescript
 // Listar modelos
 GET /entry-models?fairId&active
@@ -698,6 +748,7 @@ PATCH /entry-models/:id/archive
 ```
 
 #### 5. Clientes (Globais)
+
 ```typescript
 // Autocomplete de clientes
 GET /clients?q
@@ -718,6 +769,7 @@ PUT /clients/:id
 ## 🔒 Segurança & Validações
 
 ### Guards Necessários
+
 ```typescript
 @Controller('finance')
 @UseGuards(JwtAuthGuard, RoleGuard)
@@ -728,6 +780,7 @@ export class FinanceController {
 ```
 
 ### Validações de Upload
+
 ```typescript
 @UseInterceptors(FileInterceptor('file', {
   limits: {
@@ -744,6 +797,7 @@ export class FinanceController {
 ```
 
 ### Auditoria (Opcional)
+
 ```typescript
 // Interceptor para log de operações críticas
 @Injectable()
@@ -751,7 +805,7 @@ export class AuditInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const { user, method, url, body } = request;
-    
+
     // Log operações de CREATE, UPDATE, DELETE
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
       this.auditService.log({
@@ -761,7 +815,7 @@ export class AuditInterceptor implements NestInterceptor {
         timestamp: new Date(),
       });
     }
-    
+
     return next.handle();
   }
 }
@@ -770,6 +824,7 @@ export class AuditInterceptor implements NestInterceptor {
 ## 🧪 Casos de Teste Essenciais
 
 ### 1. Fluxo Completo de Receita
+
 ```typescript
 describe('Revenue Flow', () => {
   it('should create revenue with installments and track status changes', async () => {
@@ -777,24 +832,25 @@ describe('Revenue Flow', () => {
     const revenue = await createRevenue({
       type: 'STAND',
       contractValue: 150000, // R$ 1.500,00
-      installments: { count: 3, firstDueDate: '2025-09-10' }
+      installments: { count: 3, firstDueDate: '2025-09-10' },
     });
-    
+
     expect(revenue.status).toBe('PENDENTE');
     expect(revenue.installments).toHaveLength(3);
-    expect(revenue.installments.reduce((sum, i) => sum + i.valueCents, 0))
-      .toBe(150000);
-    
+    expect(revenue.installments.reduce((sum, i) => sum + i.valueCents, 0)).toBe(
+      150000,
+    );
+
     // 2. Baixar primeira parcela
     await payInstallment(revenue.installments[0].id);
     const updated = await getRevenue(revenue.id);
     expect(updated.status).toBe('EM_ANDAMENTO');
-    
+
     // 3. Vencer segunda parcela (simular data passada)
     await makeInstallmentOverdue(revenue.installments[1].id);
     const overdue = await getRevenue(revenue.id);
     expect(overdue.status).toBe('EM_ATRASO');
-    
+
     // 4. Baixar todas as parcelas
     await payInstallment(revenue.installments[1].id);
     await payInstallment(revenue.installments[2].id);
@@ -805,6 +861,7 @@ describe('Revenue Flow', () => {
 ```
 
 ### 2. Ordenação da Listagem
+
 ```typescript
 describe('Revenue Listing Order', () => {
   it('should return revenues ordered by status priority', async () => {
@@ -813,61 +870,61 @@ describe('Revenue Listing Order', () => {
     const emAndamento = await createRevenueWithStatus('EM_ANDAMENTO');
     const emAtraso = await createRevenueWithStatus('EM_ATRASO');
     const pago = await createRevenueWithStatus('PAGO');
-    
+
     const response = await request(app)
       .get('/api/finance/receitas')
       .query({ fairId: 'test-fair' });
-    
-    const statuses = response.body.items.map(r => r.status);
-    expect(statuses).toEqual([
-      'PENDENTE', 'EM_ANDAMENTO', 'EM_ATRASO', 'PAGO'
-    ]);
+
+    const statuses = response.body.items.map((r) => r.status);
+    expect(statuses).toEqual(['PENDENTE', 'EM_ANDAMENTO', 'EM_ATRASO', 'PAGO']);
   });
 });
 ```
 
 ### 3. KPIs Calculation
+
 ```typescript
 describe('Revenue KPIs', () => {
   it('should calculate correct totals', async () => {
     // Setup: criar receitas de diferentes tipos e parcelas pagas
     await createRevenueWithPaidInstallments('STAND', 100000, 50000); // R$ 500 pago
     await createRevenueWithPaidInstallments('PATROCINIO', 80000, 80000); // R$ 800 pago
-    
+
     const kpis = await request(app)
       .get('/api/finance/receitas/kpis')
       .query({ fairId: 'test-fair' });
-    
+
     expect(kpis.body).toEqual({
       totalStandsVendidos: 100000,
       totalPatrocinios: 80000,
       totalPago: 130000, // 50000 + 80000
-      totalEstimado: 180000 // 100000 + 80000
+      totalEstimado: 180000, // 100000 + 80000
     });
   });
 });
 ```
 
 ### 4. Analytics
+
 ```typescript
 describe('Revenue Analytics', () => {
   it('should return correct period buckets', async () => {
     // Criar receitas em diferentes meses
     await createRevenueInDate('2025-06-15', 100000);
     await createRevenueInDate('2025-07-20', 150000);
-    
+
     const analytics = await request(app)
       .get('/api/finance/receitas/analytics/contratos-por-periodo')
-      .query({ 
+      .query({
         fairId: 'test-fair',
         from: '2025-06-01',
         to: '2025-07-31',
-        granularity: 'month'
+        granularity: 'month',
       });
-    
+
     expect(analytics.body).toEqual([
       { period: '2025-06-01', qtd: 1, totalContrato: 100000 },
-      { period: '2025-07-01', qtd: 1, totalContrato: 150000 }
+      { period: '2025-07-01', qtd: 1, totalContrato: 150000 },
     ]);
   });
 });
@@ -878,20 +935,25 @@ describe('Revenue Analytics', () => {
 ### Exemplo de Response para Gráficos
 
 #### 1. Gráfico de Linhas (Contratos por Período)
+
 ```json
 {
-  "series": [{
-    "name": "Valor Contratado",
-    "data": [8200000, 5100000, 7300000]
-  }, {
-    "name": "Quantidade",
-    "data": [8, 5, 9]
-  }],
+  "series": [
+    {
+      "name": "Valor Contratado",
+      "data": [8200000, 5100000, 7300000]
+    },
+    {
+      "name": "Quantidade",
+      "data": [8, 5, 9]
+    }
+  ],
   "categories": ["Jun 2025", "Jul 2025", "Ago 2025"]
 }
 ```
 
 #### 2. Gráfico de Pizza (Por Tipo)
+
 ```json
 {
   "series": [9800000, 2600000],
@@ -900,12 +962,15 @@ describe('Revenue Analytics', () => {
 ```
 
 #### 3. Gráfico de Barras (Top Empresas)
+
 ```json
 {
-  "series": [{
-    "name": "Valor Contratado",
-    "data": [4200000, 3600000, 2800000]
-  }],
+  "series": [
+    {
+      "name": "Valor Contratado",
+      "data": [4200000, 3600000, 2800000]
+    }
+  ],
   "categories": ["ACME S/A", "Beta Ltda", "Gamma Corp"]
 }
 ```
