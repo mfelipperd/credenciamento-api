@@ -209,9 +209,76 @@ export class RevenuesService {
     return await this.revenueRepository.save(revenue);
   }
 
-  async remove(id: string, fairId: string): Promise<void> {
-    const revenue = await this.findOne(id, fairId);
-    await this.revenueRepository.remove(revenue);
+  async remove(id: string): Promise<void> {
+    console.log(`[SERVICE] Iniciando remoção da receita: ${id}`);
+
+    try {
+      // Buscar a receita para verificar se existe
+      console.log(`[SERVICE] Buscando receita ${id} no banco...`);
+      const revenue = await this.revenueRepository.findOne({
+        where: { id },
+        relations: ['installments'],
+      });
+
+      if (!revenue) {
+        console.log(`[SERVICE] Receita ${id} não encontrada`);
+        throw new NotFoundException('Receita não encontrada');
+      }
+
+      console.log(
+        `[SERVICE] Receita encontrada: ${id}, installments: ${revenue.installments?.length || 0}`,
+      );
+
+      // Remover primeiro as parcelas (installments) se existirem
+      if (revenue.installments && revenue.installments.length > 0) {
+        console.log(
+          `[SERVICE] Removendo ${revenue.installments.length} parcelas da receita ${id}...`,
+        );
+        await this.installmentRepository.remove(revenue.installments);
+        console.log(`[SERVICE] Parcelas removidas com sucesso`);
+      }
+
+      // Verificar e remover stands relacionados se existirem
+      console.log(
+        `[SERVICE] Verificando stands relacionados à receita ${id}...`,
+      );
+      const standsQuery = this.revenueRepository.manager.query(
+        'SELECT COUNT(*) as count FROM stands WHERE revenue_id = ?',
+        [id],
+      );
+      const standsCount = await standsQuery;
+
+      if (standsCount && standsCount[0]?.count > 0) {
+        console.log(
+          `[SERVICE] Removendo ${standsCount[0].count} stands relacionados à receita ${id}...`,
+        );
+        await this.revenueRepository.manager.query(
+          'UPDATE stands SET revenue_id = NULL WHERE revenue_id = ?',
+          [id],
+        );
+        console.log(`[SERVICE] Stands desvinculados com sucesso`);
+      }
+
+      // Agora remover a receita
+      console.log(`[SERVICE] Removendo receita ${id}...`);
+      await this.revenueRepository.remove(revenue);
+      console.log(`[SERVICE] Receita ${id} removida com sucesso`);
+    } catch (error) {
+      console.log(`[SERVICE] Erro detalhado ao remover receita ${id}:`, {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code,
+      });
+
+      if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+        throw new Error(
+          'Não é possível remover esta receita pois ela possui dados relacionados. Remova primeiro os dados dependentes.',
+        );
+      }
+
+      throw error;
+    }
   }
 
   async findByClient(clientId: string, fairId: string): Promise<Revenue[]> {

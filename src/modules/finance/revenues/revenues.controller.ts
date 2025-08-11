@@ -136,22 +136,18 @@ export class RevenuesController {
   @Delete(':id')
   @ApiOperation({ summary: 'Remover receita' })
   @ApiParam({ name: 'id', description: 'ID da receita' })
-  @ApiQuery({
-    name: 'fairId',
-    required: true,
-    description: 'ID da feira (obrigatório para validação)',
-  })
   @ApiResponse({ status: 204, description: 'Receita removida com sucesso' })
   @ApiResponse({ status: 404, description: 'Receita não encontrada' })
-  @ApiResponse({ status: 400, description: 'fairId é obrigatório' })
-  async remove(
-    @Param('id') id: string,
-    @Query('fairId') fairId: string,
-  ): Promise<void> {
-    if (!fairId) {
-      throw new BadRequestException('fairId é obrigatório');
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async remove(@Param('id') id: string): Promise<void> {
+    try {
+      console.log(`[DELETE] Tentando remover receita com ID: ${id}`);
+      await this.revenuesService.remove(id);
+      console.log(`[DELETE] Receita ${id} removida com sucesso`);
+    } catch (error) {
+      console.error(`[DELETE] Erro ao remover receita ${id}:`, error);
+      throw error;
     }
-    await this.revenuesService.remove(id, fairId);
   }
 
   @Get('client/:clientId')
