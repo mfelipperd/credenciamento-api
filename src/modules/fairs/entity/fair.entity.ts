@@ -23,8 +23,37 @@ export class Fair {
   @Column({ length: 255 })
   location: string;
 
+  // Campos de endereço detalhado
+  @Column({ length: 255, nullable: true })
+  address: string;
+
+  @Column({ length: 100, nullable: true })
+  city: string;
+
+  @Column({ length: 50, nullable: true })
+  state: string;
+
+  @Column({ length: 20, nullable: true })
+  zipCode: string;
+
+  @Column({ length: 100, nullable: true })
+  country: string;
+
+  // Campos de data e hora
   @Column({ type: 'date' })
   date: Date;
+
+  @Column({ type: 'time', nullable: true })
+  startTime: string;
+
+  @Column({ type: 'time', nullable: true })
+  endTime: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  startDateTime: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  endDateTime: Date;
 
   @CreateDateColumn()
   createdAt: Date;

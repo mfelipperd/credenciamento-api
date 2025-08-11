@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -42,20 +43,33 @@ export class EntryModelsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar todos os modelos de lançamento' })
+  @ApiOperation({
+    summary: 'Listar modelos de lançamento de uma feira específica',
+  })
+  @ApiQuery({
+    name: 'fairId',
+    required: true,
+    description: 'ID da feira (obrigatório)',
+  })
   @ApiQuery({ name: 'type', required: false, description: 'Filtrar por tipo' })
   @ApiResponse({
     status: 200,
-    description: 'Lista de modelos',
+    description: 'Lista de modelos da feira',
     type: [EntryModelResponseDto],
   })
+  @ApiResponse({ status: 400, description: 'fairId é obrigatório' })
   async findAll(
+    @Query('fairId') fairId: string,
     @Query('type') type?: string,
   ): Promise<EntryModelResponseDto[]> {
-    if (type) {
-      return await this.entryModelsService.findByType(type);
+    if (!fairId) {
+      throw new BadRequestException('fairId é obrigatório');
     }
-    return await this.entryModelsService.findAll();
+
+    if (type) {
+      return await this.entryModelsService.findByType(type, fairId);
+    }
+    return await this.entryModelsService.findAll(fairId);
   }
 
   @Get(':id')

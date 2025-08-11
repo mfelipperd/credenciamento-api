@@ -1,7 +1,21 @@
-import { IsString, IsEmail, IsOptional, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  MaxLength,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateClientDto {
+  @ApiProperty({
+    description: 'ID da feira',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsString()
+  @IsUUID()
+  fairId: string;
+
   @ApiProperty({ description: 'Nome do cliente', maxLength: 255 })
   @IsString()
   @MaxLength(255)
@@ -51,6 +65,9 @@ export class UpdateClientDto {
 export class ClientResponseDto {
   @ApiProperty({ description: 'ID do cliente' })
   id: string;
+
+  @ApiProperty({ description: 'ID da feira' })
+  fairId: string;
 
   @ApiProperty({ description: 'Nome do cliente' })
   name: string;

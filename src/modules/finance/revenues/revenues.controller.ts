@@ -82,86 +82,153 @@ export class RevenuesController {
   @Get(':id')
   @ApiOperation({ summary: 'Buscar receita por ID' })
   @ApiParam({ name: 'id', description: 'ID da receita' })
+  @ApiQuery({
+    name: 'fairId',
+    required: true,
+    description: 'ID da feira (obrigatório para validação)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Receita encontrada',
     type: RevenueResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Receita não encontrada' })
-  async findOne(@Param('id') id: string): Promise<RevenueResponseDto> {
-    return await this.revenuesService.findOne(id);
+  @ApiResponse({ status: 400, description: 'fairId é obrigatório' })
+  async findOne(
+    @Param('id') id: string,
+    @Query('fairId') fairId: string,
+  ): Promise<RevenueResponseDto> {
+    if (!fairId) {
+      throw new BadRequestException('fairId é obrigatório');
+    }
+    return await this.revenuesService.findOne(id, fairId);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualizar receita' })
   @ApiParam({ name: 'id', description: 'ID da receita' })
+  @ApiQuery({
+    name: 'fairId',
+    required: true,
+    description: 'ID da feira (obrigatório para validação)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Receita atualizada com sucesso',
     type: RevenueResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Receita não encontrada' })
-  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados inválidos ou fairId é obrigatório',
+  })
   async update(
     @Param('id') id: string,
+    @Query('fairId') fairId: string,
     @Body() updateRevenueDto: UpdateRevenueDto,
   ): Promise<RevenueResponseDto> {
-    return await this.revenuesService.update(id, updateRevenueDto);
+    if (!fairId) {
+      throw new BadRequestException('fairId é obrigatório');
+    }
+    return await this.revenuesService.update(id, updateRevenueDto, fairId);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Remover receita' })
   @ApiParam({ name: 'id', description: 'ID da receita' })
+  @ApiQuery({
+    name: 'fairId',
+    required: true,
+    description: 'ID da feira (obrigatório para validação)',
+  })
   @ApiResponse({ status: 204, description: 'Receita removida com sucesso' })
   @ApiResponse({ status: 404, description: 'Receita não encontrada' })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.revenuesService.remove(id);
+  @ApiResponse({ status: 400, description: 'fairId é obrigatório' })
+  async remove(
+    @Param('id') id: string,
+    @Query('fairId') fairId: string,
+  ): Promise<void> {
+    if (!fairId) {
+      throw new BadRequestException('fairId é obrigatório');
+    }
+    await this.revenuesService.remove(id, fairId);
   }
 
   @Get('client/:clientId')
   @ApiOperation({ summary: 'Buscar receitas por cliente' })
   @ApiParam({ name: 'clientId', description: 'ID do cliente' })
+  @ApiQuery({
+    name: 'fairId',
+    required: true,
+    description: 'ID da feira (obrigatório)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Receitas encontradas',
     type: [RevenueResponseDto],
   })
+  @ApiResponse({ status: 400, description: 'fairId é obrigatório' })
   async findByClient(
     @Param('clientId') clientId: string,
+    @Query('fairId') fairId: string,
   ): Promise<RevenueResponseDto[]> {
-    return await this.revenuesService.findByClient(clientId);
+    if (!fairId) {
+      throw new BadRequestException('fairId é obrigatório');
+    }
+    return await this.revenuesService.findByClient(clientId, fairId);
   }
 
   @Get('status/:status')
   @ApiOperation({ summary: 'Buscar receitas por status' })
   @ApiParam({ name: 'status', description: 'Status da receita' })
+  @ApiQuery({
+    name: 'fairId',
+    required: true,
+    description: 'ID da feira (obrigatório)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Receitas encontradas',
     type: [RevenueResponseDto],
   })
+  @ApiResponse({ status: 400, description: 'fairId é obrigatório' })
   async findByStatus(
     @Param('status') status: string,
+    @Query('fairId') fairId: string,
   ): Promise<RevenueResponseDto[]> {
-    return await this.revenuesService.findByStatus(status);
+    if (!fairId) {
+      throw new BadRequestException('fairId é obrigatório');
+    }
+    return await this.revenuesService.findByStatus(status, fairId);
   }
 
   @Patch('installment/:installmentId/confirm-payment')
   @ApiOperation({ summary: 'Confirmar pagamento de uma parcela' })
   @ApiParam({ name: 'installmentId', description: 'ID da parcela' })
+  @ApiQuery({
+    name: 'fairId',
+    required: true,
+    description: 'ID da feira (obrigatório para validação)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Pagamento confirmado com sucesso',
     type: InstallmentResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Parcela não encontrada' })
+  @ApiResponse({ status: 400, description: 'fairId é obrigatório' })
   async confirmInstallmentPayment(
     @Param('installmentId') installmentId: string,
+    @Query('fairId') fairId: string,
     @Body() confirmPaymentDto: ConfirmInstallmentPaymentDto,
   ): Promise<InstallmentResponseDto> {
+    if (!fairId) {
+      throw new BadRequestException('fairId é obrigatório');
+    }
     return await this.revenuesService.confirmInstallmentPayment(
       installmentId,
       confirmPaymentDto,
+      fairId,
     );
   }
 }

@@ -9,6 +9,7 @@ import {
   Query,
   Req,
   Request,
+  UseGuards,
 } from '@nestjs/common';
 import { VisitorsService } from './visitors.service';
 import { CreateVisitorInputDto } from './visitors.dto';
@@ -19,12 +20,14 @@ import {
   PaginatedResponse,
 } from './dto/paginated-visitors.dto';
 import { Visitor } from './entities/visitor.entity';
+import { FrontendOriginGuard } from 'src/auth/frontend-origin.guard';
 
 @Controller('visitors')
 export class VisitorsController {
   constructor(private readonly visitorsService: VisitorsService) {}
 
   @Get()
+  @UseGuards(FrontendOriginGuard)
   async getVisitors(
     @Req() req: Request,
     @Query() dto: PaginatedVisitorsDto,
@@ -52,6 +55,7 @@ export class VisitorsController {
   }
 
   @Get('stats')
+  @UseGuards(FrontendOriginGuard)
   async getVisitorsStats(
     @Req() req: Request,
     @Query('fairId') fairId?: string,
@@ -75,6 +79,7 @@ export class VisitorsController {
   }
 
   @Get(':registrationCode')
+  @UseGuards(FrontendOriginGuard)
   async getVisitorByRegistrationCode(
     @Param('registrationCode') registrationCode: string,
     @Query('fairId') fairId: string,

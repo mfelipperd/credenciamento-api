@@ -6,9 +6,10 @@ import { RevenueChartsController } from './revenue-charts.controller';
 import { RevenueChartsService } from './revenue-charts.service';
 import { Revenue } from './entities/revenue.entity';
 import { RevenueInstallment } from './entities/revenue-installment.entity';
+import { Stand } from '../stands/entities/stand.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Revenue, RevenueInstallment])],
+  imports: [TypeOrmModule.forFeature([Revenue, RevenueInstallment, Stand])],
   controllers: [RevenuesController, RevenueChartsController],
   providers: [RevenuesService, RevenueChartsService],
   exports: [RevenuesService, RevenueChartsService],

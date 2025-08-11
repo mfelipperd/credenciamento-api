@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Revenue } from './entities/revenue.entity';
 import { RevenueInstallment } from './entities/revenue-installment.entity';
+import { Stand } from '../stands/entities/stand.entity';
 import {
   CreateRevenueDto,
   UpdateRevenueDto,
@@ -20,53 +25,138 @@ export class RevenuesService {
     private readonly revenueRepository: Repository<Revenue>,
     @InjectRepository(RevenueInstallment)
     private readonly installmentRepository: Repository<RevenueInstallment>,
+    @InjectRepository(Stand)
+    private readonly standRepository: Repository<Stand>,
   ) {}
 
   async create(createRevenueDto: CreateRevenueDto): Promise<Revenue> {
-    // Criar a receita
-    const revenue = this.revenueRepository.create(createRevenueDto);
-    const savedRevenue = await this.revenueRepository.save(revenue);
+    try {
+      console.log('[REVENUES] Iniciando criação de receita:', createRevenueDto);
 
-    // Criar as parcelas automaticamente
-    await this.createInstallments(savedRevenue);
+      const { standNumber, fairId, ...revenueData } = createRevenueDto;
 
-    // Retornar receita com parcelas
-    return await this.findOne(savedRevenue.id);
+      // Verificar se o stand existe e está disponível
+      console.log('[REVENUES] Buscando stand:', { standNumber, fairId });
+      const stand = await this.standRepository.findOne({
+        where: {
+          standNumber,
+          fairId: fairId,
+        },
+      });
+
+      if (!stand) {
+        console.log('[REVENUES] Stand não encontrado');
+        throw new BadRequestException(
+          `Stand número ${standNumber} não encontrado na feira ${fairId}`,
+        );
+      }
+
+      if (!stand.isAvailable) {
+        console.log('[REVENUES] Stand já ocupado');
+        throw new BadRequestException(
+          `Stand número ${standNumber} já está ocupado`,
+        );
+      }
+
+      console.log('[REVENUES] Stand encontrado e disponível:', stand);
+
+      // Criar a receita
+      console.log('[REVENUES] Criando receita com dados:', revenueData);
+      const revenue = this.revenueRepository.create({
+        ...revenueData,
+        fairId, // Adicionar fairId explicitamente
+      });
+      console.log('[REVENUES] Receita criada (antes de salvar):', revenue);
+
+      const savedRevenue = await this.revenueRepository.save(revenue);
+      console.log('[REVENUES] Receita salva com sucesso:', savedRevenue);
+
+      // Vincular o stand à receita
+      console.log('[REVENUES] Vinculando stand à receita');
+      stand.revenueId = savedRevenue.id;
+      stand.isAvailable = false;
+      await this.standRepository.save(stand);
+      console.log('[REVENUES] Stand atualizado com sucesso');
+
+      // Criar as parcelas automaticamente
+      console.log('[REVENUES] Criando parcelas');
+      await this.createInstallments(savedRevenue);
+      console.log('[REVENUES] Parcelas criadas com sucesso');
+
+      // Retornar receita com parcelas e stand
+      console.log('[REVENUES] Buscando receita completa');
+      const finalRevenue = await this.findOne(savedRevenue.id, fairId);
+      console.log('[REVENUES] Receita completa encontrada');
+
+      return finalRevenue;
+    } catch (error) {
+      console.error('[REVENUES] Erro ao criar receita:', error);
+      if (error instanceof Error) {
+        console.error('[REVENUES] Stack trace:', error.stack);
+      }
+      throw error;
+    }
   }
 
   private async createInstallments(revenue: Revenue): Promise<void> {
-    const installments: Partial<RevenueInstallment>[] = [];
-    const numberOfInstallments = revenue.numberOfInstallments || 1;
-    const installmentValue = Math.floor(
-      revenue.contractValue / numberOfInstallments,
-    );
-    const remainder = revenue.contractValue % numberOfInstallments;
+    try {
+      console.log(
+        '[INSTALLMENTS] Iniciando criação de parcelas para receita:',
+        revenue.id,
+      );
 
-    for (let i = 1; i <= numberOfInstallments; i++) {
-      const dueDate = new Date();
-      dueDate.setMonth(dueDate.getMonth() + (i - 1)); // Primeira parcela no mês atual, depois mês a mês
+      const installments: Partial<RevenueInstallment>[] = [];
+      const numberOfInstallments = revenue.numberOfInstallments || 1;
+      const installmentValue = Math.floor(
+        revenue.contractValue / numberOfInstallments,
+      );
+      const remainder = revenue.contractValue % numberOfInstallments;
 
-      // A última parcela recebe o valor residual
-      const valueCents =
-        i === numberOfInstallments
-          ? installmentValue + remainder
-          : installmentValue;
-
-      installments.push({
-        revenueId: revenue.id,
-        n: i,
-        valueCents,
-        dueDate,
-        status: InstallmentStatus.A_VENCER,
+      console.log('[INSTALLMENTS] Configuração:', {
+        numberOfInstallments,
+        contractValue: revenue.contractValue,
+        installmentValue,
+        remainder,
       });
-    }
 
-    await this.installmentRepository.save(installments);
+      for (let i = 1; i <= numberOfInstallments; i++) {
+        const dueDate = new Date();
+        dueDate.setMonth(dueDate.getMonth() + (i - 1)); // Primeira parcela no mês atual, depois mês a mês
+
+        // A última parcela recebe o valor residual
+        const valueCents =
+          i === numberOfInstallments
+            ? installmentValue + remainder
+            : installmentValue;
+
+        const installment = {
+          revenueId: revenue.id,
+          n: i,
+          valueCents,
+          dueDate,
+          status: InstallmentStatus.A_VENCER,
+        };
+
+        console.log(`[INSTALLMENTS] Parcela ${i}:`, installment);
+        installments.push(installment);
+      }
+
+      console.log('[INSTALLMENTS] Salvando', installments.length, 'parcelas');
+      const savedInstallments =
+        await this.installmentRepository.save(installments);
+      console.log(
+        '[INSTALLMENTS] Parcelas salvas com sucesso:',
+        savedInstallments.length,
+      );
+    } catch (error) {
+      console.error('[INSTALLMENTS] Erro ao criar parcelas:', error);
+      throw error;
+    }
   }
 
   async findAll(): Promise<Revenue[]> {
     return await this.revenueRepository.find({
-      relations: ['client', 'entryModel', 'installments'],
+      relations: ['client', 'entryModel', 'installments', 'stand'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -92,14 +182,16 @@ export class RevenuesService {
     });
   }
 
-  async findOne(id: string): Promise<Revenue> {
+  async findOne(id: string, fairId: string): Promise<Revenue> {
     const revenue = await this.revenueRepository.findOne({
-      where: { id },
+      where: { id, fairId },
       relations: ['client', 'entryModel', 'installments'],
     });
 
     if (!revenue) {
-      throw new NotFoundException(`Receita com ID ${id} não encontrada`);
+      throw new NotFoundException(
+        `Receita com ID ${id} não encontrada na feira ${fairId}`,
+      );
     }
 
     return revenue;
@@ -108,30 +200,31 @@ export class RevenuesService {
   async update(
     id: string,
     updateRevenueDto: UpdateRevenueDto,
+    fairId: string,
   ): Promise<Revenue> {
-    const revenue = await this.findOne(id);
+    const revenue = await this.findOne(id, fairId);
 
     Object.assign(revenue, updateRevenueDto);
 
     return await this.revenueRepository.save(revenue);
   }
 
-  async remove(id: string): Promise<void> {
-    const revenue = await this.findOne(id);
+  async remove(id: string, fairId: string): Promise<void> {
+    const revenue = await this.findOne(id, fairId);
     await this.revenueRepository.remove(revenue);
   }
 
-  async findByClient(clientId: string): Promise<Revenue[]> {
+  async findByClient(clientId: string, fairId: string): Promise<Revenue[]> {
     return await this.revenueRepository.find({
-      where: { clientId },
+      where: { clientId, fairId },
       relations: ['client', 'entryModel'],
       order: { createdAt: 'ASC' },
     });
   }
 
-  async findByStatus(status: string): Promise<Revenue[]> {
+  async findByStatus(status: string, fairId: string): Promise<Revenue[]> {
     return await this.revenueRepository.find({
-      where: { status: status as RevenueStatus },
+      where: { status: status as RevenueStatus, fairId },
       relations: ['client', 'entryModel', 'installments'],
       order: { createdAt: 'ASC' },
     });
@@ -140,6 +233,7 @@ export class RevenuesService {
   async confirmInstallmentPayment(
     installmentId: string,
     confirmPaymentDto: ConfirmInstallmentPaymentDto,
+    fairId: string,
   ): Promise<RevenueInstallment> {
     const installment = await this.installmentRepository.findOne({
       where: { id: installmentId },
@@ -150,6 +244,11 @@ export class RevenuesService {
       throw new NotFoundException(
         `Parcela com ID ${installmentId} não encontrada`,
       );
+    }
+
+    // Validar se a receita pertence à feira correta
+    if (installment.revenue.fairId !== fairId) {
+      throw new NotFoundException(`Parcela não encontrada na feira ${fairId}`);
     }
 
     // Atualizar parcela

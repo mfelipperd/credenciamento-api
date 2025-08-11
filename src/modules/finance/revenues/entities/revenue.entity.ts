@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   JoinColumn,
   Index,
 } from 'typeorm';
@@ -17,6 +18,7 @@ import {
 import { Client } from '../../clients/entities/client.entity';
 import { EntryModel } from '../../entry-models/entities/entry-model.entity';
 import { RevenueInstallment } from './revenue-installment.entity';
+import { Stand } from '../../stands/entities/stand.entity';
 
 @Entity('finance_revenues')
 @Index(['fairId', 'status', 'type'])
@@ -88,6 +90,9 @@ export class Revenue {
   @ManyToOne(() => Client)
   @JoinColumn({ name: 'clientId' })
   client: Client;
+
+  @OneToOne(() => Stand, (stand) => stand.revenue, { nullable: true })
+  stand?: Stand;
 
   @OneToMany(() => RevenueInstallment, (installment) => installment.revenue, {
     cascade: true,

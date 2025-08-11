@@ -149,7 +149,7 @@ export class EmailsService {
       }
 
       // Coleta todos os emails dos visitantes ausentes
-      const emailsToSend = absentVisitors.map(visitor => visitor.email);
+      const emailsToSend = absentVisitors.map((visitor) => visitor.email);
 
       // Inicia processamento em background para evitar timeout
       this.processBulkEmails(emailsToSend, subject, htmlContent, fairId).catch(
@@ -210,33 +210,40 @@ export class EmailsService {
     for (let i = 0; i < emails.length; i++) {
       const email = emails[i];
       const currentTime = Date.now();
-      
+
       // Verifica limite por hora (pausa se necessário)
       if (hourlyCount >= EMAILS_PER_HOUR_LIMIT) {
         const timeElapsed = currentTime - hourStartTime;
         if (timeElapsed < DELAY_BETWEEN_HOURS) {
           const waitTime = DELAY_BETWEEN_HOURS - timeElapsed;
-          console.log(`⏰ Limite de ${EMAILS_PER_HOUR_LIMIT} emails/hora atingido. Aguardando ${Math.ceil(waitTime / 60000)} minutos...`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
+          console.log(
+            `⏰ Limite de ${EMAILS_PER_HOUR_LIMIT} emails/hora atingido. Aguardando ${Math.ceil(waitTime / 60000)} minutos...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
         }
         hourlyCount = 0;
         hourStartTime = Date.now();
       }
 
-      console.log(
-        `📧 Processando email ${i + 1}/${emails.length}: ${email}`,
-      );
+      console.log(`📧 Processando email ${i + 1}/${emails.length}: ${email}`);
 
       try {
-        await this.sendSingleEmailWithRetry(email, subject, htmlContent, MAX_RETRIES);
+        await this.sendSingleEmailWithRetry(
+          email,
+          subject,
+          htmlContent,
+          MAX_RETRIES,
+        );
         successCount++;
         hourlyCount++;
-        console.log(`✅ Email ${i + 1} enviado com sucesso (${successCount}/${emails.length})`);
+        console.log(
+          `✅ Email ${i + 1} enviado com sucesso (${successCount}/${emails.length})`,
+        );
       } catch (error) {
         errorCount++;
         errors.push({
           email: email,
-          error: error.message || 'Erro desconhecido'
+          error: error.message || 'Erro desconhecido',
         });
         console.error(`❌ Falha no email ${i + 1}: ${error.message}`);
       }
@@ -246,7 +253,9 @@ export class EmailsService {
         console.log(
           `⏳ Aguardando 30s antes do próximo email... (${i + 2}/${emails.length})`,
         );
-        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_EMAILS));
+        await new Promise((resolve) =>
+          setTimeout(resolve, DELAY_BETWEEN_EMAILS),
+        );
       }
     }
 
@@ -291,17 +300,19 @@ export class EmailsService {
         if (attempt < maxRetries) {
           // Para Gmail, usa delays maiores e específicos
           let delay = 60000; // 1 minuto base
-          
+
           // Aumenta delay baseado no erro
           if (error.message.includes('454 4.7.0')) {
             delay = 300000; // 5 minutos para rate limiting
           } else if (error.message.includes('421')) {
-            delay = 600000; // 10 minutos para service unavailable  
+            delay = 600000; // 10 minutos para service unavailable
           } else {
             delay = Math.pow(2, attempt) * 30000; // 30s, 60s, 120s...
           }
-          
-          console.log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`);
+
+          console.log(
+            `⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`,
+          );
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }

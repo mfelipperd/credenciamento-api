@@ -17,8 +17,9 @@ export class EntryModelsService {
     return await this.entryModelRepository.save(entryModel);
   }
 
-  async findAll(): Promise<EntryModel[]> {
+  async findAll(fairId: string): Promise<EntryModel[]> {
     return await this.entryModelRepository.find({
+      where: { fairId, active: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -53,9 +54,9 @@ export class EntryModelsService {
     await this.entryModelRepository.remove(entryModel);
   }
 
-  async findByType(type: string): Promise<EntryModel[]> {
+  async findByType(type: string, fairId: string): Promise<EntryModel[]> {
     return await this.entryModelRepository.find({
-      where: { type: type as EntryModelType },
+      where: { type: type as EntryModelType, fairId, active: true },
       order: { name: 'ASC' },
     });
   }

@@ -30,6 +30,15 @@ export class CreateRevenueDto {
   @IsString()
   entryModelId: string;
 
+  @ApiProperty({
+    description: 'Número do stand a ser vinculado à receita',
+    example: 15,
+    minimum: 1,
+  })
+  @IsNumber()
+  @Min(1)
+  standNumber: number;
+
   @ApiProperty({ description: 'Valor base', minimum: 0 })
   @IsNumber()
   @Min(0)

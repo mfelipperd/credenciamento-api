@@ -10,9 +10,13 @@ import {
 
 @Entity('finance_clients')
 @Index(['name'])
+@Index(['fairId'])
 export class Client {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column()
+  fairId: string;
 
   @Column()
   name: string;
