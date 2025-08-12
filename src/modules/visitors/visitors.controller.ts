@@ -30,7 +30,7 @@ export class VisitorsController {
   constructor(private readonly visitorsService: VisitorsService) {}
 
   @Get()
-  @UseGuards(FrontendOriginGuard)
+  // @UseGuards(FrontendOriginGuard)
   async getVisitors(
     @Req() req: Request,
     @Query() dto: PaginatedVisitorsDto,
@@ -58,7 +58,7 @@ export class VisitorsController {
   }
 
   @Get('stats')
-  @UseGuards(FrontendOriginGuard)
+  // @UseGuards(FrontendOriginGuard)
   async getVisitorsStats(
     @Req() req: Request,
     @Query('fairId') fairId?: string,
@@ -67,7 +67,6 @@ export class VisitorsController {
   }
 
   @Get('pdf/:fairId')
-  @IsPublicRoute()
   async generateVisitorsPdf(
     @Param('fairId') fairId: string,
     @Req() req: Request,
