@@ -64,6 +64,7 @@ export class VisitorsController {
   }
 
   @Post()
+  @UseGuards(FrontendOriginGuard)
   @IsPublicRoute()
   createVisitor(@Body() visitor: CreateVisitorInputDto) {
     return this.visitorsService.createVisitor(visitor);

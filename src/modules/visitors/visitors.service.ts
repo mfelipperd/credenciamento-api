@@ -362,6 +362,7 @@ export class VisitorsService {
       // Ao salvar, o PrimaryGeneratedColumn gera o registrationCode
       savedVisitor = await this.visitorRepository.save(newVisitor);
     } catch (err) {
+      console.log('Erro ao salvar visitante:', err);
       throw new InternalServerErrorException('Erro ao salvar visitante');
     }
 
