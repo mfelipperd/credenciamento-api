@@ -8,13 +8,21 @@ async function bootstrap() {
 
   // Habilita CORS apenas para o frontend em dev
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'https://credenciamento-frontend.vercel.app',
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://credenciamento-frontend.vercel.app',
+    'https://www.expomultimix.com'
+  ],
+  credentials: true,
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization', 
+    'x-frontend-auth'  // ← ADICIONAR ESTE HEADER
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
+});
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   const port = process.env.PORT || 8000;
