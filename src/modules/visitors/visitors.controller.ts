@@ -10,7 +10,10 @@ import {
   Req,
   Request,
   UseGuards,
+  Res,
+  NotFoundException,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { VisitorsService } from './visitors.service';
 import { CreateVisitorInputDto } from './visitors.dto';
 import { IsPublicRoute } from 'src/auth/public.route';
@@ -61,6 +64,46 @@ export class VisitorsController {
     @Query('fairId') fairId?: string,
   ) {
     return await this.visitorsService.getVisitorsStats(req.user, fairId);
+  }
+
+  @Get('pdf/:fairId')
+  @IsPublicRoute()
+  async generateVisitorsPdf(
+    @Param('fairId') fairId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    console.log(`[PDF] Iniciando geração de PDF para feira: ${fairId}`);
+
+    try {
+      const pdfBuffer = await this.visitorsService.generateVisitorsPdf(
+        null,
+        fairId,
+      );
+
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="visitantes-feira-${fairId}.pdf"`,
+        'Content-Length': pdfBuffer.length,
+      });
+
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('[PDF] Erro ao gerar PDF:', error);
+
+      // Se for um erro de NotFoundException, retornar 404
+      if (error instanceof NotFoundException) {
+        res.status(404).json({
+          message: error.message,
+          error: 'Feira não encontrada',
+        });
+      } else {
+        res.status(500).json({
+          message: 'Erro ao gerar PDF',
+          error: error instanceof Error ? error.message : 'Erro desconhecido',
+        });
+      }
+    }
   }
 
   @Post()

@@ -18,6 +18,7 @@ import {
   PaginatedVisitorsDto,
   PaginatedResponse,
 } from './dto/paginated-visitors.dto';
+import * as puppeteer from 'puppeteer';
 
 @Injectable()
 export class VisitorsService {
@@ -28,7 +29,7 @@ export class VisitorsService {
     private readonly emailsService: EmailsService,
   ) {}
 
-  async getVisitors(user: User, fairId?: string): Promise<Visitor[]> {
+  async getVisitors(user: User | null, fairId?: string): Promise<Visitor[]> {
     const query = this.visitorRepository
       .createQueryBuilder('visitor')
       .innerJoin(
@@ -37,7 +38,12 @@ export class VisitorsService {
         'fv.visitorsRegistrationCode = visitor.registrationCode',
       );
 
-    if (user.role === EUserRole.CONSULTANT) {
+    // Se user é null (rota pública), apenas filtrar por fairId se fornecido
+    if (!user) {
+      if (fairId) {
+        query.where('fv.fairsId = :fairId', { fairId });
+      }
+    } else if (user.role === EUserRole.CONSULTANT) {
       const allowed = user.fairIds ?? [];
 
       if (fairId) {
@@ -467,5 +473,259 @@ export class VisitorsService {
     }
 
     return this.visitorRepository.save(visitor);
+  }
+
+  async generateVisitorsPdf(
+    user: User | null,
+    fairId: string,
+  ): Promise<Buffer> {
+    console.log(`[PDF] Buscando visitantes para feira: ${fairId}`);
+
+    try {
+      // Primeiro verificar se a feira existe
+      const fair = await this.fairRepository.findOne({
+        where: { id: fairId },
+      });
+
+      if (!fair) {
+        throw new NotFoundException(`Feira com ID ${fairId} não encontrada`);
+      }
+
+      // Buscar todos os visitantes da feira
+      const visitors = await this.getVisitors(user, fairId);
+      console.log(`[PDF] Encontrados ${visitors.length} visitantes`);
+
+      // Gerar HTML para o PDF
+      const html = this.generateVisitorsHtml(visitors, fair);
+
+      // Gerar PDF com Puppeteer
+      console.log('[PDF] Iniciando geração do PDF...');
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      });
+
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        landscape: true,
+        printBackground: true,
+        margin: {
+          top: '15mm',
+          right: '15mm',
+          bottom: '15mm',
+          left: '15mm',
+        },
+        displayHeaderFooter: true,
+        headerTemplate: '<div></div>',
+        footerTemplate: `
+          <div style="font-size: 9px; color: #14293D; width: 100%; display: flex; justify-content: flex-end; align-items: center; padding: 0 15mm;">
+            <span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span>
+          </div>
+        `,
+      });
+
+      await browser.close();
+      console.log('[PDF] PDF gerado com sucesso');
+
+      return Buffer.from(pdfBuffer);
+    } catch (error) {
+      console.error('[PDF] Erro ao gerar PDF:', error);
+      throw new InternalServerErrorException(
+        'Erro ao gerar PDF dos visitantes',
+      );
+    }
+  }
+
+  private generateVisitorsHtml(visitors: Visitor[], fair: Fair): string {
+    const currentDate = new Date().toLocaleDateString('pt-BR');
+
+    return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Lista de Participantes - ${fair.name}</title>
+        <style>
+            @page {
+                size: A4 landscape;
+                margin: 15mm;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+                margin: 0;
+                padding: 15px;
+                color: #14293D;
+                position: relative;
+                min-height: 100vh;
+            }
+            
+            /* Logo de fundo */
+            .background-logo {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 300px;
+                height: auto;
+                opacity: 0.1;
+                z-index: -1;
+            }
+            
+            /* Cabeçalho */
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+                page-break-inside: avoid;
+            }
+            
+            .title {
+                font-size: 18px;
+                font-weight: bold;
+                margin: 0;
+            }
+            
+            /* Tabela */
+            .table-container {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            
+            .table-header {
+                background-color: #FAFAFA;
+                border-bottom: 1px solid #E4E4E7;
+                page-break-inside: avoid;
+            }
+            
+            .table-row {
+                border-bottom: 1px solid #E4E4E7;
+                page-break-inside: avoid;
+            }
+            
+            .table-row:nth-child(even) {
+                background-color: #FAFAFA;
+            }
+            
+            .cell {
+                font-size: 9px;
+                color: #14293D;
+                padding: 6px 4px;
+                vertical-align: top;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+            
+            .header-cell {
+                font-size: 10px;
+                font-weight: bold;
+                color: #71717A;
+                padding: 6px 4px;
+            }
+            
+            /* Larguras das colunas */
+            .col-name { width: 20%; }
+            .col-company { width: 20%; }
+            .col-email { width: 25%; }
+            .col-cnpj { width: 15%; }
+            .col-phone { width: 12%; }
+            .col-zipcode { width: 8%; }
+            
+            /* Rodapé */
+            .footer {
+                position: fixed;
+                bottom: 15mm;
+                left: 15mm;
+                right: 15mm;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-top: 1px solid #E4E4E7;
+                padding-top: 4px;
+                font-size: 9px;
+                color: #14293D;
+                background: white;
+            }
+            
+            .footer-text {
+                margin: 0;
+            }
+            
+            /* Quebra de página */
+            .page-break {
+                page-break-before: always;
+            }
+            
+            /* Evitar quebra de página no meio da linha */
+            tr {
+                page-break-inside: avoid;
+            }
+            
+            /* Responsividade para impressão */
+            @media print {
+                body {
+                    print-color-adjust: exact;
+                    -webkit-print-color-adjust: exact;
+                }
+                
+                .table-container {
+                    font-size: 8px;
+                }
+                
+                .cell {
+                    font-size: 8px;
+                    padding: 4px 2px;
+                }
+                
+                .header-cell {
+                    font-size: 9px;
+                    padding: 4px 2px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Cabeçalho -->
+        <div class="header">
+            <h1 class="title">Lista de Participantes - ${fair.name}</h1>
+        </div>
+        
+        <!-- Tabela -->
+        <table class="table-container">
+            <thead>
+                <tr class="table-header">
+                    <th class="header-cell col-name">Nome</th>
+                    <th class="header-cell col-company">Empresa</th>
+                    <th class="header-cell col-email">Email</th>
+                    <th class="header-cell col-cnpj">CNPJ</th>
+                    <th class="header-cell col-phone">Telefone</th>
+                    <th class="header-cell col-zipcode">CEP</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${visitors
+                  .map(
+                    (visitor) => `
+                    <tr class="table-row">
+                        <td class="cell col-name">${visitor.name}</td>
+                        <td class="cell col-company">${visitor.company}</td>
+                        <td class="cell col-email">${visitor.email}</td>
+                        <td class="cell col-cnpj">${visitor.category?.toLowerCase() === 'visitante' ? 'Visitante' : visitor.cnpj || 'N/A'}</td>
+                        <td class="cell col-phone">${visitor.phone}</td>
+                        <td class="cell col-zipcode">${visitor.zipCode}</td>
+                    </tr>
+                `,
+                  )
+                  .join('')}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `;
   }
 }
