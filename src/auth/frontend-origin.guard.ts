@@ -16,6 +16,7 @@ export class FrontendOriginGuard implements CanActivate {
   constructor(private configService: ConfigService) {
     // Origens permitidas do frontend
     this.allowedOrigins = [
+      'http://localhost:5173',
       'http://localhost:3000', // Development
       'http://localhost:3001', // Development alt
       'https://credenciamento-frontend.vercel.app', // Production
