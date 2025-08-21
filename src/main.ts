@@ -2,6 +2,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule } from '@nestjs/swagger';
+import { swaggerConfig, swaggerOptions } from './config/swagger.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,7 +27,14 @@ async function bootstrap() {
 });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
+
+  // Configuração do Swagger
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api', app, document, swaggerOptions);
+
   const port = process.env.PORT || 8000;
+  console.log(`🚀 API rodando em: http://localhost:${port}`);
+  console.log(`📚 Documentação Swagger: http://localhost:${port}/api`);
   await app.listen(port);
 }
 bootstrap();
