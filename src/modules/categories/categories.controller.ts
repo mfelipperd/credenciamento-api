@@ -19,7 +19,7 @@ export class CategoriesController {
     return this.categoriesService.createCategory(data);
   }
 
-  @Get(':fairId')
+  @Get('fair/:fairId')
   getCategoriesByFair(@Param('fairId') fairId: string) {
     return this.categoriesService.getCategoriesByFair(fairId);
   }

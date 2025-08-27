@@ -30,14 +30,17 @@ export class CreateRevenueDto {
   @IsString()
   entryModelId: string;
 
-  @ApiProperty({
-    description: 'Número do stand a ser vinculado à receita',
+  @ApiPropertyOptional({
+    description:
+      'Número do stand a ser vinculado à receita (opcional para receitas que não são de venda de stands)',
     example: 15,
     minimum: 1,
   })
+  @IsOptional()
   @IsNumber()
   @Min(1)
-  standNumber: number;
+  @Type(() => Number)
+  standNumber?: number | null;
 
   @ApiProperty({ description: 'Valor base', minimum: 0 })
   @IsNumber()
@@ -290,6 +293,16 @@ export class RevenueResponseDto {
     type: [InstallmentResponseDto],
   })
   installments: InstallmentResponseDto[];
+
+  @ApiProperty({
+    description: 'Informações do stand vinculado (se houver)',
+    required: false,
+  })
+  stand?: {
+    id: number;
+    standNumber: number;
+    isAvailable: boolean;
+  };
 }
 
 export class ConfirmInstallmentPaymentDto {

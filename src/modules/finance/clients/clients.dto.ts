@@ -36,6 +36,15 @@ export class CreateClientDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @ApiPropertyOptional({
+    description: 'Nome do responsável pelo cliente',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  responsavel?: string;
 }
 
 export class UpdateClientDto {
@@ -53,13 +62,22 @@ export class UpdateClientDto {
 
   @ApiPropertyOptional({ description: 'Email do cliente' })
   @IsOptional()
-  @IsEmail()
+  @IsString()
   email?: string;
 
   @ApiPropertyOptional({ description: 'Telefone do cliente' })
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @ApiPropertyOptional({
+    description: 'Nome do responsável pelo cliente',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  responsavel?: string;
 }
 
 export class ClientResponseDto {
@@ -80,6 +98,12 @@ export class ClientResponseDto {
 
   @ApiProperty({ description: 'Telefone do cliente', required: false })
   phone?: string;
+
+  @ApiProperty({
+    description: 'Nome do responsável pelo cliente',
+    required: false,
+  })
+  responsavel?: string;
 
   @ApiProperty({ description: 'Data de criação' })
   createdAt: Date;

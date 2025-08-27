@@ -30,6 +30,9 @@ export class Client {
   @Column({ nullable: true })
   phone: string;
 
+  @Column({ nullable: true })
+  responsavel: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

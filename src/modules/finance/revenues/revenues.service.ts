@@ -35,31 +35,6 @@ export class RevenuesService {
 
       const { standNumber, fairId, ...revenueData } = createRevenueDto;
 
-      // Verificar se o stand existe e está disponível
-      console.log('[REVENUES] Buscando stand:', { standNumber, fairId });
-      const stand = await this.standRepository.findOne({
-        where: {
-          standNumber,
-          fairId: fairId,
-        },
-      });
-
-      if (!stand) {
-        console.log('[REVENUES] Stand não encontrado');
-        throw new BadRequestException(
-          `Stand número ${standNumber} não encontrado na feira ${fairId}`,
-        );
-      }
-
-      if (!stand.isAvailable) {
-        console.log('[REVENUES] Stand já ocupado');
-        throw new BadRequestException(
-          `Stand número ${standNumber} já está ocupado`,
-        );
-      }
-
-      console.log('[REVENUES] Stand encontrado e disponível:', stand);
-
       // Criar a receita
       console.log('[REVENUES] Criando receita com dados:', revenueData);
       const revenue = this.revenueRepository.create({
@@ -71,19 +46,50 @@ export class RevenuesService {
       const savedRevenue = await this.revenueRepository.save(revenue);
       console.log('[REVENUES] Receita salva com sucesso:', savedRevenue);
 
-      // Vincular o stand à receita
-      console.log('[REVENUES] Vinculando stand à receita');
-      stand.revenueId = savedRevenue.id;
-      stand.isAvailable = false;
-      await this.standRepository.save(stand);
-      console.log('[REVENUES] Stand atualizado com sucesso');
+      // Se foi fornecido um número de stand, vincular o stand à receita
+      if (standNumber) {
+        console.log('[REVENUES] Buscando stand:', { standNumber, fairId });
+        const stand = await this.standRepository.findOne({
+          where: {
+            standNumber,
+            fairId: fairId,
+          },
+        });
+
+        if (!stand) {
+          console.log('[REVENUES] Stand não encontrado');
+          throw new BadRequestException(
+            `Stand número ${standNumber} não encontrado na feira ${fairId}`,
+          );
+        }
+
+        if (!stand.isAvailable) {
+          console.log('[REVENUES] Stand já ocupado');
+          throw new BadRequestException(
+            `Stand número ${standNumber} já está ocupado`,
+          );
+        }
+
+        console.log('[REVENUES] Stand encontrado e disponível:', stand);
+
+        // Vincular o stand à receita
+        console.log('[REVENUES] Vinculando stand à receita');
+        stand.revenueId = savedRevenue.id;
+        stand.isAvailable = false;
+        await this.standRepository.save(stand);
+        console.log('[REVENUES] Stand atualizado com sucesso');
+      } else {
+        console.log(
+          '[REVENUES] Nenhum stand fornecido - receita sem vínculo com stand',
+        );
+      }
 
       // Criar as parcelas automaticamente
       console.log('[REVENUES] Criando parcelas');
       await this.createInstallments(savedRevenue);
       console.log('[REVENUES] Parcelas criadas com sucesso');
 
-      // Retornar receita com parcelas e stand
+      // Retornar receita com parcelas e stand (se houver)
       console.log('[REVENUES] Buscando receita completa');
       const finalRevenue = await this.findOne(savedRevenue.id, fairId);
       console.log('[REVENUES] Receita completa encontrada');

@@ -9,7 +9,7 @@ import {
   Index,
 } from 'typeorm';
 import { Fair } from 'src/modules/fairs/entity/fair.entity';
-import { FinanceCategory } from '../../common/entities/finance-category.entity';
+import { Category } from '../../../categories/entity/categories.entity';
 import { Account } from '../../common/entities/account.entity';
 
 @Entity('finance_expenses')
@@ -52,9 +52,9 @@ export class Expense {
   @JoinColumn({ name: 'fairId' })
   fair: Fair;
 
-  @ManyToOne(() => FinanceCategory, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => Category, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'categoryId' })
-  category: FinanceCategory;
+  category: Category;
 
   @ManyToOne(() => Account, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'accountId' })
