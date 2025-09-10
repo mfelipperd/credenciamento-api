@@ -52,23 +52,25 @@ export class FrontendOriginGuard implements CanActivate {
     const frontendAuth = request.headers['x-frontend-auth'] as string;
     console.log('[DEBUG] Token recebido:', frontendAuth);
     console.log('[DEBUG] Tamanho do token:', frontendAuth?.length);
-    
+
     if (!frontendAuth) {
       throw new UnauthorizedException(
         'Acesso não autorizado: Token de frontend ausente',
       );
     }
-    
+
     // Temporariamente, vamos apenas verificar se o token tem o tamanho esperado
     if (frontendAuth.length !== 64) {
-      console.log('[DEBUG] Token rejeitado - tamanho inválido:', frontendAuth.length);
+      console.log(
+        '[DEBUG] Token rejeitado - tamanho inválido:',
+        frontendAuth.length,
+      );
       throw new UnauthorizedException(
         'Acesso não autorizado: Token de frontend inválido',
       );
     }
-    
+
     console.log('[DEBUG] Token aceito!');
-    
 
     return true;
   }
@@ -100,24 +102,27 @@ export class FrontendOriginGuard implements CanActivate {
     try {
       console.log('[DEBUG] Token recebido:', authHeader);
       console.log('[DEBUG] Chave secreta:', this.secretKey);
-      
+
       // Descriptografar o header
       const decrypted = this.decrypt(authHeader);
       console.log('[DEBUG] Timestamp descriptografado:', decrypted);
-      
+
       const timestamp = parseInt(decrypted);
 
       // Verificar se o timestamp é recente (últimos 5 minutos)
       const now = Date.now();
       const fiveMinutes = 5 * 60 * 1000;
-      
+
       console.log('[DEBUG] Timestamp atual:', now);
       console.log('[DEBUG] Diferença:', now - timestamp);
       console.log('[DEBUG] Válido?', now - timestamp < fiveMinutes);
 
       return now - timestamp < fiveMinutes;
     } catch (error) {
-      console.log('[DEBUG] Erro na validação:', error instanceof Error ? error.message : 'Erro desconhecido');
+      console.log(
+        '[DEBUG] Erro na validação:',
+        error instanceof Error ? error.message : 'Erro desconhecido',
+      );
       return false;
     }
   }

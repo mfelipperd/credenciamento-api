@@ -21,7 +21,6 @@ export class CashFlowService {
     if (!createCashFlowDto.totalRevenue || !createCashFlowDto.totalExpenses) {
       const calculated = await this.calculateTotalsForPeriod(
         createCashFlowDto.fairId,
-        new Date(createCashFlowDto.period),
       );
 
       createCashFlowDto.totalRevenue = calculated.totalRevenue;
@@ -118,10 +117,7 @@ export class CashFlowService {
   }
 
   // Método para calcular totais automaticamente
-  async calculateTotalsForPeriod(
-    fairId: string,
-    period: Date,
-  ): Promise<{
+  async calculateTotalsForPeriod(fairId: string): Promise<{
     totalRevenue: number;
     totalExpenses: number;
   }> {

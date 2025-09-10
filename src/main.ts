@@ -10,21 +10,21 @@ async function bootstrap() {
 
   // Habilita CORS apenas para o frontend em dev
   app.enableCors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'https://credenciamento-frontend.vercel.app',
-    'https://www.expomultimix.com'
-  ],
-  credentials: true,
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization', 
-    'x-frontend-auth'  // ← ADICIONAR ESTE HEADER
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
-});
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://credenciamento-frontend.vercel.app',
+      'https://www.expomultimix.com',
+    ],
+    credentials: true,
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-frontend-auth', // ← ADICIONAR ESTE HEADER
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
@@ -37,4 +37,7 @@ async function bootstrap() {
   console.log(`📚 Documentação Swagger: http://localhost:${port}/api`);
   await app.listen(port);
 }
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('Erro ao inicializar a aplicação:', error);
+  process.exit(1);
+});

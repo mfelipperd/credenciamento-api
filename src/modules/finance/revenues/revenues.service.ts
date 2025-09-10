@@ -372,4 +372,28 @@ export class RevenuesService {
       await this.revenueRepository.save(revenue);
     }
   }
+
+  // Método para obter estatísticas de receitas por feira
+  async getRevenueStatsByFair(fairId: string): Promise<{
+    totalValue: number;
+    totalRevenues: number;
+    averagePerRevenue: number;
+  }> {
+    const result = await this.revenueRepository
+      .createQueryBuilder('revenue')
+      .select('SUM(revenue.contractValue)', 'totalValue')
+      .addSelect('COUNT(revenue.id)', 'totalRevenues')
+      .where('revenue.fairId = :fairId', { fairId })
+      .getRawOne();
+
+    const totalValue = parseFloat(result.totalValue) || 0;
+    const totalRevenues = parseInt(result.totalRevenues) || 0;
+    const averagePerRevenue = totalRevenues > 0 ? totalValue / totalRevenues : 0;
+
+    return {
+      totalValue,
+      totalRevenues,
+      averagePerRevenue: Math.round(averagePerRevenue * 100) / 100, // Arredondar para 2 casas decimais
+    };
+  }
 }

@@ -152,7 +152,7 @@ export class EmailsService {
       const emailsToSend = absentVisitors.map((visitor) => visitor.email);
 
       // Inicia processamento em background para evitar timeout
-      this.processBulkEmails(emailsToSend, subject, htmlContent, fairId).catch(
+      this.processBulkEmails(emailsToSend, subject, htmlContent).catch(
         (error) => {
           console.error('Erro no processamento em background:', error);
         },
@@ -183,7 +183,6 @@ export class EmailsService {
     emails: string[],
     subject: string,
     htmlContent: string,
-    fairId: string,
   ) {
     // 📧 CONFIGURAÇÕES OTIMIZADAS PARA GMAIL SMTP
     const DELAY_BETWEEN_EMAILS = 30000; // 30 segundos entre emails (2 emails/minuto)

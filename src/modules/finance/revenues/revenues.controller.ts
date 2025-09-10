@@ -227,4 +227,34 @@ export class RevenuesController {
       fairId,
     );
   }
+
+  @Get('stats/:fairId')
+  @ApiOperation({ summary: 'Estatísticas de receitas por feira' })
+  @ApiParam({ name: 'fairId', description: 'ID da feira' })
+  @ApiResponse({
+    status: 200,
+    description: 'Estatísticas das receitas da feira',
+    schema: {
+      type: 'object',
+      properties: {
+        totalValue: { type: 'number', description: 'Valor total das receitas (soma de contractValue)' },
+        totalRevenues: { type: 'number', description: 'Quantidade total de receitas' },
+        averagePerRevenue: { type: 'number', description: 'Média por receita (totalValue / totalRevenues)' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'fairId é obrigatório' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async getRevenueStats(@Param('fairId') fairId: string) {
+    if (!fairId) {
+      throw new BadRequestException('fairId é obrigatório');
+    }
+    
+    try {
+      return await this.revenuesService.getRevenueStatsByFair(fairId);
+    } catch (error) {
+      console.error(`Erro ao buscar estatísticas de receitas da feira ${fairId}:`, error);
+      throw new BadRequestException('Erro ao buscar estatísticas de receitas');
+    }
+  }
 }
