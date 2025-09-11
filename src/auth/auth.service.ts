@@ -24,11 +24,16 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Buscar feiras associadas ao usuário
+    const userResponse = await this.usersService.findOne(user.id);
+    const fairIds = userResponse.fairIds || [];
+
     const payload = {
       email: user.email,
       name: user.name,
       id: user.id,
       role: user.role,
+      fairIds: fairIds,
     };
 
     return {
@@ -38,6 +43,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         role: user.role,
+        fairIds: fairIds,
       },
     };
   }
