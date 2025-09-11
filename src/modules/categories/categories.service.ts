@@ -32,11 +32,15 @@ export class CategoriesService {
   }
 
   async getCategoriesByFair(fairId: string) {
-    return this.categoryRepository.find({ where: { fair: { id: fairId } } });
+    return this.categoryRepository.find({ 
+      where: { fair: { id: fairId } },
+      relations: ['fair']
+    });
   }
   async getCategoryById(id: string) {
     return this.categoryRepository.findOne({ where: { id } });
   }
+
 
   async updateCategory(id: string, data: Partial<CreateCategoryDto>) {
     await this.categoryRepository.update(id, data);

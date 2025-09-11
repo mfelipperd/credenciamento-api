@@ -27,8 +27,6 @@ export class ExpensesController {
     @Body() createExpenseDto: CreateExpenseDto,
   ) {
     try {
-      this.logger.log(`Criando despesa para feira ${fairId}`);
-
       // Garantir que o fairId do DTO seja o mesmo da URL
       createExpenseDto.fairId = fairId;
 
@@ -41,8 +39,6 @@ export class ExpensesController {
       }
 
       const expense = await this.expensesService.create(createExpenseDto);
-      this.logger.log(`Despesa criada com sucesso: ${expense.id}`);
-
       return expense;
     } catch (error) {
       this.logger.error(`Erro ao criar despesa: ${error.message}`, error.stack);

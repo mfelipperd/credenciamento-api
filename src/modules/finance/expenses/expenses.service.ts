@@ -27,8 +27,6 @@ export class ExpensesService {
 
   async create(createExpenseDto: CreateExpenseDto): Promise<Expense> {
     try {
-      this.logger.log(`Criando despesa: ${JSON.stringify(createExpenseDto)}`);
-
       // Validações adicionais
       if (createExpenseDto.valor <= 0) {
         throw new BadRequestException('Valor deve ser maior que zero');
@@ -41,11 +39,6 @@ export class ExpensesService {
         }
       }
 
-      // Debug: Verificar se a categoria existe
-      this.logger.log(
-        `Buscando categoria: ${createExpenseDto.categoryId} na feira: ${createExpenseDto.fairId}`,
-      );
-
       // Validar se a categoria existe na feira específica
       const category = await this.categoryRepository.findOne({
         where: {
@@ -55,23 +48,16 @@ export class ExpensesService {
         relations: ['fair'],
       });
 
-      this.logger.log(`Resultado da busca da categoria:`, category);
-
       if (!category) {
         throw new BadRequestException(
           `Categoria com ID ${createExpenseDto.categoryId} não encontrada na feira ${createExpenseDto.fairId}`,
         );
       }
 
-      // Debug: Verificar se a conta existe
-      this.logger.log(`Buscando conta: ${createExpenseDto.accountId}`);
-
       // Validar se a conta existe (global)
       const account = await this.accountRepository.findOne({
         where: { id: createExpenseDto.accountId },
       });
-
-      this.logger.log(`Resultado da busca da conta:`, account);
 
       if (!account) {
         throw new BadRequestException(
@@ -79,21 +65,8 @@ export class ExpensesService {
         );
       }
 
-      this.logger.log(
-        `Validações passaram: categoria "${category.name}" e conta "${account.nomeConta}"`,
-      );
-
-      // Debug: Criar a despesa
-      this.logger.log(`Criando entidade Expense com dados:`, createExpenseDto);
-
       const expense = this.expensesRepository.create(createExpenseDto);
-      this.logger.log(`Entidade Expense criada:`, expense);
-
-      // Debug: Salvar a despesa
-      this.logger.log(`Salvando despesa no banco...`);
-
       const savedExpense = await this.expensesRepository.save(expense);
-      this.logger.log(`Despesa salva com sucesso: ${savedExpense.id}`);
 
       return savedExpense;
     } catch (error: any) {
@@ -187,29 +160,21 @@ export class ExpensesService {
   // Relatórios
   async getTotalByFair(fairId: string): Promise<number> {
     try {
-      this.logger.log(`Buscando total de despesas para feira: ${fairId}`);
-      
       // Buscar todas as despesas da feira
       const allExpenses = await this.expensesRepository.find({
         where: { fairId },
         select: ['id', 'valor', 'descricao']
       });
       
-      this.logger.log(`Despesas encontradas: ${allExpenses.length}`);
-      
       if (allExpenses.length === 0) {
-        this.logger.log('Nenhuma despesa encontrada para esta feira');
         return 0;
       }
       
       // Calcular total manualmente (mais confiável)
       const total = allExpenses.reduce((sum, expense) => {
         const valor = Number(expense.valor) || 0;
-        this.logger.log(`Despesa ${expense.id}: ${valor} - ${expense.descricao}`);
         return sum + valor;
       }, 0);
-      
-      this.logger.log(`Total calculado: ${total}`);
       
       return total;
       
