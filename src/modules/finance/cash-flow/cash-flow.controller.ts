@@ -417,4 +417,53 @@ export class CashFlowController {
     // Retornar análise de lucratividade geral
     return this.cashFlowService.findAll();
   }
+
+  // Endpoint para análise completa de fluxo de caixa de uma feira
+  @Get('analysis/fair/:fairId')
+  @ApiOperation({
+    summary: 'Análise completa de fluxo de caixa por feira',
+    description: 'Retorna análise detalhada de receitas, despesas, lucro e recomendações para uma feira específica',
+  })
+  @ApiParam({
+    name: 'fairId',
+    description: 'ID da feira para análise',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Análise de fluxo de caixa retornada com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        fairId: { type: 'string', description: 'ID da feira' },
+        totalRevenue: { type: 'number', description: 'Receita total' },
+        totalExpenses: { type: 'number', description: 'Despesa total' },
+        netProfit: { type: 'number', description: 'Lucro líquido' },
+        profitMargin: { type: 'number', description: 'Margem de lucro (%)' },
+        isProfitable: { type: 'boolean', description: 'Se é lucrativo' },
+        revenueCount: { type: 'number', description: 'Quantidade de receitas' },
+        expenseCount: { type: 'number', description: 'Quantidade de despesas' },
+        averageRevenue: { type: 'number', description: 'Média por receita' },
+        averageExpense: { type: 'number', description: 'Média por despesa' },
+        largestRevenue: { type: 'number', description: 'Maior receita' },
+        largestExpense: { type: 'number', description: 'Maior despesa' },
+        performance: { 
+          type: 'string', 
+          enum: ['excellent', 'good', 'average', 'poor'],
+          description: 'Classificação de performance' 
+        },
+        recommendations: { 
+          type: 'array', 
+          items: { type: 'string' },
+          description: 'Recomendações baseadas na análise' 
+        },
+        summary: { type: 'string', description: 'Resumo executivo' }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'Feira não encontrada' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async getFairCashFlowAnalysis(@Param('fairId', ParseUUIDPipe) fairId: string) {
+    return await this.cashFlowService.getFairCashFlowAnalysis(fairId);
+  }
 }

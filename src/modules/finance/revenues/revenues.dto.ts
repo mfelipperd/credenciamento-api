@@ -32,13 +32,13 @@ export class CreateRevenueDto {
 
   @ApiPropertyOptional({
     description:
-      'Número do stand a ser vinculado à receita (opcional para receitas que não são de venda de stands)',
+      'Número do stand a ser vinculado à receita (opcional para receitas que não são de venda de stands). Use 0 para patrocínios.',
     example: 15,
-    minimum: 1,
+    minimum: 0,
   })
   @IsOptional()
   @IsNumber()
-  @Min(1)
+  @Min(0)
   @Type(() => Number)
   standNumber?: number | null;
 

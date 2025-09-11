@@ -46,8 +46,8 @@ export class RevenuesService {
       const savedRevenue = await this.revenueRepository.save(revenue);
       console.log('[REVENUES] Receita salva com sucesso:', savedRevenue);
 
-      // Se foi fornecido um número de stand, vincular o stand à receita
-      if (standNumber) {
+      // Se foi fornecido um número de stand válido (maior que 0), vincular o stand à receita
+      if (standNumber && standNumber > 0) {
         console.log('[REVENUES] Buscando stand:', { standNumber, fairId });
         const stand = await this.standRepository.findOne({
           where: {

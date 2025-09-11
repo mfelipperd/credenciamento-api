@@ -254,4 +254,108 @@ export class CashFlowService {
 
     return comparisons;
   }
+
+  // Método para análise completa de fluxo de caixa de uma feira
+  async getFairCashFlowAnalysis(fairId: string): Promise<{
+    fairId: string;
+    totalRevenue: number;
+    totalExpenses: number;
+    netProfit: number;
+    profitMargin: number;
+    isProfitable: boolean;
+    revenueCount: number;
+    expenseCount: number;
+    averageRevenue: number;
+    averageExpense: number;
+    largestRevenue: number;
+    largestExpense: number;
+    performance: 'excellent' | 'good' | 'average' | 'poor';
+    recommendations: string[];
+    summary: string;
+  }> {
+    // Buscar receitas da feira
+    const revenues = await this.revenuesService.findByFair(fairId);
+    const totalRevenue = revenues.reduce((sum, revenue) => {
+      // contractValue está em centavos (bigint), converter para reais
+      const valueInCents = Number(revenue.contractValue) || 0;
+      const valueInReais = valueInCents / 100;
+      return sum + valueInReais;
+    }, 0);
+    const revenueCount = revenues.length;
+    const averageRevenue = revenueCount > 0 ? totalRevenue / revenueCount : 0;
+    const largestRevenue = revenueCount > 0 ? Math.max(...revenues.map(r => (Number(r.contractValue) || 0) / 100)) : 0;
+
+    // Buscar despesas da feira
+    const totalExpenses = await this.expensesService.getTotalByFair(fairId);
+    const expenses = await this.expensesService.findAllByFair(fairId);
+    const expenseCount = expenses.length;
+    const averageExpense = expenseCount > 0 ? totalExpenses / expenseCount : 0;
+    const largestExpense = expenseCount > 0 ? Math.max(...expenses.map(e => e.valor)) : 0;
+
+    // Calcular métricas
+    const netProfit = totalRevenue - totalExpenses;
+    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    const isProfitable = netProfit > 0;
+
+    // Determinar performance
+    let performance: 'excellent' | 'good' | 'average' | 'poor';
+    if (profitMargin >= 30) performance = 'excellent';
+    else if (profitMargin >= 15) performance = 'good';
+    else if (profitMargin >= 0) performance = 'average';
+    else performance = 'poor';
+
+    // Gerar recomendações
+    const recommendations: string[] = [];
+    
+    if (profitMargin < 0) {
+      recommendations.push('Reduza custos operacionais para melhorar a lucratividade');
+      recommendations.push('Revise preços dos produtos/serviços oferecidos');
+    } else if (profitMargin < 10) {
+      recommendations.push('Considere otimizar processos para reduzir despesas');
+      recommendations.push('Avalie oportunidades de aumentar receitas');
+    } else if (profitMargin >= 30) {
+      recommendations.push('Excelente performance! Mantenha os padrões atuais');
+      recommendations.push('Considere reinvestir parte do lucro para crescimento');
+    }
+
+    if (revenueCount === 0) {
+      recommendations.push('Nenhuma receita registrada - verifique se há vendas não cadastradas');
+    }
+
+    if (expenseCount === 0) {
+      recommendations.push('Nenhuma despesa registrada - verifique se todos os custos foram contabilizados');
+    }
+
+    // Gerar resumo
+    let summary = '';
+    if (isProfitable) {
+      summary = `Feira lucrativa com margem de ${profitMargin.toFixed(2)}%. `;
+      summary += `Receita total: R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} `;
+      summary += `e despesas: R$ ${totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. `;
+      summary += `Lucro líquido: R$ ${netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`;
+    } else {
+      summary = `Feira com prejuízo de R$ ${Math.abs(netProfit).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. `;
+      summary += `Margem: ${profitMargin.toFixed(2)}%. `;
+      summary += `Receita: R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} `;
+      summary += `e despesas: R$ ${totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`;
+    }
+
+    return {
+      fairId,
+      totalRevenue,
+      totalExpenses,
+      netProfit,
+      profitMargin: Math.round(profitMargin * 100) / 100,
+      isProfitable,
+      revenueCount,
+      expenseCount,
+      averageRevenue: Math.round(averageRevenue * 100) / 100,
+      averageExpense: Math.round(averageExpense * 100) / 100,
+      largestRevenue,
+      largestExpense,
+      performance,
+      recommendations,
+      summary
+    };
+  }
 }
