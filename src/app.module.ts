@@ -17,6 +17,7 @@ import { CategoriesService } from './modules/categories/categories.service';
 import { SectorsModule } from './modules/sectors/sectors.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { PartnersModule } from './modules/partners/partners.module';
 
 @Module({
   providers: [
@@ -40,6 +41,7 @@ import { FinanceModule } from './modules/finance/finance.module';
     SectorsModule,
     CategoriesModule,
     FinanceModule,
+    PartnersModule,
   ],
   controllers: [],
 })

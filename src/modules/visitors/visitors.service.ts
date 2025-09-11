@@ -44,19 +44,9 @@ export class VisitorsService {
         query.where('fv.fairsId = :fairId', { fairId });
       }
     } else if (user.role === EUserRole.CONSULTANT) {
-      const allowed = user.fairIds ?? [];
-
+      // Consultores podem ver todos os visitantes
       if (fairId) {
-        if (!allowed.includes(fairId)) {
-          return [];
-        }
         query.where('fv.fairsId = :fairId', { fairId });
-      } else {
-        // Sem fairId, retorna tudo que está em user.fairIds
-        if (allowed.length === 0) {
-          return [];
-        }
-        query.where('fv.fairsId IN (:...fairIds)', { fairIds: allowed });
       }
     } else {
       // Outros papéis: mantém o filtro por fairId se enviado, senão traz tudo
@@ -92,38 +82,9 @@ export class VisitorsService {
 
     // Aplicar filtros de autorização
     if (user.role === EUserRole.CONSULTANT) {
-      const allowed = user.fairIds ?? [];
-
+      // Consultores podem ver todos os visitantes
       if (fairId) {
-        if (!allowed.includes(fairId)) {
-          return {
-            data: [],
-            meta: {
-              total: 0,
-              page,
-              limit,
-              totalPages: 0,
-              hasNext: false,
-              hasPrev: false,
-            },
-          };
-        }
         query.where('fv.fairsId = :fairId', { fairId });
-      } else {
-        if (allowed.length === 0) {
-          return {
-            data: [],
-            meta: {
-              total: 0,
-              page,
-              limit,
-              totalPages: 0,
-              hasNext: false,
-              hasPrev: false,
-            },
-          };
-        }
-        query.where('fv.fairsId IN (:...fairIds)', { fairIds: allowed });
       }
     } else {
       if (fairId) {
@@ -303,18 +264,9 @@ export class VisitorsService {
 
     // Aplicar filtros de autorização (mesmo que no getVisitors)
     if (user.role === EUserRole.CONSULTANT) {
-      const allowed = user.fairIds ?? [];
-
+      // Consultores podem ver todos os visitantes
       if (fairId) {
-        if (!allowed.includes(fairId)) {
-          return { total: 0, recent: 0, companies: 0 };
-        }
         query.where('fv.fairsId = :fairId', { fairId });
-      } else {
-        if (allowed.length === 0) {
-          return { total: 0, recent: 0, companies: 0 };
-        }
-        query.where('fv.fairsId IN (:...fairIds)', { fairIds: allowed });
       }
     } else {
       if (fairId) {
@@ -366,7 +318,8 @@ export class VisitorsService {
     let savedVisitor: Visitor;
     try {
       // Ao salvar, o PrimaryGeneratedColumn gera o registrationCode
-      savedVisitor = await this.visitorRepository.save(newVisitor);
+      const result = await this.visitorRepository.save(newVisitor);
+      savedVisitor = Array.isArray(result) ? result[0] : result;
     } catch (err) {
       console.log('Erro ao salvar visitante:', err);
       throw new InternalServerErrorException('Erro ao salvar visitante');

@@ -9,11 +9,14 @@ import { FinanceCategory } from 'src/modules/finance/common/entities/finance-cat
 import { Account } from 'src/modules/finance/common/entities/account.entity';
 import { CashFlow } from 'src/modules/finance/cash-flow/entities/cash-flow.entity';
 import { Category } from 'src/modules/categories/entity/categories.entity';
+import { Partner } from 'src/modules/partners/entities/partner.entity';
+import { PartnerWithdrawal } from 'src/modules/partners/entities/partner-withdrawal.entity';
+import { FairPartner } from 'src/modules/partners/entities/fair-partner.entity';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'mysql',
   url: process.env.DATABASE_URL?.trim(),
   autoLoadEntities: true,
   synchronize: true,
-  entities: [Visitor, Fair, Expense, FinanceCategory, Account, CashFlow, Category],
+  entities: [Visitor, Fair, Expense, FinanceCategory, Account, CashFlow, Category, Partner, PartnerWithdrawal, FairPartner],
 };

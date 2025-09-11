@@ -6,6 +6,7 @@ import { CreateCashFlowDto } from './dto/create-cash-flow.dto';
 import { UpdateCashFlowDto } from './dto/update-cash-flow.dto';
 import { ExpensesService } from '../expenses/expenses.service';
 import { RevenuesService } from '../revenues/revenues.service';
+import { ProfitDistributionService } from '../../partners/profit-distribution.service';
 
 @Injectable()
 export class CashFlowService {
@@ -14,6 +15,7 @@ export class CashFlowService {
     private cashFlowRepository: Repository<CashFlow>,
     private expensesService: ExpensesService,
     private revenuesService: RevenuesService,
+    private profitDistributionService: ProfitDistributionService,
   ) {}
 
   async create(createCashFlowDto: CreateCashFlowDto): Promise<CashFlow> {
@@ -356,6 +358,39 @@ export class CashFlowService {
       performance,
       recommendations,
       summary
+    };
+  }
+
+  // Método para distribuir lucro entre sócios
+  async distributeProfitToPartners(fairId: string): Promise<{
+    fairId: string;
+    totalProfit: number;
+    distribution: {
+      partnerId: string;
+      partnerName: string;
+      percentage: number;
+      share: number;
+    }[];
+  }> {
+    // Obter análise de fluxo de caixa da feira
+    const analysis = await this.getFairCashFlowAnalysis(fairId);
+    
+    if (!analysis.isProfitable) {
+      throw new Error('Não é possível distribuir lucro de uma feira que não teve lucro');
+    }
+
+    const totalProfit = analysis.netProfit;
+
+    // Calcular distribuição sem efetuar
+    const distribution = await this.profitDistributionService.calculateProfitDistribution(fairId, totalProfit);
+
+    // Efetuar a distribuição
+    await this.profitDistributionService.distributeProfit(fairId, totalProfit);
+
+    return {
+      fairId,
+      totalProfit,
+      distribution
     };
   }
 }

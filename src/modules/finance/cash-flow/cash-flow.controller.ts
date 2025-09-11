@@ -466,4 +466,44 @@ export class CashFlowController {
   async getFairCashFlowAnalysis(@Param('fairId', ParseUUIDPipe) fairId: string) {
     return await this.cashFlowService.getFairCashFlowAnalysis(fairId);
   }
+
+  // Endpoint para distribuir lucro entre sócios
+  @Post('distribute-profit/:fairId')
+  @ApiOperation({
+    summary: 'Distribuir lucro entre sócios',
+    description: 'Distribui o lucro de uma feira entre os sócios ativos baseado em suas porcentagens',
+  })
+  @ApiParam({
+    name: 'fairId',
+    description: 'ID da feira para distribuição de lucro',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lucro distribuído com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        fairId: { type: 'string' },
+        totalProfit: { type: 'number' },
+        distribution: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              partnerId: { type: 'string' },
+              partnerName: { type: 'string' },
+              percentage: { type: 'number' },
+              share: { type: 'number' }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'Feira não encontrada' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async distributeProfit(@Param('fairId', ParseUUIDPipe) fairId: string) {
+    return await this.cashFlowService.distributeProfitToPartners(fairId);
+  }
 }

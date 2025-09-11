@@ -29,7 +29,6 @@ export class AuthService {
       name: user.name,
       id: user.id,
       role: user.role,
-      fairIds: user.fairIds || [],
     };
 
     return {
@@ -39,7 +38,6 @@ export class AuthService {
         name: user.name,
         email: user.email,
         role: user.role,
-        fairIds: user.fairIds || [],
       },
     };
   }

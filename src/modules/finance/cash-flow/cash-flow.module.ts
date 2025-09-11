@@ -6,12 +6,14 @@ import { CashFlow } from './entities/cash-flow.entity';
 import { Fair } from 'src/modules/fairs/entity/fair.entity';
 import { ExpensesModule } from '../expenses/expenses.module';
 import { RevenuesModule } from '../revenues/revenues.module';
+import { PartnersModule } from '../../partners/partners.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([CashFlow, Fair]),
     ExpensesModule,
     RevenuesModule,
+    PartnersModule,
   ],
   controllers: [CashFlowController],
   providers: [CashFlowService],
