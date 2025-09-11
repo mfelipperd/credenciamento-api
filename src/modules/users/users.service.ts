@@ -12,7 +12,6 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -43,12 +42,8 @@ export class UsersService {
       }
     }
 
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-
     const user = this.userRepository.create({
       ...createUserDto,
-      password: hashedPassword
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -138,19 +133,12 @@ export class UsersService {
     }
 
     // Verificar senha atual
-    const isCurrentPasswordValid = await bcrypt.compare(
-      changePasswordDto.currentPassword,
-      user.password
-    );
-
-    if (!isCurrentPasswordValid) {
+    if (changePasswordDto.currentPassword !== user.password) {
       throw new BadRequestException('Senha atual incorreta');
     }
 
-    // Hash da nova senha
-    const hashedNewPassword = await bcrypt.hash(changePasswordDto.newPassword, 10);
-
-    user.password = hashedNewPassword;
+    // Atualizar senha
+    user.password = changePasswordDto.newPassword;
     await this.userRepository.save(user);
 
     this.logger.log(`Senha alterada para usuário: ${user.name} (ID: ${id})`);
@@ -232,4 +220,6 @@ export class UsersService {
   async updateUser(id: number, data: any) {
     return this.update(id, data);
   }
+
+
 }

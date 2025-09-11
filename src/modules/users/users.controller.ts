@@ -290,4 +290,6 @@ export class UsersController {
     await this.usersService.remove(id);
     return { message: 'Usuário removido com sucesso' };
   }
+
+
 }
