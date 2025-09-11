@@ -128,11 +128,27 @@ export class ExpensesService {
   }
 
   async findAllByFair(fairId: string): Promise<Expense[]> {
-    return await this.expensesRepository.find({
+    const expenses = await this.expensesRepository.find({
       where: { fairId },
-      relations: ['category', 'account'],
+      relations: ['category', 'account', 'fair'],
       order: { data: 'DESC' },
     });
+
+    // Agrupar despesas por categoria
+    const groupedExpenses = expenses.sort((a, b) => {
+      // Primeiro ordena por nome da categoria
+      const categoryA = a.category?.name || '';
+      const categoryB = b.category?.name || '';
+      
+      if (categoryA !== categoryB) {
+        return categoryA.localeCompare(categoryB);
+      }
+      
+      // Se a categoria for a mesma, ordena por data (mais recente primeiro)
+      return new Date(b.data).getTime() - new Date(a.data).getTime();
+    });
+
+    return groupedExpenses;
   }
 
   async findOne(id: string): Promise<Expense> {
@@ -170,13 +186,37 @@ export class ExpensesService {
 
   // Relatórios
   async getTotalByFair(fairId: string): Promise<number> {
-    const result = await this.expensesRepository
-      .createQueryBuilder('expense')
-      .select('SUM(expense.valor)', 'total')
-      .where('expense.fairId = :fairId', { fairId })
-      .getRawOne();
-
-    return parseFloat(result.total) || 0;
+    try {
+      this.logger.log(`Buscando total de despesas para feira: ${fairId}`);
+      
+      // Buscar todas as despesas da feira
+      const allExpenses = await this.expensesRepository.find({
+        where: { fairId },
+        select: ['id', 'valor', 'descricao']
+      });
+      
+      this.logger.log(`Despesas encontradas: ${allExpenses.length}`);
+      
+      if (allExpenses.length === 0) {
+        this.logger.log('Nenhuma despesa encontrada para esta feira');
+        return 0;
+      }
+      
+      // Calcular total manualmente (mais confiável)
+      const total = allExpenses.reduce((sum, expense) => {
+        const valor = Number(expense.valor) || 0;
+        this.logger.log(`Despesa ${expense.id}: ${valor} - ${expense.descricao}`);
+        return sum + valor;
+      }, 0);
+      
+      this.logger.log(`Total calculado: ${total}`);
+      
+      return total;
+      
+    } catch (error) {
+      this.logger.error(`Erro ao calcular total de despesas: ${error.message}`);
+      throw error;
+    }
   }
 
   async getTotalByCategory(

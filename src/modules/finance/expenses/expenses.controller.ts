@@ -15,13 +15,13 @@ import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 
-@Controller('fairs')
+@Controller('expenses')
 export class ExpensesController {
   private readonly logger = new Logger(ExpensesController.name);
 
   constructor(private readonly expensesService: ExpensesService) {}
 
-  @Post(':fairId/expenses')
+  @Post('fairs/:fairId/expenses')
   async create(
     @Param('fairId', ParseUUIDPipe) fairId: string,
     @Body() createExpenseDto: CreateExpenseDto,
@@ -70,7 +70,7 @@ export class ExpensesController {
     }
   }
 
-  @Get(':fairId/expenses')
+  @Get('fairs/:fairId/expenses')
   async findAllByFair(@Param('fairId', ParseUUIDPipe) fairId: string) {
     try {
       return await this.expensesService.findAllByFair(fairId);
@@ -85,7 +85,7 @@ export class ExpensesController {
     }
   }
 
-  @Get('expenses/:id')
+  @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     try {
       return await this.expensesService.findOne(id);
@@ -101,7 +101,7 @@ export class ExpensesController {
     }
   }
 
-  @Patch('expenses/:id')
+  @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateExpenseDto: UpdateExpenseDto,
@@ -120,7 +120,7 @@ export class ExpensesController {
     }
   }
 
-  @Delete('expenses/:id')
+  @Delete(':id')
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     try {
       await this.expensesService.remove(id);
@@ -138,7 +138,7 @@ export class ExpensesController {
   }
 
   // Endpoints de relatórios
-  @Get(':fairId/expenses/total')
+  @Get('fairs/:fairId/expenses/total')
   async getTotalByFair(@Param('fairId', ParseUUIDPipe) fairId: string) {
     try {
       return await this.expensesService.getTotalByFair(fairId);
@@ -153,7 +153,7 @@ export class ExpensesController {
     }
   }
 
-  @Get(':fairId/expenses/total-by-category')
+  @Get('fairs/:fairId/expenses/total-by-category')
   async getTotalByCategory(@Param('fairId', ParseUUIDPipe) fairId: string) {
     try {
       return await this.expensesService.getTotalByCategory(fairId);
@@ -168,7 +168,7 @@ export class ExpensesController {
     }
   }
 
-  @Get(':fairId/expenses/total-by-account')
+  @Get('fairs/:fairId/expenses/total-by-account')
   async getTotalByAccount(@Param('fairId', ParseUUIDPipe) fairId: string) {
     try {
       return await this.expensesService.getTotalByAccount(fairId);
