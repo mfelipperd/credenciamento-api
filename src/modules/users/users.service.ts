@@ -12,6 +12,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import { UserFairService } from './user-fair.service';
 
 @Injectable()
 export class UsersService {
@@ -19,6 +20,7 @@ export class UsersService {
 
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
+    private userFairService: UserFairService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
@@ -42,14 +44,34 @@ export class UsersService {
       }
     }
 
-    const user = this.userRepository.create({
-      ...createUserDto,
-    });
+    // Extrair fairIds do DTO
+    const { fairIds, ...userData } = createUserDto;
 
+    const user = this.userRepository.create(userData);
     const savedUser = await this.userRepository.save(user);
     
+    // Associar usuário às feiras se fornecidas
+    if (fairIds && fairIds.length > 0) {
+      for (const fairId of fairIds) {
+        try {
+          await this.userFairService.create({
+            userId: savedUser.id,
+            fairId: fairId,
+            isActive: true
+          });
+        } catch (error) {
+          this.logger.warn(`Erro ao associar usuário ${savedUser.id} à feira ${fairId}: ${error.message}`);
+        }
+      }
+    }
+    
     this.logger.log(`Usuário criado: ${savedUser.name} (ID: ${savedUser.id})`);
-    return new UserResponseDto(savedUser);
+    
+    // Buscar feiras associadas para retornar
+    const userFairs = await this.userFairService.findByUser(savedUser.id);
+    const associatedFairIds = userFairs.map(uf => uf.fairId);
+    
+    return new UserResponseDto(savedUser, associatedFairIds);
   }
 
   async findAll(): Promise<UserResponseDto[]> {
@@ -57,7 +79,15 @@ export class UsersService {
       order: { name: 'ASC' }
     });
     
-    return users.map(user => new UserResponseDto(user));
+    const usersWithFairs = await Promise.all(
+      users.map(async (user) => {
+        const userFairs = await this.userFairService.findByUser(user.id);
+        const fairIds = userFairs.map(uf => uf.fairId);
+        return new UserResponseDto(user, fairIds);
+      })
+    );
+    
+    return usersWithFairs;
   }
 
   async findOne(id: number): Promise<UserResponseDto> {
@@ -69,7 +99,11 @@ export class UsersService {
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    return new UserResponseDto(user);
+    // Buscar feiras associadas
+    const userFairs = await this.userFairService.findByUser(id);
+    const fairIds = userFairs.map(uf => uf.fairId);
+
+    return new UserResponseDto(user, fairIds);
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -107,11 +141,47 @@ export class UsersService {
       }
     }
 
-    Object.assign(user, updateUserDto);
+    // Extrair fairIds do DTO
+    const { fairIds, ...userData } = updateUserDto;
+
+    Object.assign(user, userData);
     const updatedUser = await this.userRepository.save(user);
     
+    // Gerenciar associações com feiras se fornecidas
+    if (fairIds !== undefined) {
+      // Remover todas as associações existentes
+      const existingUserFairs = await this.userFairService.findByUser(id);
+      for (const userFair of existingUserFairs) {
+        try {
+          await this.userFairService.remove(userFair.id);
+        } catch (error) {
+          this.logger.warn(`Erro ao remover associação ${userFair.id}: ${error.message}`);
+        }
+      }
+
+      // Criar novas associações
+      if (fairIds && fairIds.length > 0) {
+        for (const fairId of fairIds) {
+          try {
+            await this.userFairService.create({
+              userId: id,
+              fairId: fairId,
+              isActive: true
+            });
+          } catch (error) {
+            this.logger.warn(`Erro ao associar usuário ${id} à feira ${fairId}: ${error.message}`);
+          }
+        }
+      }
+    }
+    
     this.logger.log(`Usuário atualizado: ${updatedUser.name} (ID: ${updatedUser.id})`);
-    return new UserResponseDto(updatedUser);
+    
+    // Buscar feiras associadas para retornar
+    const userFairs = await this.userFairService.findByUser(id);
+    const associatedFairIds = userFairs.map(uf => uf.fairId);
+    
+    return new UserResponseDto(updatedUser, associatedFairIds);
   }
 
   async remove(id: number): Promise<void> {

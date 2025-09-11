@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEmail, IsEnum, IsOptional, IsBoolean, MinLength, MaxLength, Length, Matches } from 'class-validator';
+import { IsString, IsEmail, IsEnum, IsOptional, IsBoolean, MinLength, MaxLength, Length, Matches, IsArray, IsUUID } from 'class-validator';
 import { EUserRole } from '../../../enum/role';
 
 export class CreateUserDto {
@@ -75,4 +75,15 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty({ 
+    description: 'IDs das feiras que o usuário tem acesso',
+    example: ['uuid-feira-1', 'uuid-feira-2'],
+    type: [String],
+    required: false
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  fairIds?: string[];
 }

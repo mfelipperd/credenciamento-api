@@ -2,6 +2,7 @@ import { Category } from 'src/modules/categories/entity/categories.entity';
 import { HowDidYouKnow } from 'src/modules/how-did-you-know/how-did-you-know.entity';
 import { Sector } from 'src/modules/sectors/sectors.entity';
 import { Visitor } from 'src/modules/visitors/entities/visitor.entity';
+import { UserFair } from 'src/modules/users/entities/user-fair.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -74,4 +75,8 @@ export class Fair {
   // 🔹 Novo relacionamento com "Como nos conheceu"
   @OneToMany(() => HowDidYouKnow, (howDidYouKnow) => howDidYouKnow.fair)
   howDidYouKnow: HowDidYouKnow[];
+
+  // 🔹 Relacionamento com usuários através da tabela de associação
+  @OneToMany(() => UserFair, (userFair) => userFair.fair)
+  userFairs: UserFair[];
 }

@@ -33,7 +33,14 @@ export class UserResponseDto {
   @ApiProperty({ description: 'Data de atualização' })
   updatedAt: Date;
 
-  constructor(user: User) {
+  @ApiProperty({ 
+    description: 'Feiras associadas ao usuário',
+    type: [String],
+    required: false
+  })
+  fairIds?: string[];
+
+  constructor(user: User, fairIds?: string[]) {
     this.id = user.id;
     this.name = user.name;
     this.email = user.email;
@@ -44,5 +51,6 @@ export class UserResponseDto {
     this.notes = user.notes;
     this.createdAt = user.createdAt;
     this.updatedAt = user.updatedAt;
+    this.fairIds = fairIds;
   }
 }

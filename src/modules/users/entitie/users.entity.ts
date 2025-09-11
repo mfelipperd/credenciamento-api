@@ -1,5 +1,6 @@
 import { EUserRole } from 'src/enum/role';
 import { Visitor } from 'src/modules/visitors/entities/visitor.entity';
+import { UserFair } from '../entities/user-fair.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -48,4 +49,7 @@ export class User {
 
   @OneToMany(() => Visitor, (visitor) => visitor.createdBy)
   visitors: Visitor[];
+
+  @OneToMany(() => UserFair, (userFair) => userFair.user)
+  userFairs: UserFair[];
 }
