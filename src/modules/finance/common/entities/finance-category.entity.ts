@@ -24,6 +24,12 @@ export class FinanceCategory {
   @Column({ nullable: true })
   fairId: string;
 
+  @Column({ default: false })
+  isRequired: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
   // Relacionamento com categoria pai (auto-referência)
   @ManyToOne(() => FinanceCategory, (category) => category.children, {
     nullable: true,

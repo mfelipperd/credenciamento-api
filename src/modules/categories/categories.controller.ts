@@ -24,6 +24,21 @@ export class CategoriesController {
     return this.categoriesService.getCategoriesByFair(fairId);
   }
 
+  @Get('fair/:fairId/required')
+  getRequiredCategoriesByFair(@Param('fairId') fairId: string) {
+    return this.categoriesService.getRequiredCategoriesByFair(fairId);
+  }
+
+  @Get('fair/:fairId/optional')
+  getOptionalCategoriesByFair(@Param('fairId') fairId: string) {
+    return this.categoriesService.getOptionalCategoriesByFair(fairId);
+  }
+
+  @Get('fair/:fairId/required/summary')
+  getRequiredCategoriesSummary(@Param('fairId') fairId: string) {
+    return this.categoriesService.getRequiredCategoriesSummary(fairId);
+  }
+
   @Get(':id')
   getCategoryById(@Param('id') id: string) {
     return this.categoriesService.getCategoryById(id);
@@ -35,6 +50,11 @@ export class CategoriesController {
     @Body() data: Partial<CreateCategoryDto>,
   ) {
     return this.categoriesService.updateCategory(id, data);
+  }
+
+  @Put(':id/toggle-required')
+  toggleRequired(@Param('id') id: string) {
+    return this.categoriesService.toggleRequired(id);
   }
 
   @Delete(':id')

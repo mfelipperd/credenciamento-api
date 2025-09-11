@@ -22,4 +22,12 @@ export class CreateFinanceCategoryDto {
   @IsUUID()
   @IsOptional()
   fairId?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isRequired?: boolean;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
 }

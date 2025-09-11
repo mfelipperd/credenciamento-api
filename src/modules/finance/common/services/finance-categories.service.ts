@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { FinanceCategory } from '../entities/finance-category.entity';
 import { CreateFinanceCategoryDto } from '../dto/create-finance-category.dto';
 import { UpdateFinanceCategoryDto } from '../dto/update-finance-category.dto';
+import { CategoriesService } from '../../../categories/categories.service';
 
 @Injectable()
 export class FinanceCategoriesService {
   constructor(
     @InjectRepository(FinanceCategory)
     private categoriesRepository: Repository<FinanceCategory>,
+    private categoriesService: CategoriesService,
   ) {}
 
   async create(
@@ -69,5 +71,26 @@ export class FinanceCategoriesService {
       relations: ['parent', 'children'],
       order: { nome: 'ASC' },
     });
+  }
+
+  async findRequiredByFair(fairId: string): Promise<any[]> {
+    // Redirecionar para o módulo categories
+    return await this.categoriesService.getRequiredCategoriesByFair(fairId);
+  }
+
+  async findOptionalByFair(fairId: string): Promise<any[]> {
+    // Redirecionar para o módulo categories
+    return await this.categoriesService.getOptionalCategoriesByFair(fairId);
+  }
+
+  async toggleRequired(id: string): Promise<FinanceCategory> {
+    const category = await this.findOne(id);
+    category.isRequired = !category.isRequired;
+    return await this.categoriesRepository.save(category);
+  }
+
+  async getRequiredCategoriesSummary(fairId: string): Promise<any> {
+    // Redirecionar para o módulo categories
+    return await this.categoriesService.getRequiredCategoriesSummary(fairId);
   }
 }
