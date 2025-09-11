@@ -10,11 +10,15 @@ export class FairsService {
     @InjectRepository(Fair) private fairRepository: Repository<Fair>,
   ) {}
   async createFair(fair: CreateInputFairDto) {
-    const newFair = this.fairRepository.create({
-      ...fair,
-    });
+    // Extrair configurações de stands do DTO
+    const { standConfigurations, ...fairData } = fair;
 
+    const newFair = this.fairRepository.create(fairData);
     const result = await this.fairRepository.save(newFair);
+
+    // As configurações de stands serão criadas separadamente via endpoint específico
+    // para manter a separação de responsabilidades
+
     return result;
   }
 

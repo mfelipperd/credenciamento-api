@@ -3,6 +3,7 @@ import { HowDidYouKnow } from 'src/modules/how-did-you-know/how-did-you-know.ent
 import { Sector } from 'src/modules/sectors/sectors.entity';
 import { Visitor } from 'src/modules/visitors/entities/visitor.entity';
 import { UserFair } from 'src/modules/users/entities/user-fair.entity';
+import { StandConfiguration } from './stand-configuration.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -44,6 +45,9 @@ export class Fair {
   @Column({ type: 'date' })
   date: Date;
 
+  @Column({ type: 'date', nullable: true })
+  endDate: Date;
+
   @Column({ type: 'time', nullable: true })
   startTime: string;
 
@@ -55,6 +59,33 @@ export class Fair {
 
   @Column({ type: 'datetime', nullable: true })
   endDateTime: Date;
+
+  // Configurações de stands
+  @Column({ type: 'int', default: 0 })
+  totalStands: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  costPerSquareMeter: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  setupCostPerSquareMeter: number;
+
+
+  // Análise de margem
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  expectedRevenue: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  expectedProfit: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
+  expectedProfitMargin: number;
+
+  @Column({ type: 'text', nullable: true })
+  insights: string; // JSON string com insights de negócio
+
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -79,4 +110,8 @@ export class Fair {
   // 🔹 Relacionamento com usuários através da tabela de associação
   @OneToMany(() => UserFair, (userFair) => userFair.fair)
   userFairs: UserFair[];
+
+  // 🔹 Relacionamento com configurações de stands
+  @OneToMany(() => StandConfiguration, (standConfig) => standConfig.fair)
+  standConfigurations: StandConfiguration[];
 }

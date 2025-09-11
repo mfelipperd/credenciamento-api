@@ -4,7 +4,14 @@ import {
   IsISO8601,
   IsOptional,
   IsDateString,
+  IsNumber,
+  IsBoolean,
+  IsArray,
+  ValidateNested,
+  Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreateStandConfigurationDto } from './dto/create-stand-configuration.dto';
 
 export class CreateInputFairDto {
   @IsString()
@@ -60,4 +67,34 @@ export class CreateInputFairDto {
   @IsOptional()
   @IsDateString()
   endDateTime?: Date;
+
+  // Novos campos para análise de negócio
+  @IsOptional()
+  @IsDateString()
+  endDate?: Date;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  totalStands?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  costPerSquareMeter?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  setupCostPerSquareMeter?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateStandConfigurationDto)
+  standConfigurations?: CreateStandConfigurationDto[];
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
