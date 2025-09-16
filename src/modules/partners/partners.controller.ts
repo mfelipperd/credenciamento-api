@@ -78,16 +78,47 @@ export class PartnersController {
   @Get('me')
   @ApiOperation({
     summary: 'Obter perfil do sócio logado',
-    description: 'Retorna o perfil do sócio baseado no usuário logado',
+    description: 'Retorna o perfil do sócio com dados financeiros calculados baseado no usuário logado',
   })
   @ApiResponse({
     status: 200,
     description: 'Perfil do sócio retornado com sucesso',
-    type: PartnerResponseDto,
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        userId: { type: 'string' },
+        name: { type: 'string' },
+        cpf: { type: 'string', nullable: true },
+        email: { type: 'string', nullable: true },
+        phone: { type: 'string', nullable: true },
+        percentage: { type: 'number' },
+        totalEarnings: { type: 'number' },
+        totalWithdrawn: { type: 'number' },
+        availableBalance: { type: 'number' },
+        isActive: { type: 'boolean' },
+        notes: { type: 'string', nullable: true },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+        fairEarnings: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              fairId: { type: 'string' },
+              fairName: { type: 'string' },
+              percentage: { type: 'number' },
+              earnings: { type: 'number' },
+              isProfitable: { type: 'boolean' }
+            }
+          }
+        }
+      }
+    }
   })
   @ApiResponse({ status: 404, description: 'Sócio não encontrado' })
   async findMe(@Request() req) {
-    return await this.partnersService.findByUserId(req.user.id);
+    return await this.partnersService.getPartnerProfile(req.user.id);
   }
 
   @Get(':id')
@@ -188,24 +219,21 @@ export class PartnersController {
     return await this.partnersService.createWithdrawal(id, createWithdrawalDto);
   }
 
-  @Get(':id/withdrawals')
+  @Get(':fairId/withdrawals')
   @ApiOperation({
-    summary: 'Listar saques do sócio',
-    description: 'Retorna histórico de saques de um sócio',
+    summary: 'Listar saques por feira',
+    description: 'Retorna todas as solicitações de saque dos sócios de uma feira específica',
   })
-  @ApiParam({ name: 'id', description: 'ID do sócio' })
-  @ApiResponse({ status: 200, description: 'Histórico de saques retornado com sucesso' })
+  @ApiParam({ name: 'fairId', description: 'ID da feira' })
+  @ApiResponse({ status: 200, description: 'Solicitações de saque da feira retornadas com sucesso' })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
-  async getWithdrawals(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
-    // Verificar se é admin ou o próprio sócio
+  async getWithdrawalsByFair(@Param('fairId', ParseUUIDPipe) fairId: string, @Request() req) {
+    // Apenas administradores podem visualizar saques por feira
     if (req.user.role !== EUserRole.ADMIN) {
-      const partner = await this.partnersService.findByUserId(req.user.id);
-      if (!partner || partner.id !== id) {
-        throw new Error('Acesso negado');
-      }
+      throw new Error('Apenas administradores podem visualizar saques por feira');
     }
 
-    return await this.partnersService.getWithdrawals(id);
+    return await this.partnersService.getWithdrawalsByFair(fairId);
   }
 
   @Get(':id/financial-summary')

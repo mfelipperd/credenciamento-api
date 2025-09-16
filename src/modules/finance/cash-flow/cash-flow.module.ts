@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CashFlowService } from './cash-flow.service';
 import { CashFlowController } from './cash-flow.controller';
@@ -13,7 +13,7 @@ import { PartnersModule } from '../../partners/partners.module';
     TypeOrmModule.forFeature([CashFlow, Fair]),
     ExpensesModule,
     RevenuesModule,
-    PartnersModule,
+    forwardRef(() => PartnersModule),
   ],
   controllers: [CashFlowController],
   providers: [CashFlowService],

@@ -1,12 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository, Not, In } from 'typeorm';
 import { Partner } from './entities/partner.entity';
 import { PartnerWithdrawal, WithdrawalStatus } from './entities/partner-withdrawal.entity';
+import { FairPartner } from './entities/fair-partner.entity';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 import { PartnerResponseDto } from './dto/partner-response.dto';
+import { CashFlowService } from '../finance/cash-flow/cash-flow.service';
+import { Fair } from '../fairs/entity/fair.entity';
 
 @Injectable()
 export class PartnersService {
@@ -17,6 +20,12 @@ export class PartnersService {
     private partnerRepository: Repository<Partner>,
     @InjectRepository(PartnerWithdrawal)
     private withdrawalRepository: Repository<PartnerWithdrawal>,
+    @InjectRepository(FairPartner)
+    private fairPartnerRepository: Repository<FairPartner>,
+    @InjectRepository(Fair)
+    private fairRepository: Repository<Fair>,
+    @Inject(forwardRef(() => CashFlowService))
+    private cashFlowService: CashFlowService,
   ) {}
 
   async create(createPartnerDto: CreatePartnerDto): Promise<PartnerResponseDto> {
@@ -133,8 +142,22 @@ export class PartnersService {
       throw new NotFoundException('Sócio não encontrado');
     }
 
-    if (!partner.canWithdraw(createWithdrawalDto.amount)) {
-      throw new BadRequestException('Valor solicitado excede o saldo disponível ou sócio inativo');
+    if (!partner.isActive) {
+      throw new BadRequestException('Sócio inativo');
+    }
+
+    // Calcular saldo disponível real baseado nas feiras
+    const financialSummary = await this.getFinancialSummary(partnerId);
+    const availableBalance = financialSummary.availableBalance;
+
+    if (createWithdrawalDto.amount <= 0) {
+      throw new BadRequestException('Valor deve ser maior que zero');
+    }
+
+    if (createWithdrawalDto.amount > availableBalance) {
+      throw new BadRequestException(
+        `Valor solicitado (R$ ${createWithdrawalDto.amount.toFixed(2)}) excede o saldo disponível (R$ ${availableBalance.toFixed(2)})`
+      );
     }
 
     const withdrawal = this.withdrawalRepository.create({
@@ -144,7 +167,7 @@ export class PartnersService {
     });
 
     const savedWithdrawal = await this.withdrawalRepository.save(withdrawal);
-    this.logger.log(`Saque solicitado por ${partner.name}: R$ ${createWithdrawalDto.amount.toFixed(2)}`);
+    this.logger.log(`Saque solicitado por ${partner.name}: R$ ${createWithdrawalDto.amount.toFixed(2)} (Saldo disponível: R$ ${availableBalance.toFixed(2)})`);
     
     return savedWithdrawal;
   }
@@ -154,6 +177,32 @@ export class PartnersService {
       where: { partnerId },
       order: { createdAt: 'DESC' }
     });
+  }
+
+  async getWithdrawalsByFair(fairId: string): Promise<PartnerWithdrawal[]> {
+    // Buscar todos os sócios que participam da feira
+    const fairPartners = await this.fairPartnerRepository.find({
+      where: { fairId, isActive: true },
+      relations: ['partner']
+    });
+
+    if (fairPartners.length === 0) {
+      return [];
+    }
+
+    // Extrair IDs dos sócios
+    const partnerIds = fairPartners.map(fp => fp.partnerId);
+
+    // Buscar todos os saques desses sócios
+    const withdrawals = await this.withdrawalRepository.find({
+      where: { partnerId: In(partnerIds) },
+      relations: ['partner'],
+      order: { createdAt: 'DESC' }
+    });
+
+    this.logger.log(`Buscando saques da feira ${fairId}: ${withdrawals.length} saques encontrados para ${partnerIds.length} sócios`);
+
+    return withdrawals;
   }
 
   async approveWithdrawal(withdrawalId: string, approvedBy: string): Promise<PartnerWithdrawal> {
@@ -170,19 +219,14 @@ export class PartnersService {
       throw new BadRequestException('Esta solicitação já foi processada');
     }
 
-    // Atualizar saldo do sócio
-    withdrawal.partner.totalWithdrawn += withdrawal.amount;
-    withdrawal.partner.availableBalance -= withdrawal.amount;
-
     // Atualizar status do saque
     withdrawal.status = WithdrawalStatus.APPROVED;
     withdrawal.approvedBy = approvedBy;
     withdrawal.approvedAt = new Date();
 
-    await this.partnerRepository.save(withdrawal.partner);
     const updatedWithdrawal = await this.withdrawalRepository.save(withdrawal);
 
-    this.logger.log(`Saque aprovado: ${withdrawal.partner.name} - R$ ${withdrawal.amount.toFixed(2)}`);
+    this.logger.log(`Saque aprovado: ${withdrawal.partner.name} - R$ ${Number(withdrawal.amount).toFixed(2)}`);
     return updatedWithdrawal;
   }
 
@@ -214,6 +258,14 @@ export class PartnersService {
     availableBalance: number;
     pendingWithdrawals: number;
     totalWithdrawals: number;
+    percentage: number;
+    fairEarnings: Array<{
+      fairId: string;
+      fairName: string;
+      percentage: number;
+      earnings: number;
+      isProfitable: boolean;
+    }>;
   }> {
     const partner = await this.partnerRepository.findOne({ where: { id: partnerId } });
 
@@ -221,20 +273,83 @@ export class PartnersService {
       throw new NotFoundException('Sócio não encontrado');
     }
 
+    // Buscar participações do sócio em feiras
+    const fairPartners = await this.fairPartnerRepository.find({
+      where: { partnerId, isActive: true },
+      relations: ['partner']
+    });
+
+    // Calcular ganhos reais baseados nas feiras
+    let totalEarnings = 0;
+    let totalWithdrawn = 0;
+    let availableBalance = 0;
+    const fairEarnings: Array<{
+      fairId: string;
+      fairName: string;
+      percentage: number;
+      earnings: number;
+      isProfitable: boolean;
+    }> = [];
+
+    for (const fairPartner of fairPartners) {
+      // Buscar análise de fluxo de caixa da feira
+      try {
+        const fairAnalysis = await this.cashFlowService.getFairCashFlowAnalysis(fairPartner.fairId);
+        
+        // Calcular ganho proporcional do sócio nesta feira
+        const partnerShare = (fairAnalysis.netProfit * fairPartner.percentage) / 100;
+        
+        // Buscar nome da feira
+        const fair = await this.fairRepository.findOne({ where: { id: fairPartner.fairId } });
+        const fairName = fair ? fair.name : `Feira ${fairPartner.fairId}`;
+        
+        fairEarnings.push({
+          fairId: fairPartner.fairId,
+          fairName,
+          percentage: fairPartner.percentage,
+          earnings: partnerShare,
+          isProfitable: fairAnalysis.isProfitable
+        });
+
+        // Somar apenas se a feira for lucrativa
+        if (fairAnalysis.isProfitable) {
+          totalEarnings += partnerShare;
+        }
+      } catch (error) {
+        this.logger.warn(`Erro ao calcular ganhos da feira ${fairPartner.fairId}: ${error.message}`);
+      }
+    }
+
+    // Calcular saldo disponível (ganhos - saques)
     const withdrawals = await this.withdrawalRepository.find({
       where: { partnerId }
     });
 
+    const approvedWithdrawals = withdrawals
+      .filter(w => w.status === WithdrawalStatus.APPROVED)
+      .reduce((sum, w) => sum + Number(w.amount), 0);
+
     const pendingWithdrawals = withdrawals
       .filter(w => w.status === WithdrawalStatus.PENDING)
-      .reduce((sum, w) => sum + w.amount, 0);
+      .reduce((sum, w) => sum + Number(w.amount), 0);
+
+    totalWithdrawn = approvedWithdrawals;
+    availableBalance = totalEarnings - totalWithdrawn;
+
+    // Calcular porcentagem média do sócio (média ponderada pelas feiras)
+    const totalPercentage = fairPartners.reduce((sum, fp) => sum + fp.percentage, 0);
+    const averagePercentage = fairPartners.length > 0 ? totalPercentage / fairPartners.length : 0;
+
+    this.logger.log(`Resumo financeiro do sócio ${partner.name}: Ganhos R$ ${totalEarnings.toFixed(2)}, Saques R$ ${totalWithdrawn.toFixed(2)}, Disponível R$ ${availableBalance.toFixed(2)}`);
 
     return {
-      totalEarnings: partner.totalEarnings,
-      totalWithdrawn: partner.totalWithdrawn,
-      availableBalance: partner.availableBalance,
+      totalEarnings,
+      totalWithdrawn,
+      availableBalance,
       pendingWithdrawals,
-      totalWithdrawals: withdrawals.length
+      totalWithdrawals: withdrawals.length,
+      percentage: averagePercentage,
+      fairEarnings
     };
   }
 
@@ -293,5 +408,118 @@ export class PartnersService {
     return await this.partnerRepository.findOne({
       where: { userId: userId.toString() }
     });
+  }
+
+  async getPartnerProfile(userId: number): Promise<{
+    id: string;
+    userId: string;
+    name: string;
+    cpf: string;
+    email: string;
+    phone: string;
+    percentage: number;
+    totalEarnings: number;
+    totalWithdrawn: number;
+    availableBalance: number;
+    isActive: boolean;
+    notes: string;
+    createdAt: Date;
+    updatedAt: Date;
+    fairEarnings: Array<{
+      fairId: string;
+      fairName: string;
+      percentage: number;
+      earnings: number;
+      isProfitable: boolean;
+    }>;
+  }> {
+    const partner = await this.partnerRepository.findOne({
+      where: { userId: userId.toString() }
+    });
+
+    if (!partner) {
+      throw new NotFoundException('Sócio não encontrado');
+    }
+
+    // Buscar participações do sócio em feiras
+    const fairPartners = await this.fairPartnerRepository.find({
+      where: { partnerId: partner.id, isActive: true },
+      relations: ['partner']
+    });
+
+    // Calcular ganhos reais baseados nas feiras
+    let totalEarnings = 0;
+    let totalWithdrawn = 0;
+    let availableBalance = 0;
+    const fairEarnings: Array<{
+      fairId: string;
+      fairName: string;
+      percentage: number;
+      earnings: number;
+      isProfitable: boolean;
+    }> = [];
+
+    for (const fairPartner of fairPartners) {
+      // Buscar análise de fluxo de caixa da feira
+      try {
+        const fairAnalysis = await this.cashFlowService.getFairCashFlowAnalysis(fairPartner.fairId);
+        
+        // Calcular ganho proporcional do sócio nesta feira
+        const partnerShare = (fairAnalysis.netProfit * fairPartner.percentage) / 100;
+        
+        // Buscar nome da feira
+        const fair = await this.fairRepository.findOne({ where: { id: fairPartner.fairId } });
+        const fairName = fair ? fair.name : `Feira ${fairPartner.fairId}`;
+        
+        fairEarnings.push({
+          fairId: fairPartner.fairId,
+          fairName,
+          percentage: fairPartner.percentage,
+          earnings: partnerShare,
+          isProfitable: fairAnalysis.isProfitable
+        });
+
+        // Somar apenas se a feira for lucrativa
+        if (fairAnalysis.isProfitable) {
+          totalEarnings += partnerShare;
+        }
+      } catch (error) {
+        this.logger.warn(`Erro ao calcular ganhos da feira ${fairPartner.fairId}: ${error.message}`);
+      }
+    }
+
+    // Calcular saldo disponível (ganhos - saques)
+    const withdrawals = await this.withdrawalRepository.find({
+      where: { partnerId: partner.id }
+    });
+
+    const approvedWithdrawals = withdrawals
+      .filter(w => w.status === WithdrawalStatus.APPROVED)
+      .reduce((sum, w) => sum + w.amount, 0);
+
+    totalWithdrawn = approvedWithdrawals;
+    availableBalance = totalEarnings - totalWithdrawn;
+
+    // Calcular porcentagem média do sócio (média ponderada pelas feiras)
+    const totalPercentage = fairPartners.reduce((sum, fp) => sum + fp.percentage, 0);
+    const averagePercentage = fairPartners.length > 0 ? totalPercentage / fairPartners.length : 0;
+
+    return {
+      id: partner.id,
+      userId: partner.userId,
+      name: partner.name,
+      cpf: partner.cpf,
+      email: partner.email,
+      phone: partner.phone,
+      percentage: averagePercentage,
+      totalEarnings,
+      totalWithdrawn,
+      availableBalance,
+      isActive: partner.isActive,
+      notes: partner.notes,
+      createdAt: partner.createdAt,
+      updatedAt: partner.updatedAt,
+      fairEarnings
+    };
   }
 }
