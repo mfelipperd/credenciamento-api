@@ -43,12 +43,12 @@ export class EmailsService {
   ) {
     // 1) busca dados da feira
     const fair = await this.fairsService.findOne(fairId);
-    if (!fair || !fair.date) {
+    if (!fair || !fair.startDate) {
       throw new BadRequestException('Dados da feira não encontrados.');
     }
     const title = fair.name;
     const location = fair.location;
-    const date = new Date(fair.date);
+    const date = new Date(fair.startDate);
     const start = new Date(date);
     start.setHours(9, 0, 0, 0);
     const end = new Date(date);

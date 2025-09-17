@@ -22,6 +22,11 @@ export class CreateInputFairDto {
   @Length(1, 255)
   location: string;
 
+  @IsOptional()
+  @IsString()
+  @Length(1, 500)
+  googleMapsUrl?: string; // URL do Google Maps
+
   // Campos de endereço detalhado (opcionais)
   @IsOptional()
   @IsString()
@@ -48,9 +53,14 @@ export class CreateInputFairDto {
   @Length(1, 100)
   country?: string;
 
-  // Campos de data e hora
+  // Campos de data e hora (temporariamente opcionais para migração)
+  @IsOptional()
   @IsISO8601()
-  date: Date;
+  startDate?: Date; // Data de início da feira
+
+  @IsOptional()
+  @IsISO8601()
+  endDate?: Date; // Data de fim da feira
 
   @IsOptional()
   @IsString()
@@ -67,11 +77,6 @@ export class CreateInputFairDto {
   @IsOptional()
   @IsDateString()
   endDateTime?: Date;
-
-  // Novos campos para análise de negócio
-  @IsOptional()
-  @IsDateString()
-  endDate?: Date;
 
   @IsOptional()
   @IsNumber()

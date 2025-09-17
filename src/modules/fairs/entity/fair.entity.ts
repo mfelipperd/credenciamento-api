@@ -25,6 +25,9 @@ export class Fair {
   @Column({ length: 255 })
   location: string;
 
+  @Column({ length: 500, nullable: true })
+  googleMapsUrl: string; // URL do Google Maps do local
+
   // Campos de endereço detalhado
   @Column({ length: 255, nullable: true })
   address: string;
@@ -41,24 +44,24 @@ export class Fair {
   @Column({ length: 100, nullable: true })
   country: string;
 
-  // Campos de data e hora
-  @Column({ type: 'date' })
-  date: Date;
+  // Campos de data e hora (temporariamente opcionais para migração)
+  @Column({ type: 'date', nullable: true })
+  startDate: Date; // Data de início da feira
 
   @Column({ type: 'date', nullable: true })
-  endDate: Date;
+  endDate: Date; // Data de fim da feira
 
   @Column({ type: 'time', nullable: true })
-  startTime: string;
+  startTime: string; // Horário de início (HH:mm)
 
   @Column({ type: 'time', nullable: true })
-  endTime: string;
+  endTime: string; // Horário de fim (HH:mm)
 
   @Column({ type: 'datetime', nullable: true })
-  startDateTime: Date;
+  startDateTime: Date; // Data e hora de início combinadas
 
   @Column({ type: 'datetime', nullable: true })
-  endDateTime: Date;
+  endDateTime: Date; // Data e hora de fim combinadas
 
   // Configurações de stands
   @Column({ type: 'int', default: 0 })

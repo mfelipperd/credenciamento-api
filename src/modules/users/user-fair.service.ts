@@ -219,7 +219,7 @@ export class UserFairService {
         id: userFair.fair.id,
         name: userFair.fair.name,
         location: userFair.fair.location,
-        date: userFair.fair.date
+        date: userFair.fair.startDate
       } : undefined
     };
   }
