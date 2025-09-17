@@ -1,7 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, Min, Length } from 'class-validator';
+import { IsString, IsNumber, IsOptional, Min, Length, IsUUID } from 'class-validator';
 
 export class CreateWithdrawalDto {
+  @ApiProperty({ 
+    description: 'ID da feira',
+    example: '0299a14d-10f1-4799-bf18-a0ecfec99d62'
+  })
+  @IsUUID()
+  fairId: string;
+
   @ApiProperty({ 
     description: 'Valor do saque',
     example: 5000.00,

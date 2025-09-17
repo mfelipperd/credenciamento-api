@@ -24,6 +24,9 @@ export class PartnerWithdrawal {
   @Column()
   partnerId: string;
 
+  @Column()
+  fairId: string;
+
   @Column('decimal', { precision: 15, scale: 2 })
   amount: number;
 

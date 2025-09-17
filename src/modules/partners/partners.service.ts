@@ -146,8 +146,17 @@ export class PartnersService {
       throw new BadRequestException('Sócio inativo');
     }
 
-    // Calcular saldo disponível real baseado nas feiras
-    const financialSummary = await this.getFinancialSummary(partnerId);
+    // Validar se o sócio tem participação na feira
+    const fairPartner = await this.fairPartnerRepository.findOne({
+      where: { partnerId, fairId: createWithdrawalDto.fairId, isActive: true }
+    });
+
+    if (!fairPartner) {
+      throw new BadRequestException('Sócio não possui participação ativa nesta feira');
+    }
+
+    // Obter saldo disponível específico da feira
+    const financialSummary = await this.getFinancialSummaryByFair(partnerId, createWithdrawalDto.fairId);
     const availableBalance = financialSummary.availableBalance;
 
     if (createWithdrawalDto.amount <= 0) {
@@ -156,7 +165,7 @@ export class PartnersService {
 
     if (createWithdrawalDto.amount > availableBalance) {
       throw new BadRequestException(
-        `Valor solicitado (R$ ${createWithdrawalDto.amount.toFixed(2)}) excede o saldo disponível (R$ ${availableBalance.toFixed(2)})`
+        `Valor solicitado (R$ ${createWithdrawalDto.amount.toFixed(2)}) excede o saldo disponível na feira ${financialSummary.fairName} (R$ ${availableBalance.toFixed(2)})`
       );
     }
 
@@ -167,7 +176,7 @@ export class PartnersService {
     });
 
     const savedWithdrawal = await this.withdrawalRepository.save(withdrawal);
-    this.logger.log(`Saque solicitado por ${partner.name}: R$ ${createWithdrawalDto.amount.toFixed(2)} (Saldo disponível: R$ ${availableBalance.toFixed(2)})`);
+    this.logger.log(`Saque solicitado por ${partner.name} na feira ${financialSummary.fairName}: R$ ${createWithdrawalDto.amount.toFixed(2)} (Saldo disponível: R$ ${availableBalance.toFixed(2)})`);
     
     return savedWithdrawal;
   }
@@ -177,6 +186,33 @@ export class PartnersService {
       where: { partnerId },
       order: { createdAt: 'DESC' }
     });
+  }
+
+  async getWithdrawalsByPartnerAndFair(partnerId: string, fairId: string): Promise<PartnerWithdrawal[]> {
+    // Verificar se o sócio existe
+    const partner = await this.partnerRepository.findOne({ where: { id: partnerId } });
+    if (!partner) {
+      throw new NotFoundException('Sócio não encontrado');
+    }
+
+    // Verificar se o sócio tem participação na feira
+    const fairPartner = await this.fairPartnerRepository.findOne({
+      where: { partnerId, fairId, isActive: true }
+    });
+
+    if (!fairPartner) {
+      throw new NotFoundException('Sócio não possui participação ativa nesta feira');
+    }
+
+    // Buscar saques do sócio específicos desta feira
+    const withdrawals = await this.withdrawalRepository.find({
+      where: { partnerId, fairId },
+      order: { createdAt: 'DESC' }
+    });
+
+    this.logger.log(`Histórico de saques do sócio ${partner.name} na feira ${fairId}: ${withdrawals.length} saques encontrados`);
+
+    return withdrawals;
   }
 
   async getWithdrawalsByFair(fairId: string): Promise<PartnerWithdrawal[]> {
@@ -193,9 +229,12 @@ export class PartnersService {
     // Extrair IDs dos sócios
     const partnerIds = fairPartners.map(fp => fp.partnerId);
 
-    // Buscar todos os saques desses sócios
+    // Buscar apenas os saques específicos desta feira
     const withdrawals = await this.withdrawalRepository.find({
-      where: { partnerId: In(partnerIds) },
+      where: { 
+        partnerId: In(partnerIds),
+        fairId: fairId
+      },
       relations: ['partner'],
       order: { createdAt: 'DESC' }
     });
@@ -389,9 +428,9 @@ export class PartnersService {
     const fair = await this.fairRepository.findOne({ where: { id: fairId } });
     const fairName = fair ? fair.name : `Feira ${fairId}`;
 
-    // Calcular saques apenas desta feira (assumindo que os saques são globais, mas podemos filtrar por data se necessário)
+    // Calcular saques apenas desta feira específica
     const withdrawals = await this.withdrawalRepository.find({
-      where: { partnerId }
+      where: { partnerId, fairId }
     });
 
     const approvedWithdrawals = withdrawals

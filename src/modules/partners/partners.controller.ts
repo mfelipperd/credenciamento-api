@@ -238,6 +238,32 @@ export class PartnersController {
     return await this.partnersService.getWithdrawalsByFair(fairId);
   }
 
+  @Get(':partnerId/withdrawals/fair/:fairId')
+  @ApiOperation({
+    summary: 'Histórico de saques do sócio por feira',
+    description: 'Lista o histórico de saques de um sócio específico para uma feira específica',
+  })
+  @ApiParam({ name: 'partnerId', description: 'ID do sócio' })
+  @ApiParam({ name: 'fairId', description: 'ID da feira' })
+  @ApiResponse({ status: 200, description: 'Histórico de saques retornado com sucesso' })
+  @ApiResponse({ status: 404, description: 'Sócio não encontrado ou sem participação na feira' })
+  @ApiResponse({ status: 403, description: 'Acesso negado' })
+  async getWithdrawalsByPartnerAndFair(
+    @Param('partnerId', ParseUUIDPipe) partnerId: string,
+    @Param('fairId', ParseUUIDPipe) fairId: string,
+    @Request() req
+  ) {
+    // Verificar se é admin ou o próprio sócio
+    if (req.user.role !== EUserRole.ADMIN) {
+      const partner = await this.partnersService.findByUserId(req.user.id);
+      if (!partner || partner.id !== partnerId) {
+        throw new Error('Acesso negado');
+      }
+    }
+
+    return await this.partnersService.getWithdrawalsByPartnerAndFair(partnerId, fairId);
+  }
+
   @Get(':id/financial-summary')
   @ApiOperation({
     summary: 'Resumo financeiro do sócio por feira',
