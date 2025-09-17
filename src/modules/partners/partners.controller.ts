@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +18,7 @@ import {
   ApiParam,
   ApiBearerAuth,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { PartnersService } from './partners.service';
 import { CreatePartnerDto } from './dto/create-partner.dto';
@@ -238,13 +240,19 @@ export class PartnersController {
 
   @Get(':id/financial-summary')
   @ApiOperation({
-    summary: 'Resumo financeiro do sócio',
-    description: 'Retorna resumo financeiro completo do sócio',
+    summary: 'Resumo financeiro do sócio por feira',
+    description: 'Retorna resumo financeiro do sócio para uma feira específica',
   })
   @ApiParam({ name: 'id', description: 'ID do sócio' })
+  @ApiQuery({ name: 'fairId', description: 'ID da feira', required: true })
   @ApiResponse({ status: 200, description: 'Resumo financeiro retornado com sucesso' })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
-  async getFinancialSummary(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  @ApiResponse({ status: 400, description: 'fairId é obrigatório' })
+  async getFinancialSummary(
+    @Param('id', ParseUUIDPipe) id: string, 
+    @Query('fairId', ParseUUIDPipe) fairId: string,
+    @Request() req
+  ) {
     // Verificar se é admin ou o próprio sócio
     if (req.user.role !== EUserRole.ADMIN) {
       const partner = await this.partnersService.findByUserId(req.user.id);
@@ -253,7 +261,7 @@ export class PartnersController {
       }
     }
 
-    return await this.partnersService.getFinancialSummary(id);
+    return await this.partnersService.getFinancialSummaryByFair(id, fairId);
   }
 
   // Endpoints para administradores gerenciarem saques

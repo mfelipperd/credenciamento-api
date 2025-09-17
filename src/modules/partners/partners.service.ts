@@ -353,6 +353,74 @@ export class PartnersService {
     };
   }
 
+  async getFinancialSummaryByFair(partnerId: string, fairId: string): Promise<{
+    totalEarnings: number;
+    totalWithdrawn: number;
+    availableBalance: number;
+    pendingWithdrawals: number;
+    totalWithdrawals: number;
+    percentage: number;
+    fairName: string;
+    isProfitable: boolean;
+  }> {
+    const partner = await this.partnerRepository.findOne({ where: { id: partnerId } });
+
+    if (!partner) {
+      throw new NotFoundException('Sócio não encontrado');
+    }
+
+    // Buscar participação do sócio na feira específica
+    const fairPartner = await this.fairPartnerRepository.findOne({
+      where: { partnerId, fairId, isActive: true },
+      relations: ['partner']
+    });
+
+    if (!fairPartner) {
+      throw new NotFoundException('Sócio não possui participação ativa nesta feira');
+    }
+
+    // Buscar análise de fluxo de caixa da feira
+    const fairAnalysis = await this.cashFlowService.getFairCashFlowAnalysis(fairId);
+    
+    // Calcular ganho proporcional do sócio nesta feira
+    const partnerShare = (fairAnalysis.netProfit * fairPartner.percentage) / 100;
+    
+    // Buscar nome da feira
+    const fair = await this.fairRepository.findOne({ where: { id: fairId } });
+    const fairName = fair ? fair.name : `Feira ${fairId}`;
+
+    // Calcular saques apenas desta feira (assumindo que os saques são globais, mas podemos filtrar por data se necessário)
+    const withdrawals = await this.withdrawalRepository.find({
+      where: { partnerId }
+    });
+
+    const approvedWithdrawals = withdrawals
+      .filter(w => w.status === WithdrawalStatus.APPROVED)
+      .reduce((sum, w) => sum + Number(w.amount), 0);
+
+    const pendingWithdrawals = withdrawals
+      .filter(w => w.status === WithdrawalStatus.PENDING)
+      .reduce((sum, w) => sum + Number(w.amount), 0);
+
+    // Para uma feira específica, o saldo disponível é baseado apenas nos ganhos desta feira
+    const totalEarnings = fairAnalysis.isProfitable ? partnerShare : 0;
+    const totalWithdrawn = approvedWithdrawals;
+    const availableBalance = totalEarnings - totalWithdrawn;
+
+    this.logger.log(`Resumo financeiro do sócio ${partner.name} na feira ${fairName}: Ganhos R$ ${totalEarnings.toFixed(2)}, Saques R$ ${totalWithdrawn.toFixed(2)}, Disponível R$ ${availableBalance.toFixed(2)}`);
+
+    return {
+      totalEarnings,
+      totalWithdrawn,
+      availableBalance,
+      pendingWithdrawals,
+      totalWithdrawals: withdrawals.length,
+      percentage: fairPartner.percentage,
+      fairName,
+      isProfitable: fairAnalysis.isProfitable
+    };
+  }
+
   /**
    * Valida se a porcentagem solicitada está disponível
    * @param percentage Porcentagem solicitada
