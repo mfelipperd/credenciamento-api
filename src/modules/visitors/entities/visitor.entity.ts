@@ -35,6 +35,24 @@ export class Visitor {
   @Column()
   zipCode: string;
 
+  @Column({ length: 255, nullable: true })
+  street: string;
+
+  @Column({ length: 50, nullable: true })
+  number: string;
+
+  @Column({ length: 255, nullable: true })
+  complement: string;
+
+  @Column({ length: 255, nullable: true })
+  neighborhood: string;
+
+  @Column({ length: 255, nullable: true })
+  city: string;
+
+  @Column({ length: 2, nullable: true })
+  state: string;
+
   @Column({ type: 'simple-array' })
   sectors: string[];
 
