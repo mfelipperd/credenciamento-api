@@ -16,6 +16,7 @@ async function bootstrap() {
       'http://localhost:3001',
       'https://credenciamento-frontend.vercel.app',
       'https://www.expomultimix.com',
+      'https://expo-mm-site.vercel.app',
     ],
     credentials: true,
     allowedHeaders: [
