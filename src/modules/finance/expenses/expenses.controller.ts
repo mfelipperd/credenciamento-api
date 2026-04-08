@@ -15,7 +15,7 @@ import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 
-@Controller('expenses')
+@Controller()
 export class ExpensesController {
   private readonly logger = new Logger(ExpensesController.name);
 
@@ -81,7 +81,7 @@ export class ExpensesController {
     }
   }
 
-  @Get(':id')
+  @Get('expenses/:id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     try {
       return await this.expensesService.findOne(id);
@@ -97,7 +97,7 @@ export class ExpensesController {
     }
   }
 
-  @Patch(':id')
+  @Patch('expenses/:id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateExpenseDto: UpdateExpenseDto,
@@ -116,7 +116,7 @@ export class ExpensesController {
     }
   }
 
-  @Delete(':id')
+  @Delete('expenses/:id')
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     try {
       await this.expensesService.remove(id);
