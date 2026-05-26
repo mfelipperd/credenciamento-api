@@ -7,10 +7,11 @@ import { EmailProcessor } from './email.processor';
 import { Visitor } from '../visitors/entities/visitor.entity';
 import { FairsModule } from '../fairs/fairs.module';
 import { Fair } from '../fairs/entity/fair.entity';
+import { EmailCampaign } from './entities/email-campaign.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Visitor, Fair]),
+    TypeOrmModule.forFeature([Visitor, Fair, EmailCampaign]),
     FairsModule,
     BullModule.registerQueue({ name: EMAIL_QUEUE }),
   ],

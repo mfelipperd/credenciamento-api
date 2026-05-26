@@ -1,6 +1,11 @@
-import { IsString, IsNotEmpty, IsUUID, IsIn } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsIn, MaxLength } from 'class-validator';
 
 export class SendMarketingEmailV2Dto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  title: string;
+
   @IsUUID()
   @IsNotEmpty()
   targetFairId: string;
@@ -14,6 +19,7 @@ export class SendMarketingEmailV2Dto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(500)
   subject: string;
 
   @IsString()

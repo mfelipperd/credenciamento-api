@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body } from '@nestjs/common';
 import { EmailsService } from './emails.service';
 import { SendMarketingEmailDto } from './dto/send-marketing-email.dto';
 import { SendMarketingEmailV2Dto } from './dto/send-marketing-email-v2.dto';
@@ -6,6 +6,8 @@ import { SendMarketingEmailV2Dto } from './dto/send-marketing-email-v2.dto';
 @Controller('emails')
 export class EmailsController {
   constructor(private readonly emailsService: EmailsService) {}
+
+  // ── Transactional ──────────────────────────────────────────────────────────
 
   @Post('confirmation')
   async sendConfirmationEmail(
@@ -18,7 +20,6 @@ export class EmailsController {
     },
   ) {
     const { visitorEmail, visitorName, registrationCode, fairId } = body;
-
     return this.emailsService.sendConfirmationEmail(
       visitorEmail,
       visitorName,
@@ -37,7 +38,6 @@ export class EmailsController {
     },
   ) {
     const { subject, htmlTemplate, recipients } = body;
-
     await Promise.all(
       recipients.map((r) =>
         this.emailsService.sendTransactionalEmail(
@@ -48,17 +48,17 @@ export class EmailsController {
         ),
       ),
     );
-
     return { success: true, sent: recipients.length };
   }
+
+  // ── Marketing campaigns ────────────────────────────────────────────────────
 
   @Post('marketing/absent-visitors')
   async sendMarketingToAbsentVisitors(
     @Body() sendMarketingEmailDto: SendMarketingEmailDto,
   ) {
     const { subject, htmlContent, fairId } = sendMarketingEmailDto;
-
-    return await this.emailsService.sendMarketingEmailToAbsentVisitors(
+    return this.emailsService.sendMarketingEmailToAbsentVisitors(
       subject,
       htmlContent,
       fairId,
@@ -73,6 +73,24 @@ export class EmailsController {
       dto.sendTo,
       dto.subject,
       dto.htmlContent,
+      dto.title,
     );
+  }
+
+  // ── Campaign stats & history ───────────────────────────────────────────────
+
+  @Get('account-stats')
+  async getAccountStats() {
+    return this.emailsService.getAccountStats();
+  }
+
+  @Get('campaigns')
+  async getCampaigns() {
+    return this.emailsService.getCampaigns();
+  }
+
+  @Get('campaigns/:id/stats')
+  async getCampaignStats(@Param('id') id: string) {
+    return this.emailsService.getCampaignStats(id);
   }
 }

@@ -18,7 +18,7 @@ export class EmailProcessor extends WorkerHost {
   }
 
   async process(job: Job<MarketingEmailJob>): Promise<void> {
-    const { to, name, subject, htmlContent } = job.data;
+    const { to, name, subject, htmlContent, campaignTag } = job.data;
 
     const personalizedHtml = htmlContent.replace(/\{\{VISITOR_NAME\}\}/g, name);
 
@@ -30,6 +30,7 @@ export class EmailProcessor extends WorkerHost {
       to: [{ email: to, name }],
       subject,
       htmlContent: personalizedHtml,
+      tags: campaignTag ? [campaignTag] : undefined,
     });
 
     this.logger.log(`[Job ${job.id}] Email enviado para ${to}`);
