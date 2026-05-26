@@ -14,8 +14,6 @@ import { FairsService } from '../fairs/fairs.service';
 import { Visitor } from '../visitors/entities/visitor.entity';
 import { generateConfirmationEmail } from 'src/utils/emailLayoutGenerator';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const qr = require('qr-image');
 
 export const EMAIL_QUEUE = 'email-queue';
 
@@ -73,20 +71,12 @@ export class EmailsService {
       'https://credenciamento-frontend.vercel.app/visitor/checkin' +
       registrationCode;
 
-    let qrBuffer: Buffer;
-    try {
-      qrBuffer = qr.imageSync(qrData, { type: 'png', size: 5 }) as Buffer;
-    } catch (err) {
-      this.logger.error('Erro ao gerar QR code', err);
-      throw new BadRequestException('Falha ao gerar QR code');
-    }
-
-    const qrDataUri = `data:image/png;base64,${qrBuffer.toString('base64')}`;
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
 
     const html = generateConfirmationEmail(
       visitorName,
       registrationCode,
-      qrDataUri,
+      qrImageUrl,
       fair.name,
       start?.toISOString() ?? '',
       end?.toISOString() ?? '',
