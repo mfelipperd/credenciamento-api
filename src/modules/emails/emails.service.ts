@@ -59,15 +59,15 @@ export class EmailsService {
     fairId: string,
   ) {
     const fair = await this.fairsService.findOne(fairId);
-    if (!fair || !fair.startDate) {
+    if (!fair) {
       throw new BadRequestException('Dados da feira não encontrados.');
     }
 
-    const date = new Date(fair.startDate);
-    const start = new Date(date);
-    start.setHours(9, 0, 0, 0);
-    const end = new Date(date);
-    end.setHours(18, 0, 0, 0);
+    const baseDate = fair.startDate ?? fair.startDateTime ?? null;
+    const start = baseDate ? new Date(baseDate) : null;
+    const end = baseDate ? new Date(baseDate) : null;
+    if (start) start.setHours(9, 0, 0, 0);
+    if (end) end.setHours(18, 0, 0, 0);
 
     const qrData =
       'https://credenciamento-frontend.vercel.app/visitor/checkin' +
@@ -86,8 +86,8 @@ export class EmailsService {
       registrationCode,
       'cid:qrcode',
       fair.name,
-      start.toISOString(),
-      end.toISOString(),
+      start?.toISOString() ?? '',
+      end?.toISOString() ?? '',
       fair.location,
     );
 

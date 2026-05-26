@@ -15,14 +15,16 @@ export function generateConfirmationEmail(
   eventLocation: string,
   eventDescription?: string,
 ) {
-  // 1) link do Google Calendar
-  const calendarLink = generateGoogleCalendarLink(
-    eventTitle,
-    eventStart,
-    eventEnd,
-    eventLocation,
-    eventDescription ?? '',
-  );
+  const calendarLink =
+    eventStart && eventEnd
+      ? generateGoogleCalendarLink(
+          eventTitle,
+          eventStart,
+          eventEnd,
+          eventLocation,
+          eventDescription ?? '',
+        )
+      : null;
 
   return `
     <html>
@@ -32,13 +34,17 @@ export function generateConfirmationEmail(
         <p>Seu QR Code de inscrição:</p>
         <img src="${qrUrl}" alt="QR Code" width="200" height="200" />
         <p><strong>Código de Inscrição:</strong> ${registrationCode}</p>
-        <p>
-          <a href="${calendarLink}" target="_blank"
-             style="display: inline-block; background-color: #4285F4; color: white;
-                    padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-            📅 Salvar no Google Calendar
-          </a>
-        </p>
+        ${
+          calendarLink
+            ? `<p>
+                <a href="${calendarLink}" target="_blank"
+                   style="display: inline-block; background-color: #4285F4; color: white;
+                          padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                  📅 Salvar no Google Calendar
+                </a>
+              </p>`
+            : ''
+        }
       </body>
     </html>
   `;
