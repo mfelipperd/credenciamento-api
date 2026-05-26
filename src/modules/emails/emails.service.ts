@@ -81,10 +81,12 @@ export class EmailsService {
       throw new BadRequestException('Falha ao gerar QR code');
     }
 
+    const qrDataUri = `data:image/png;base64,${qrBuffer.toString('base64')}`;
+
     const html = generateConfirmationEmail(
       visitorName,
       registrationCode,
-      'cid:qrcode',
+      qrDataUri,
       fair.name,
       start?.toISOString() ?? '',
       end?.toISOString() ?? '',
@@ -97,12 +99,6 @@ export class EmailsService {
         to: [{ email: to, name: visitorName }],
         subject: `Confirmação – ${fair.name}`,
         htmlContent: html,
-        attachment: [
-          {
-            content: qrBuffer.toString('base64'),
-            name: 'qrcode.png',
-          },
-        ],
       });
       this.logger.log(`Email de confirmação enviado para ${to}`);
     } catch (err) {
