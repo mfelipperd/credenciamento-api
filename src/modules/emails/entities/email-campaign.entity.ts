@@ -17,7 +17,7 @@ export class EmailCampaign {
   @Column({ length: 36 })
   targetFairId: string;
 
-  @Column({ length: 36, nullable: true })
+  @Column({ type: 'varchar', length: 36, nullable: true })
   templateFairId: string | null;
 
   @Column({ length: 10, default: 'all' })
