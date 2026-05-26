@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq';
 import { databaseConfig } from './config/database.config';
 import { VisitorsModule } from './modules/visitors/visitors.module';
 import { UsersModule } from './modules/users/users.module';
@@ -28,6 +29,18 @@ import { PartnersModule } from './modules/partners/partners.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          url: config.get<string>('REDIS_URL'),
+        },
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+        },
+      }),
     }),
     TypeOrmModule.forRoot(databaseConfig),
     VisitorsModule,
