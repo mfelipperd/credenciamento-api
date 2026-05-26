@@ -32,22 +32,23 @@ export class EmailsController {
     body: {
       subject: string;
       htmlTemplate: string;
-      recipients: string[];
-      fairId: string;
+      recipients: Array<{ email: string; name?: string }>;
     },
   ) {
-    const { subject, htmlTemplate, recipients, fairId } = body;
+    const { subject, htmlTemplate, recipients } = body;
 
-    for (const recipient of recipients) {
-      await this.emailsService.sendConfirmationEmail(
-        recipient,
-        subject,
-        htmlTemplate,
-        fairId,
-      );
-    }
+    await Promise.all(
+      recipients.map((r) =>
+        this.emailsService.sendTransactionalEmail(
+          r.email,
+          r.name ?? r.email,
+          subject,
+          htmlTemplate,
+        ),
+      ),
+    );
 
-    return { success: true, message: 'Campaign emails sent successfully' };
+    return { success: true, sent: recipients.length };
   }
 
   @Post('marketing/absent-visitors')
