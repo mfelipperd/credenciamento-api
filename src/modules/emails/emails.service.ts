@@ -190,6 +190,86 @@ export class EmailsService {
     };
   }
 
+  async sendMarketingEmail(
+    targetFairId: string,
+    templateFairId: string,
+    sendTo: 'all' | 'absent',
+    subject: string,
+    htmlContent: string,
+  ) {
+    const [targetFair, templateFair] = await Promise.all([
+      this.fairsService.findOne(targetFairId),
+      this.fairsService.findOne(templateFairId),
+    ]);
+
+    if (!targetFair) throw new BadRequestException('Feira destino não encontrada.');
+    if (!templateFair) throw new BadRequestException('Feira template não encontrada.');
+
+    const qb = this.visitorsRepository
+      .createQueryBuilder('visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :targetFairId', { targetFairId })
+      .select(['visitor.name', 'visitor.email']);
+
+    if (sendTo === 'absent') {
+      qb.leftJoin(
+        'checkins',
+        'c',
+        'c.visitorRegistrationCode = visitor.registrationCode',
+      ).andWhere('c.id IS NULL');
+    }
+
+    const recipients = await qb.getMany();
+
+    if (recipients.length === 0) {
+      return {
+        success: true,
+        message: 'Nenhum destinatário encontrado para os critérios informados',
+        targetFairId,
+        templateFairId,
+        sendTo,
+        totalQueued: 0,
+        status: 'QUEUED',
+      };
+    }
+
+    const jobs = recipients.map((visitor) => ({
+      name: 'send-marketing-email',
+      data: {
+        to: visitor.email,
+        name: visitor.name,
+        subject,
+        htmlContent,
+      } satisfies MarketingEmailJob,
+      opts: {
+        attempts: 3,
+        backoff: { type: 'exponential' as const, delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 50,
+      },
+    }));
+
+    await this.emailQueue.addBulk(jobs);
+
+    this.logger.log(
+      `[${sendTo.toUpperCase()}] ${recipients.length} emails enfileirados — target: ${targetFair.name}, template: ${templateFair.name}`,
+    );
+
+    return {
+      success: true,
+      message: `${recipients.length} email(s) enfileirados para envio`,
+      targetFairId,
+      templateFairId,
+      sendTo,
+      totalQueued: recipients.length,
+      status: 'QUEUED',
+    };
+  }
+
   async sendTransactionalEmail(
     to: string,
     toName: string,

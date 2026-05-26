@@ -20,6 +20,8 @@ export class EmailProcessor extends WorkerHost {
   async process(job: Job<MarketingEmailJob>): Promise<void> {
     const { to, name, subject, htmlContent } = job.data;
 
+    const personalizedHtml = htmlContent.replace(/\{\{VISITOR_NAME\}\}/g, name);
+
     await this.brevo.transactionalEmails.sendTransacEmail({
       sender: {
         name: this.config.get<string>('BREVO_SENDER_NAME') ?? 'Credenciamento',
@@ -27,7 +29,7 @@ export class EmailProcessor extends WorkerHost {
       },
       to: [{ email: to, name }],
       subject,
-      htmlContent,
+      htmlContent: personalizedHtml,
     });
 
     this.logger.log(`[Job ${job.id}] Email enviado para ${to}`);
