@@ -161,7 +161,7 @@ export class OverheadExpensesService {
     const { fairs, ...fields } = dto;
     Object.assign(expense, fields);
 
-    return this.dataSource.transaction(async (manager) => {
+    await this.dataSource.transaction(async (manager) => {
       await manager.save(expense);
 
       if (fairs !== undefined) {
@@ -178,9 +178,10 @@ export class OverheadExpensesService {
         );
         await manager.save(OverheadExpenseAllocation, entities);
       }
-
-      return this.findOne(id);
     });
+
+    // findOne fora da transação — dados já commitados
+    return this.findOne(id);
   }
 
   async remove(id: string): Promise<{ message: string }> {
