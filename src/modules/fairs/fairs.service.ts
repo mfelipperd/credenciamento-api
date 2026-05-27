@@ -97,7 +97,9 @@ export class FairsService {
       .createQueryBuilder('fair')
       .leftJoinAndSelect('fair.standConfigurations', 'standConfig')
       .leftJoinAndSelect('fair.daySchedules', 'daySchedule')
-      .orderBy('fair.startDate', 'ASC', 'NULLS LAST')
+      // MySQL não suporta NULLS LAST — usar ISNULL() para colocar nulos no final
+      .orderBy('ISNULL(fair.startDate)', 'ASC')
+      .addOrderBy('fair.startDate', 'ASC')
       .addOrderBy('fair.createdAt', 'DESC');
 
     if (uf) {
