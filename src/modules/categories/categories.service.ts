@@ -32,9 +32,9 @@ export class CategoriesService {
   }
 
   async getCategoriesByFair(fairId: string) {
-    return this.categoryRepository.find({ 
-      where: { fair: { id: fairId } },
-      relations: ['fair']
+    return this.categoryRepository.find({
+      where: { fairId },
+      order: { name: 'ASC' },
     });
   }
   async getCategoryById(id: string) {
@@ -52,21 +52,16 @@ export class CategoriesService {
   }
 
   async getRequiredCategoriesByFair(fairId: string) {
-    return this.categoryRepository.find({ 
-      where: { 
-        fair: { id: fairId },
-        isRequired: true 
-      },
-      relations: ['fair']
+    return this.categoryRepository.find({
+      where: { fairId, isRequired: true },
+      order: { name: 'ASC' },
     });
   }
 
   async getOptionalCategoriesByFair(fairId: string) {
-    return this.categoryRepository.find({ 
-      where: { 
-        fair: { id: fairId },
-        isRequired: false 
-      } 
+    return this.categoryRepository.find({
+      where: { fairId, isRequired: false },
+      order: { name: 'ASC' },
     });
   }
 
@@ -82,15 +77,15 @@ export class CategoriesService {
 
   async getRequiredCategoriesSummary(fairId: string) {
     const requiredCategories = await this.getRequiredCategoriesByFair(fairId);
-    
+
     return {
       totalRequired: requiredCategories.length,
-      categories: requiredCategories.map(cat => ({
+      categories: requiredCategories.map((cat) => ({
         id: cat.id,
         name: cat.name,
         description: cat.description,
-        fairId: cat.fair.id
-      }))
+        fairId: cat.fairId,
+      })),
     };
   }
 }

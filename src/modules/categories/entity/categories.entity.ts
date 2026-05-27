@@ -21,7 +21,14 @@ export class Category {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @ManyToOne(() => Fair, (fair) => fair.categories, { onDelete: 'CASCADE' }) // 🔹 Confirme que a relação está correta
-  @JoinColumn({ name: 'fairId' }) // 🔹 Garante que a chave estrangeira está correta
+  /**
+   * FK explícita para permitir queries diretas: where: { fairId }
+   * Sem isso, o TypeORM não resolve corretamente o nested-where via relação.
+   */
+  @Column({ nullable: true })
+  fairId: string;
+
+  @ManyToOne(() => Fair, (fair) => fair.categories, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'fairId' })
   fair: Fair;
 }
