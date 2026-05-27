@@ -105,6 +105,30 @@ export class UpdateOverheadExpenseDto {
   fairs?: FairAllocationDto[];
 }
 
+// ── Convert direct expense to overhead ───────────────────────────────────────
+
+export class ConvertExpenseToOverheadDto {
+  /**
+   * ID de uma finance_category global existente para mapear esta despesa.
+   * Se não informado, o sistema busca uma categoria global com o mesmo nome
+   * da categoria da despesa direta. Se não existir, cria automaticamente.
+   */
+  @IsOptional()
+  @IsUUID()
+  financeCategoryId?: string;
+
+  /**
+   * Feiras que compartilharão o custo.
+   * Pode incluir a feira original da despesa e outras feiras.
+   * Se omitir percentuais → divisão igualitária.
+   */
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => FairAllocationDto)
+  fairs: FairAllocationDto[];
+}
+
 // ── Response types ────────────────────────────────────────────────────────────
 
 export interface AllocatedOverheadItem {

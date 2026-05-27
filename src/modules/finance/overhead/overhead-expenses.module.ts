@@ -7,6 +7,8 @@ import { OverheadExpenseAllocation } from './entities/overhead-expense-allocatio
 import { FinanceCategory } from '../common/entities/finance-category.entity';
 import { Account } from '../common/entities/account.entity';
 import { Fair } from 'src/modules/fairs/entity/fair.entity';
+import { Expense } from '../expenses/entities/expense.entity';
+import { Category } from '../../categories/entity/categories.entity';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { Fair } from 'src/modules/fairs/entity/fair.entity';
       FinanceCategory,
       Account,
       Fair,
+      Expense,
+      Category,
     ]),
   ],
   controllers: [OverheadExpensesController],

@@ -15,6 +15,7 @@ import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { OverheadExpensesService } from '../overhead/overhead-expenses.service';
+import { ConvertExpenseToOverheadDto } from '../overhead/dto/overhead-expense.dto';
 
 @Controller()
 export class ExpensesController {
@@ -119,6 +120,33 @@ export class ExpensesController {
       throw new HttpException(
         'Erro ao buscar despesa',
         HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * POST /expenses/:id/convert-to-overhead
+   *
+   * Converte uma despesa direta em overhead expense (com rateio entre feiras).
+   * A despesa original é removida atomicamente após a criação do overhead.
+   *
+   * Body: { financeCategoryId?: string, fairs: [{ fairId, percentual? }] }
+   */
+  @Post('expenses/:id/convert-to-overhead')
+  async convertToOverhead(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ConvertExpenseToOverheadDto,
+  ) {
+    try {
+      return await this.overheadExpensesService.convertExpenseToOverhead(id, dto);
+    } catch (error) {
+      this.logger.error(
+        `Erro ao converter despesa ${id} para overhead: ${error.message}`,
+      );
+      if (error instanceof HttpException) throw error;
+      throw new HttpException(
+        error.message || 'Erro ao converter despesa para overhead',
+        error.status ?? HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }

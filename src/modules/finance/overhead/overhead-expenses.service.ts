@@ -5,13 +5,16 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, ILike } from 'typeorm';
 import { OverheadExpense } from './entities/overhead-expense.entity';
 import { OverheadExpenseAllocation } from './entities/overhead-expense-allocation.entity';
 import { FinanceCategory } from '../common/entities/finance-category.entity';
+import { Expense } from '../expenses/entities/expense.entity';
+import { Category } from '../../categories/entity/categories.entity';
 import {
   CreateOverheadExpenseDto,
   UpdateOverheadExpenseDto,
+  ConvertExpenseToOverheadDto,
   FairAllocationDto,
   AllocatedOverheadItem,
 } from './dto/overhead-expense.dto';
@@ -27,6 +30,10 @@ export class OverheadExpensesService {
     private readonly allocationRepo: Repository<OverheadExpenseAllocation>,
     @InjectRepository(FinanceCategory)
     private readonly financeCategoryRepo: Repository<FinanceCategory>,
+    @InjectRepository(Expense)
+    private readonly expenseRepo: Repository<Expense>,
+    @InjectRepository(Category)
+    private readonly fairCategoryRepo: Repository<Category>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -236,6 +243,103 @@ export class OverheadExpensesService {
   async getTotalAllocatedForFair(fairId: string): Promise<number> {
     const items = await this.findAllocatedForFair(fairId);
     return items.reduce((sum, i) => sum + i.valorAlocado, 0);
+  }
+
+  // ── Conversão de despesa direta → overhead ─────────────────────────────────
+
+  /**
+   * Converte uma despesa direta (finance_expenses) em uma overhead expense.
+   *
+   * Fluxo:
+   * 1. Localiza a despesa direta pelo ID (com categoria).
+   * 2. Determina a finance_category global a usar:
+   *    - Se `dto.financeCategoryId` for fornecido → valida e usa.
+   *    - Caso contrário → busca finance_category com nome igual ao da categoria da despesa (case-insensitive).
+   *      Se não existir → cria automaticamente.
+   * 3. Em transação: cria overhead_expense + allocations e remove a despesa original.
+   */
+  async convertExpenseToOverhead(
+    expenseId: string,
+    dto: ConvertExpenseToOverheadDto,
+  ): Promise<OverheadExpense> {
+    // 1. Buscar despesa direta
+    const directExpense = await this.expenseRepo.findOne({
+      where: { id: expenseId },
+      relations: ['category', 'account'],
+    });
+
+    if (!directExpense) {
+      throw new NotFoundException(
+        `Despesa com ID ${expenseId} não encontrada.`,
+      );
+    }
+
+    // 2. Determinar a finance_category global
+    let financeCategory: FinanceCategory;
+
+    if (dto.financeCategoryId) {
+      financeCategory = await this.validateCategory(dto.financeCategoryId);
+    } else {
+      const categoryName = directExpense.category?.name ?? directExpense.descricao ?? 'Overhead';
+
+      // Tenta encontrar uma categoria global com o mesmo nome (case-insensitive)
+      const existing = await this.financeCategoryRepo.findOne({
+        where: { nome: ILike(categoryName), global: true },
+      });
+
+      if (existing) {
+        financeCategory = existing;
+        this.logger.log(
+          `Usando finance_category existente "${financeCategory.nome}" (id=${financeCategory.id})`,
+        );
+      } else {
+        // Cria automaticamente como categoria global
+        const newCategory = Object.assign(new FinanceCategory(), {
+          nome: categoryName.toUpperCase(),
+          global: true,
+          isRequired: false,
+        });
+        financeCategory = await this.financeCategoryRepo.save(newCategory);
+        this.logger.log(
+          `Criada finance_category "${financeCategory.nome}" (id=${financeCategory.id})`,
+        );
+      }
+    }
+
+    // 3. Resolver alocações
+    const allocations = this.resolveAllocations(dto.fairs);
+
+    // 4. Transação: cria overhead + allocations + remove despesa original
+    return this.dataSource.transaction(async (manager) => {
+      const overhead = Object.assign(new OverheadExpense(), {
+        categoryId: financeCategory.id,
+        accountId: directExpense.accountId ?? null,
+        descricao: directExpense.descricao ?? null,
+        valor: directExpense.valor,
+        data: directExpense.data,
+        observacoes: directExpense.observacoes ?? null,
+      });
+      const savedOverhead = await manager.save(OverheadExpense, overhead);
+
+      const allocationEntities = allocations.map((a) =>
+        Object.assign(new OverheadExpenseAllocation(), {
+          overheadExpenseId: savedOverhead.id,
+          fairId: a.fairId,
+          percentual: a.percentual,
+        }),
+      );
+      await manager.save(OverheadExpenseAllocation, allocationEntities);
+
+      // Remove a despesa direta original
+      await manager.remove(Expense, directExpense);
+
+      this.logger.log(
+        `Despesa ${expenseId} convertida para overhead ${savedOverhead.id} ` +
+          `(categoria: "${financeCategory.nome}", feiras: ${allocations.map((a) => a.fairId).join(', ')})`,
+      );
+
+      return this.findOne(savedOverhead.id);
+    });
   }
 
   // ── Categorias globais disponíveis ──────────────────────────────────────────
