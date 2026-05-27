@@ -310,7 +310,7 @@ export class OverheadExpensesService {
     const allocations = this.resolveAllocations(dto.fairs);
 
     // 4. Transação: cria overhead + allocations + remove despesa original
-    return this.dataSource.transaction(async (manager) => {
+    const overheadId = await this.dataSource.transaction(async (manager) => {
       const overhead = Object.assign(new OverheadExpense(), {
         categoryId: financeCategory.id,
         accountId: directExpense.accountId ?? null,
@@ -338,8 +338,11 @@ export class OverheadExpensesService {
           `(categoria: "${financeCategory.nome}", feiras: ${allocations.map((a) => a.fairId).join(', ')})`,
       );
 
-      return this.findOne(savedOverhead.id);
+      return savedOverhead.id;
     });
+
+    // findOne fora da transação — dados já commitados, repositório enxerga normalmente
+    return this.findOne(overheadId);
   }
 
   // ── Categorias globais disponíveis ──────────────────────────────────────────
