@@ -7,6 +7,7 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { FinanceCommonModule } from './common/finance-common.module';
 import { CashFlowModule } from './cash-flow/cash-flow.module';
 import { OverheadExpensesModule } from './overhead/overhead-expenses.module';
+import { ChartsModule } from './charts/charts.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { OverheadExpensesModule } from './overhead/overhead-expenses.module';
     FinanceCommonModule,
     CashFlowModule,
     OverheadExpensesModule,
+    ChartsModule,
   ],
 })
 export class FinanceModule {}
