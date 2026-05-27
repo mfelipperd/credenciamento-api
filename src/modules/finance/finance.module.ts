@@ -6,6 +6,7 @@ import { StandsModule } from './stands/stands.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { FinanceCommonModule } from './common/finance-common.module';
 import { CashFlowModule } from './cash-flow/cash-flow.module';
+import { OverheadExpensesModule } from './overhead/overhead-expenses.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { CashFlowModule } from './cash-flow/cash-flow.module';
     ExpensesModule,
     FinanceCommonModule,
     CashFlowModule,
+    OverheadExpensesModule,
   ],
 })
 export class FinanceModule {}

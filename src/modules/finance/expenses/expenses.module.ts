@@ -6,9 +6,13 @@ import { Expense } from './entities/expense.entity';
 import { Fair } from 'src/modules/fairs/entity/fair.entity';
 import { Category } from '../../categories/entity/categories.entity';
 import { Account } from '../common/entities/account.entity';
+import { OverheadExpensesModule } from '../overhead/overhead-expenses.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Expense, Fair, Category, Account])],
+  imports: [
+    TypeOrmModule.forFeature([Expense, Fair, Category, Account]),
+    OverheadExpensesModule,
+  ],
   controllers: [ExpensesController],
   providers: [ExpensesService],
   exports: [ExpensesService],
