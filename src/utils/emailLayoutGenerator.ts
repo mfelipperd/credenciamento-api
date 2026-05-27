@@ -4,7 +4,7 @@ import { toZonedTime } from 'date-fns-tz';
 import { generateGoogleCalendarLink } from './googleCalendarCreatEvent';
 
 const LOGO_URL =
-  'https://www.expomultimix.com.br/_next/image?url=%2Fassets%2Flogo%20EMM_Prancheta%201.png&w=400&q=75';
+  'https://www.expomultimix.com.br/assets/logo%20EMM_Prancheta%201.png';
 
 function formatEventDate(isoString: string): string {
   try {
