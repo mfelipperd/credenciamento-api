@@ -192,10 +192,76 @@ type OverheadExpenseFormProps =
 
 ---
 
+---
+
+## 7. Converter despesa direta em overhead — novo endpoint
+
+Durante a análise dos dados da Belém 2026, identificamos despesas lançadas como **diretas** que são, na verdade, custos compartilhados da empresa (overhead):
+
+| Despesa direta (Belém 2026) | Categoria | Natureza real |
+|-----------------------------|-----------|---------------|
+| ESCRITORIO CE | ALUGUEL ESCRITORIO | ⚠️ Overhead (escritório CE é da empresa, não da feira) |
+| CONTADOR HONORARIOS | CONTADOR | ⚠️ Overhead (honorários da empresa) |
+| SIMPLES NACIONAL | IMPOSTOS | ⚠️ Overhead (imposto da empresa) |
+| PIS COFINS | IMPOSTOS | ⚠️ Overhead |
+| FGTS | IMPOSTOS | ⚠️ Overhead |
+| INTERNET ESCRITORIO | INTERNET | ⚠️ Overhead (internet do escritório) |
+| BOMBEIRO FEIRA | BOMBEIRO | ✅ Direto da feira |
+| ESTACIONAMENTO | CUSTO ESCRITÓRIO | ✅ Direto (discutível) |
+
+Para corrigir isso sem perder o histórico, criamos um endpoint de conversão:
+
+### `POST /expenses/:id/convert-to-overhead`
+
+Converte uma despesa direta em overhead em uma operação atômica:
+1. Cria o `overhead_expense` com os mesmos dados (valor, data, descrição, conta)
+2. Registra o rateio entre as feiras informadas
+3. Exclui a despesa direta original
+4. Se não for informado `financeCategoryId`, o backend busca automaticamente uma `finance_category` global com o mesmo nome da categoria da despesa. Se não existir, cria.
+
+**Exemplo — converter ESCRITORIO CE para overhead entre Belém 2026 e Manaus 2026:**
+
+```http
+POST /expenses/{expenseId}/convert-to-overhead
+Content-Type: application/json
+
+{
+  "fairs": [
+    { "fairId": "0299a14d-10f1-4799-bf18-a0ecfec99d62" },  // Belém 2026
+    { "fairId": "outro-uuid-manaus-2026" }                   // Manaus 2026
+  ]
+}
+```
+
+Resposta: o `OverheadExpense` criado (com alocações 50%/50%).
+
+**Exemplo com percentual manual:**
+
+```http
+POST /expenses/{expenseId}/convert-to-overhead
+Content-Type: application/json
+
+{
+  "financeCategoryId": "uuid-da-finance-category-aluguel",
+  "fairs": [
+    { "fairId": "0299a14d-10f1-4799-bf18-a0ecfec99d62", "percentual": 0.6 },  // 60% Belém
+    { "fairId": "outro-uuid-manaus-2026",                "percentual": 0.4 }   // 40% Manaus
+  ]
+}
+```
+
+**Workflow sugerido no frontend para cada despesa overhead:**
+1. Listar categorias globais disponíveis: `GET /overhead-expenses/categories`
+2. Fazer a conversão: `POST /expenses/:id/convert-to-overhead`
+3. Recarregar `GET /fairs/:fairId/expenses` para ver o resultado
+
+---
+
 ## Resumo das ações por responsável
 
 ### Backend (feito agora — deploy automático Railway)
 - [x] Adicionar `transformer` nas colunas DECIMAL → `valor` e `percentual` passam a retornar `number`
+- [x] Novo endpoint `POST /expenses/:id/convert-to-overhead`
 
 ### Frontend (refatorações necessárias)
 | # | Ação | Arquivo(s) |
@@ -207,3 +273,4 @@ type OverheadExpenseFormProps =
 | 5 | Corrigir URLs de `/finance/overhead-expenses` para `/overhead-expenses` | `expenses.service.ts` |
 | 6 | Manter apenas uma `FinanceCategory` com `nome` (remover a com `name`) | `finance.ts` |
 | 7 | Separar prop `expense` do form com discriminador de modo (`edit` / `view`) | `OverheadExpenseForm.tsx`, `ExpenseFilters.tsx` |
+| 8 | Implementar UI para converter despesas diretas em overhead (botão na listagem de despesas) | `ExpenseList.tsx` |
