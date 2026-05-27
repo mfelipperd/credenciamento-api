@@ -136,9 +136,13 @@ export class VisitorsController {
    * Retorna visitante + histórico de feiras + campos vazios.
    */
   @Get('lookup')
-  @IsPublicRoute()
-  async lookupVisitors(@Query('q') q: string) {
-    return this.visitorsService.lookupVisitors(q ?? '');
+  async lookupVisitors(
+    @Query('name') name?: string,
+    @Query('phone') phone?: string,
+    @Query('cnpj') cnpj?: string,
+    @Query('email') email?: string,
+  ) {
+    return this.visitorsService.lookupVisitors({ name, phone, cnpj, email });
   }
 
   /**

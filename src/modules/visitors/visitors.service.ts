@@ -307,11 +307,22 @@ export class VisitorsService {
   // ── Lookup cross-feiras ──────────────────────────────────────────────────
 
   /**
-   * Busca visitantes em TODAS as feiras por nome, email ou CNPJ.
+   * Busca visitantes em TODAS as feiras combinando até 4 campos:
+   * nome, telefone, cnpj, email.
+   *
+   * Regras:
+   * - Mínimo 2 parâmetros devem ser fornecidos.
+   * - Cada parâmetro fornecido é um filtro AND (visitante precisa bater em TODOS).
+   * - Busca parcial (LIKE %valor%) em todos os campos.
+   *
    * Retorna dados do visitante + histórico de feiras + campos vazios.
-   * Usado para pré-preencher o formulário de nova inscrição.
    */
-  async lookupVisitors(q: string): Promise<
+  async lookupVisitors(params: {
+    name?: string;
+    phone?: string;
+    cnpj?: string;
+    email?: string;
+  }): Promise<
     Array<{
       registrationCode: string;
       name: string;
@@ -340,27 +351,48 @@ export class VisitorsService {
       }>;
     }>
   > {
-    if (!q || q.trim().length < 2) return [];
+    const { name, phone, cnpj, email } = params;
 
-    const term = q.trim();
-    const cleanTerm = term.replace(/\D/g, '');
+    // Normaliza e filtra apenas os parâmetros enviados
+    const filters = {
+      name:  name?.trim()  || null,
+      phone: phone?.trim() || null,
+      cnpj:  cnpj?.replace(/\D/g, '') || null,
+      email: email?.trim().toLowerCase() || null,
+    };
+
+    const activeFilters = Object.values(filters).filter(Boolean);
+    if (activeFilters.length < 2) return [];
 
     const qb = this.visitorRepository
       .createQueryBuilder('visitor')
       .leftJoinAndSelect('visitor.fair_visitor', 'fair')
-      .where(
-        [
-          'LOWER(visitor.name)    LIKE :like',
-          'LOWER(visitor.email)   LIKE :like',
-          'visitor.cnpj           LIKE :cnpjLike',
-        ].join(' OR '),
-        {
-          like: `%${term.toLowerCase()}%`,
-          cnpjLike: `%${cleanTerm}%`,
-        },
-      )
       .orderBy('visitor.registrationDate', 'DESC')
       .take(20);
+
+    // Cada filtro fornecido vira um AND WHERE
+    if (filters.name) {
+      qb.andWhere('LOWER(visitor.name) LIKE :name', {
+        name: `%${filters.name.toLowerCase()}%`,
+      });
+    }
+    if (filters.email) {
+      qb.andWhere('LOWER(visitor.email) LIKE :email', {
+        email: `%${filters.email}%`,
+      });
+    }
+    if (filters.cnpj) {
+      qb.andWhere('visitor.cnpj LIKE :cnpj', {
+        cnpj: `%${filters.cnpj}%`,
+      });
+    }
+    if (filters.phone) {
+      // Compara dígitos para ignorar formatação (parênteses, traços, espaços)
+      const cleanPhone = filters.phone.replace(/\D/g, '');
+      qb.andWhere('REPLACE(REPLACE(REPLACE(REPLACE(visitor.phone," ",""),"-",""),"(",""),")","") LIKE :phone', {
+        phone: `%${cleanPhone}%`,
+      });
+    }
 
     const visitors = await qb.getMany();
 
