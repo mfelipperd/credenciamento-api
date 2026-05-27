@@ -33,7 +33,7 @@ export class Fair {
   name: string;
 
   /** Edição da feira: "1ª Edição", "ExpoMultimix 2026" */
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   edition: string | null;
 
   /** Descrição curta exibida no site e nos e-mails */
@@ -41,7 +41,7 @@ export class Fair {
   description: string | null;
 
   /** URL da imagem de capa/banner */
-  @Column({ length: 500, nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true })
   bannerUrl: string | null;
 
   /** Ciclo de vida: upcoming → ongoing → ended (ou cancelled) */
@@ -62,44 +62,44 @@ export class Fair {
   location: string;
 
   /** Nome do pavilhão/venue: "Centro de Convenções Vasco Vasques" */
-  @Column({ length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   venueName: string | null;
 
   /** Logradouro */
-  @Column({ length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   address: string | null;
 
   /** Número do endereço */
-  @Column({ length: 20, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
   number: string | null;
 
   /** Complemento */
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   complement: string | null;
 
   /** Bairro */
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   neighborhood: string | null;
 
   /** Cidade */
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   city: string | null;
 
   /**
    * UF (2 letras): "AM", "PA", "SP"
    * Usado para filtrar feiras por estado: GET /fairs?uf=AM
    */
-  @Column({ length: 2, nullable: true })
+  @Column({ type: 'varchar', length: 2, nullable: true })
   state: string | null;
 
-  @Column({ length: 10, nullable: true })
+  @Column({ type: 'varchar', length: 10, nullable: true })
   zipCode: string | null;
 
-  @Column({ length: 50, nullable: true })
+  @Column({ type: 'varchar', length: 50, nullable: true })
   country: string | null;
 
   /** Link direto do Google Maps para o local */
-  @Column({ length: 500, nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true })
   googleMapsUrl: string | null;
 
   /**

@@ -36,6 +36,6 @@ export class FairDaySchedule {
   endTime: string;
 
   /** Observação opcional sobre o dia (ex: "Encerramento antecipado") */
-  @Column({ length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   note: string | null;
 }
