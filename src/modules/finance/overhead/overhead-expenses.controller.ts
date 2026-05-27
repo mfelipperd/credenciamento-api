@@ -26,6 +26,16 @@ export class OverheadExpensesController {
   ) {}
 
   /**
+   * GET /overhead-expenses/categories
+   * Lista categorias globais (finance_categories com global: true).
+   * Use esses IDs no campo categoryId ao criar despesas overhead.
+   */
+  @Get('categories')
+  async findGlobalCategories() {
+    return this.overheadExpensesService.findGlobalCategories();
+  }
+
+  /**
    * POST /overhead-expenses
    * Lança uma nova despesa overhead e define quais feiras a compartilham.
    */

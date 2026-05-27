@@ -7,7 +7,6 @@ import {
   IsString,
   IsUUID,
   Max,
-  MaxLength,
   Min,
   ValidateNested,
   ArrayMinSize,
@@ -36,11 +35,10 @@ export class FairAllocationDto {
 // ── Create ────────────────────────────────────────────────────────────────────
 
 export class CreateOverheadExpenseDto {
-  /** Categoria livre: ex. "Aluguel", "Pessoal", "Impostos" */
-  @IsString()
+  /** ID da categoria global (finance_categories com global: true) */
+  @IsUUID()
   @IsNotEmpty()
-  @MaxLength(255)
-  categoria: string;
+  categoryId: string;
 
   @IsOptional()
   @IsUUID()
@@ -48,7 +46,6 @@ export class CreateOverheadExpenseDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(500)
   descricao?: string;
 
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -74,10 +71,9 @@ export class CreateOverheadExpenseDto {
 
 export class UpdateOverheadExpenseDto {
   @IsOptional()
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
-  @MaxLength(255)
-  categoria?: string;
+  categoryId?: string;
 
   @IsOptional()
   @IsUUID()
@@ -85,7 +81,6 @@ export class UpdateOverheadExpenseDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(500)
   descricao?: string;
 
   @IsOptional()
@@ -114,7 +109,7 @@ export class UpdateOverheadExpenseDto {
 
 export interface AllocatedOverheadItem {
   id: string;
-  categoria: string;
+  category: { id: string; nome: string } | null;
   descricao: string | null;
   data: Date;
   valorTotal: number;

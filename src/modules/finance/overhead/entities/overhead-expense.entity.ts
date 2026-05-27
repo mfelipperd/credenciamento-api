@@ -9,6 +9,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Account } from '../../common/entities/account.entity';
+import { FinanceCategory } from '../../common/entities/finance-category.entity';
 import { OverheadExpenseAllocation } from './overhead-expense-allocation.entity';
 
 @Entity('overhead_expenses')
@@ -16,9 +17,9 @@ export class OverheadExpense {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  /** Categoria livre: ex. "Aluguel", "Pessoal", "Impostos" */
-  @Column({ length: 255 })
-  categoria: string;
+  /** FK para finance_categories (categorias globais de overhead) */
+  @Column()
+  categoryId: string;
 
   @Column({ nullable: true })
   accountId: string;
@@ -42,6 +43,10 @@ export class OverheadExpense {
   updatedAt: Date;
 
   // ── Relations ──────────────────────────────────────────────────────────────
+
+  @ManyToOne(() => FinanceCategory, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'categoryId' })
+  category: FinanceCategory;
 
   @ManyToOne(() => Account, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'accountId' })

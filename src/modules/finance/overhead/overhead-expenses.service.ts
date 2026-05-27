@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { OverheadExpense } from './entities/overhead-expense.entity';
 import { OverheadExpenseAllocation } from './entities/overhead-expense-allocation.entity';
+import { FinanceCategory } from '../common/entities/finance-category.entity';
 import {
   CreateOverheadExpenseDto,
   UpdateOverheadExpenseDto,
@@ -24,10 +25,29 @@ export class OverheadExpensesService {
     private readonly overheadRepo: Repository<OverheadExpense>,
     @InjectRepository(OverheadExpenseAllocation)
     private readonly allocationRepo: Repository<OverheadExpenseAllocation>,
+    @InjectRepository(FinanceCategory)
+    private readonly financeCategoryRepo: Repository<FinanceCategory>,
     private readonly dataSource: DataSource,
   ) {}
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  private async validateCategory(categoryId: string): Promise<FinanceCategory> {
+    const category = await this.financeCategoryRepo.findOne({
+      where: { id: categoryId },
+    });
+    if (!category) {
+      throw new BadRequestException(
+        `Categoria com ID ${categoryId} não encontrada. Use GET /finance/categories para listar as categorias globais disponíveis.`,
+      );
+    }
+    if (!category.global) {
+      throw new BadRequestException(
+        `A categoria "${category.nome}" não é global. Overhead expenses devem usar categorias com global: true.`,
+      );
+    }
+    return category;
+  }
 
   /**
    * Resolve percentuais a partir da lista de fairs do DTO.
@@ -40,9 +60,7 @@ export class OverheadExpensesService {
     const hasAnyPercentual = fairs.some((f) => f.percentual !== undefined);
 
     if (!hasAnyPercentual) {
-      // Divisão igualitária
       const equal = Math.round((1 / fairs.length) * 10000) / 10000;
-      // Ajuste de arredondamento na última parcela
       const allocations = fairs.map((f, i) => ({
         fairId: f.fairId,
         percentual: i < fairs.length - 1 ? equal : 0,
@@ -55,7 +73,6 @@ export class OverheadExpensesService {
       return allocations;
     }
 
-    // Percentuais manuais — todos devem estar presentes
     const missing = fairs.filter((f) => f.percentual === undefined);
     if (missing.length > 0) {
       throw new BadRequestException(
@@ -73,30 +90,17 @@ export class OverheadExpensesService {
     return fairs.map((f) => ({ fairId: f.fairId, percentual: f.percentual! }));
   }
 
-  private async saveAllocations(
-    overheadExpenseId: string,
-    allocations: { fairId: string; percentual: number }[],
-  ): Promise<void> {
-    const entities = allocations.map((a) =>
-      this.allocationRepo.create({
-        overheadExpenseId,
-        fairId: a.fairId,
-        percentual: a.percentual,
-      }),
-    );
-    await this.allocationRepo.save(entities);
-  }
-
   // ── CRUD ────────────────────────────────────────────────────────────────────
 
   async create(dto: CreateOverheadExpenseDto): Promise<OverheadExpense> {
-    this.logger.log(`Criando overhead expense: ${dto.categoria} — R$ ${dto.valor}`);
+    this.logger.log(`Criando overhead expense: categoryId=${dto.categoryId} — R$ ${dto.valor}`);
 
+    await this.validateCategory(dto.categoryId);
     const allocations = this.resolveAllocations(dto.fairs);
 
     return this.dataSource.transaction(async (manager) => {
       const expense = Object.assign(new OverheadExpense(), {
-        categoria: dto.categoria,
+        categoryId: dto.categoryId,
         accountId: dto.accountId ?? null,
         descricao: dto.descricao ?? null,
         valor: dto.valor,
@@ -120,7 +124,7 @@ export class OverheadExpensesService {
 
   async findAll(): Promise<OverheadExpense[]> {
     return this.overheadRepo.find({
-      relations: ['account', 'allocations', 'allocations.fair'],
+      relations: ['category', 'account', 'allocations', 'allocations.fair'],
       order: { data: 'DESC' },
     });
   }
@@ -128,7 +132,7 @@ export class OverheadExpensesService {
   async findOne(id: string): Promise<OverheadExpense> {
     const expense = await this.overheadRepo.findOne({
       where: { id },
-      relations: ['account', 'allocations', 'allocations.fair'],
+      relations: ['category', 'account', 'allocations', 'allocations.fair'],
     });
     if (!expense) {
       throw new NotFoundException(`Overhead expense com ID ${id} não encontrado`);
@@ -142,6 +146,10 @@ export class OverheadExpensesService {
   ): Promise<OverheadExpense> {
     this.logger.log(`Atualizando overhead expense: ${id}`);
     const expense = await this.findOne(id);
+
+    if (dto.categoryId) {
+      await this.validateCategory(dto.categoryId);
+    }
 
     const { fairs, ...fields } = dto;
     Object.assign(expense, fields);
@@ -185,6 +193,7 @@ export class OverheadExpensesService {
       where: { fairId },
       relations: [
         'overheadExpense',
+        'overheadExpense.category',
         'overheadExpense.account',
         'overheadExpense.allocations',
         'overheadExpense.allocations.fair',
@@ -199,7 +208,9 @@ export class OverheadExpensesService {
 
       return {
         id: exp.id,
-        categoria: exp.categoria,
+        category: exp.category
+          ? { id: exp.category.id, nome: exp.category.nome }
+          : null,
         descricao: exp.descricao ?? null,
         data: exp.data,
         valorTotal,
@@ -225,5 +236,15 @@ export class OverheadExpensesService {
   async getTotalAllocatedForFair(fairId: string): Promise<number> {
     const items = await this.findAllocatedForFair(fairId);
     return items.reduce((sum, i) => sum + i.valorAlocado, 0);
+  }
+
+  // ── Categorias globais disponíveis ──────────────────────────────────────────
+
+  /** Lista categorias globais de finance_categories para uso no overhead */
+  async findGlobalCategories(): Promise<FinanceCategory[]> {
+    return this.financeCategoryRepo.find({
+      where: { global: true },
+      order: { nome: 'ASC' },
+    });
   }
 }
