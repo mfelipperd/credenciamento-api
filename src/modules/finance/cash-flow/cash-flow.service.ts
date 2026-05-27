@@ -5,6 +5,7 @@ import { CashFlow } from './entities/cash-flow.entity';
 import { CreateCashFlowDto } from './dto/create-cash-flow.dto';
 import { UpdateCashFlowDto } from './dto/update-cash-flow.dto';
 import { ExpensesService } from '../expenses/expenses.service';
+import { OverheadExpensesService } from '../overhead/overhead-expenses.service';
 import { RevenuesService } from '../revenues/revenues.service';
 import { ProfitDistributionService } from '../../partners/profit-distribution.service';
 
@@ -14,9 +15,26 @@ export class CashFlowService {
     @InjectRepository(CashFlow)
     private cashFlowRepository: Repository<CashFlow>,
     private expensesService: ExpensesService,
+    private overheadExpensesService: OverheadExpensesService,
     private revenuesService: RevenuesService,
     private profitDistributionService: ProfitDistributionService,
   ) {}
+
+  /**
+   * Total real de despesas de uma feira = diretas + rateadas (ambos os sistemas).
+   *
+   * - diretas           → finance_expenses WHERE isOverhead = false
+   * - overhead direto   → finance_expenses WHERE isOverhead = true, calculado via expense_fair_allocations
+   * - overhead legado   → overhead_expenses alocadas para esta feira via overhead_expense_allocations
+   */
+  private async getTotalExpenses(fairId: string): Promise<number> {
+    const [diretas, overheadDireto, overheadLegado] = await Promise.all([
+      this.expensesService.getTotalByFair(fairId),
+      this.expensesService.getTotalDirectOverheadForFair(fairId),
+      this.overheadExpensesService.getTotalAllocatedForFair(fairId),
+    ]);
+    return Math.round((diretas + overheadDireto + overheadLegado) * 100) / 100;
+  }
 
   async create(createCashFlowDto: CreateCashFlowDto): Promise<CashFlow> {
     // Se não foram fornecidos os totais, calcular automaticamente
@@ -130,8 +148,8 @@ export class CashFlowService {
       0,
     );
 
-    // Calcular total de despesas para o período
-    const totalExpenses = await this.expensesService.getTotalByFair(fairId);
+    // Calcular total de despesas para o período (diretas + rateadas de ambos os sistemas)
+    const totalExpenses = await this.getTotalExpenses(fairId);
 
     return {
       totalRevenue,
@@ -154,7 +172,7 @@ export class CashFlowService {
       (sum, revenue) => sum + revenue.contractValue,
       0,
     );
-    const totalExpenses = await this.expensesService.getTotalByFair(fairId);
+    const totalExpenses = await this.getTotalExpenses(fairId);
     const netBalance = totalRevenue - totalExpenses;
     const profitMargin =
       totalRevenue > 0 ? (netBalance / totalRevenue) * 100 : 0;
@@ -287,12 +305,24 @@ export class CashFlowService {
     const averageRevenue = revenueCount > 0 ? totalRevenue / revenueCount : 0;
     const largestRevenue = revenueCount > 0 ? Math.max(...revenues.map(r => (Number(r.contractValue) || 0) / 100)) : 0;
 
-    // Buscar despesas da feira
-    const totalExpenses = await this.expensesService.getTotalByFair(fairId);
-    const expenses = await this.expensesService.findAllByFair(fairId);
-    const expenseCount = expenses.length;
+    // Buscar despesas da feira (diretas + rateadas de ambos os sistemas)
+    const totalExpenses = await this.getTotalExpenses(fairId);
+
+    const [directExpenses, allocatedDirect, allocatedLegacy] = await Promise.all([
+      this.expensesService.findAllByFair(fairId),
+      this.expensesService.findOverheadAllocatedForFair(fairId),
+      this.overheadExpensesService.findAllocatedForFair(fairId),
+    ]);
+
+    // Todos os valores individuais (usando valorAlocado para os rateados)
+    const allExpenseValues = [
+      ...directExpenses.map(e => e.valor),
+      ...allocatedDirect.map(e => e.valorAlocado),
+      ...allocatedLegacy.map(e => e.valorAlocado),
+    ];
+    const expenseCount = allExpenseValues.length;
     const averageExpense = expenseCount > 0 ? totalExpenses / expenseCount : 0;
-    const largestExpense = expenseCount > 0 ? Math.max(...expenses.map(e => e.valor)) : 0;
+    const largestExpense = expenseCount > 0 ? Math.max(...allExpenseValues) : 0;
 
     // Calcular métricas
     const netProfit = totalRevenue - totalExpenses;

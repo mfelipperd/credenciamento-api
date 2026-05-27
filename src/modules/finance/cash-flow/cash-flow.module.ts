@@ -7,12 +7,14 @@ import { Fair } from 'src/modules/fairs/entity/fair.entity';
 import { ExpensesModule } from '../expenses/expenses.module';
 import { RevenuesModule } from '../revenues/revenues.module';
 import { PartnersModule } from '../../partners/partners.module';
+import { OverheadExpensesModule } from '../overhead/overhead-expenses.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([CashFlow, Fair]),
     ExpensesModule,
     RevenuesModule,
+    OverheadExpensesModule,
     forwardRef(() => PartnersModule),
   ],
   controllers: [CashFlowController],
