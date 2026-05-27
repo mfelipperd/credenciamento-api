@@ -5,12 +5,14 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   Index,
 } from 'typeorm';
 import { Fair } from 'src/modules/fairs/entity/fair.entity';
 import { Category } from '../../../categories/entity/categories.entity';
 import { Account } from '../../common/entities/account.entity';
+import { ExpenseFairAllocation } from './expense-fair-allocation.entity';
 
 @Entity('finance_expenses')
 @Index(['fairId', 'data'])
@@ -45,6 +47,15 @@ export class Expense {
   @Column('text', { nullable: true })
   observacoes: string;
 
+  /**
+   * Quando true, a despesa é um custo compartilhado entre feiras.
+   * O rateio é definido em fairAllocations (expense_fair_allocations).
+   * A despesa NÃO aparece em directExpenses — apenas em allocatedOverhead
+   * para cada feira com alocação.
+   */
+  @Column({ default: false })
+  isOverhead: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -63,4 +74,9 @@ export class Expense {
   @ManyToOne(() => Account, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'accountId' })
   account: Account;
+
+  @OneToMany(() => ExpenseFairAllocation, (alloc) => alloc.expense, {
+    cascade: true,
+  })
+  fairAllocations: ExpenseFairAllocation[];
 }
