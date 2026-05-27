@@ -304,6 +304,156 @@ export class VisitorsService {
     };
   }
 
+  // ── Lookup cross-feiras ──────────────────────────────────────────────────
+
+  /**
+   * Busca visitantes em TODAS as feiras por nome, email ou CNPJ.
+   * Retorna dados do visitante + histórico de feiras + campos vazios.
+   * Usado para pré-preencher o formulário de nova inscrição.
+   */
+  async lookupVisitors(q: string): Promise<
+    Array<{
+      registrationCode: string;
+      name: string;
+      company: string;
+      email: string;
+      cnpj: string;
+      phone: string;
+      zipCode: string;
+      street: string | null;
+      number: string | null;
+      complement: string | null;
+      neighborhood: string | null;
+      city: string | null;
+      state: string | null;
+      sectors: string[];
+      howDidYouKnow: string;
+      category: string;
+      /** Campos que estão vazios/nulos — o frontend deve destacá-los no formulário */
+      missingFields: string[];
+      /** Feiras que esse visitante já participou */
+      fairHistory: Array<{
+        fairId: string;
+        fairName: string;
+        state: string | null;
+        startDate: Date | null;
+      }>;
+    }>
+  > {
+    if (!q || q.trim().length < 2) return [];
+
+    const term = q.trim();
+    const cleanTerm = term.replace(/\D/g, '');
+
+    const qb = this.visitorRepository
+      .createQueryBuilder('visitor')
+      .leftJoinAndSelect('visitor.fair_visitor', 'fair')
+      .where(
+        [
+          'LOWER(visitor.name)    LIKE :like',
+          'LOWER(visitor.email)   LIKE :like',
+          'visitor.cnpj           LIKE :cnpjLike',
+        ].join(' OR '),
+        {
+          like: `%${term.toLowerCase()}%`,
+          cnpjLike: `%${cleanTerm}%`,
+        },
+      )
+      .orderBy('visitor.registrationDate', 'DESC')
+      .take(20);
+
+    const visitors = await qb.getMany();
+
+    const REQUIRED_FIELDS: Array<keyof Visitor> = [
+      'name', 'company', 'email', 'cnpj', 'phone',
+      'zipCode', 'sectors', 'howDidYouKnow', 'category',
+    ];
+
+    return visitors.map((v) => {
+      const missingFields = REQUIRED_FIELDS.filter((f) => {
+        const val = v[f];
+        if (Array.isArray(val)) return val.length === 0;
+        return !val;
+      }) as string[];
+
+      const fairHistory = (v.fair_visitor ?? []).map((f) => ({
+        fairId: f.id,
+        fairName: f.name,
+        state: f.state ?? null,
+        startDate: f.startDate ?? null,
+      }));
+
+      return {
+        registrationCode: v.registrationCode,
+        name: v.name,
+        company: v.company,
+        email: v.email,
+        cnpj: v.cnpj,
+        phone: v.phone,
+        zipCode: v.zipCode,
+        street: v.street ?? null,
+        number: v.number ?? null,
+        complement: v.complement ?? null,
+        neighborhood: v.neighborhood ?? null,
+        city: v.city ?? null,
+        state: v.state ?? null,
+        sectors: v.sectors ?? [],
+        howDidYouKnow: v.howDidYouKnow,
+        category: v.category,
+        missingFields,
+        fairHistory,
+      };
+    });
+  }
+
+  // ── Enroll visitante existente em nova feira ──────────────────────────────
+
+  /**
+   * Matricula um visitante já cadastrado em uma nova feira.
+   * Não cria novo registro — apenas adiciona a entrada em fair_visitor
+   * e dispara o email de confirmação para a nova feira.
+   *
+   * Retorna ConflictException se já estiver inscrito na feira.
+   */
+  async enrollInFair(
+    registrationCode: string,
+    fairId: string,
+  ): Promise<Visitor> {
+    const visitor = await this.visitorRepository.findOne({
+      where: { registrationCode },
+      relations: ['fair_visitor'],
+    });
+    if (!visitor) throw new NotFoundException('Visitante não encontrado');
+
+    const fair = await this.fairRepository.findOne({ where: { id: fairId } });
+    if (!fair) throw new NotFoundException('Feira não encontrada');
+
+    const alreadyEnrolled = visitor.fair_visitor.some((f) => f.id === fairId);
+    if (alreadyEnrolled) {
+      // Idempotente — retorna o visitante sem duplicar
+      return visitor;
+    }
+
+    visitor.fair_visitor = [...visitor.fair_visitor, fair];
+    const saved = await this.visitorRepository.save(visitor);
+
+    // Dispara email de confirmação para a nova feira
+    try {
+      await this.emailsService.sendConfirmationEmail(
+        saved.email,
+        saved.name,
+        saved.registrationCode,
+        fairId,
+      );
+    } catch (err) {
+      console.error('Erro enviando email de confirmação no enroll:', err);
+    }
+
+    return saved;
+  }
+
+  // ── Criação de novo visitante ─────────────────────────────────────────────
+
   async createVisitor(
     dto: CreateVisitorInputDto,
     userId?: string,

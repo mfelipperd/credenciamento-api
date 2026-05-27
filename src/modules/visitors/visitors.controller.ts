@@ -13,6 +13,13 @@ import {
   Res,
   NotFoundException,
 } from '@nestjs/common';
+import { IsNotEmpty, IsUUID } from 'class-validator';
+
+class EnrollInFairDto {
+  @IsNotEmpty()
+  @IsUUID()
+  fairId: string;
+}
 import { Response } from 'express';
 import { VisitorsService } from './visitors.service';
 import { CreateVisitorInputDto } from './visitors.dto';
@@ -119,6 +126,37 @@ export class VisitorsController {
   ) {
     const userId = req.user.id || undefined;
     return this.visitorsService.createVisitor(visitor, userId?.toString());
+  }
+
+  /**
+   * GET /visitors/lookup?q=TERMO
+   *
+   * Busca cross-feiras por nome, email ou CNPJ.
+   * Rota pública — sem autenticação (usada no formulário de inscrição).
+   * Retorna visitante + histórico de feiras + campos vazios.
+   */
+  @Get('lookup')
+  @IsPublicRoute()
+  async lookupVisitors(@Query('q') q: string) {
+    return this.visitorsService.lookupVisitors(q ?? '');
+  }
+
+  /**
+   * POST /visitors/:registrationCode/enroll
+   * Body: { "fairId": "uuid-da-nova-feira" }
+   *
+   * Matricula visitante EXISTENTE em uma nova feira.
+   * Não cria novo registro — apenas adiciona fair_visitor e envia email.
+   * Rota pública — usada no formulário de inscrição quando o visitante já existe.
+   */
+  @Post(':registrationCode/enroll')
+  @IsPublicRoute()
+  @UseGuards(FrontendOriginGuard)
+  async enrollInFair(
+    @Param('registrationCode') registrationCode: string,
+    @Body() dto: EnrollInFairDto,
+  ) {
+    return this.visitorsService.enrollInFair(registrationCode, dto.fairId);
   }
 
   @Get(':registrationCode')
