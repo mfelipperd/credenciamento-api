@@ -205,6 +205,15 @@ export class EmailsService {
       start?.toISOString() ?? '',
       end?.toISOString() ?? '',
       fair.location,
+      undefined,
+      {
+        googleMapsUrl: fair.googleMapsUrl ?? undefined,
+        latitude: fair.latitude ? Number(fair.latitude) : undefined,
+        longitude: fair.longitude ? Number(fair.longitude) : undefined,
+        venueName: fair.venueName ?? undefined,
+        address: [fair.address, fair.number, fair.neighborhood, fair.city, fair.state]
+          .filter(Boolean).join(', ') || fair.location,
+      },
     );
 
     try {

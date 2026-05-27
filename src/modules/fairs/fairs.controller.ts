@@ -1,23 +1,26 @@
-import { 
-  Body, 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
-  Delete, 
-  Param, 
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
   Patch,
+  Query,
   HttpCode,
   HttpStatus
 } from '@nestjs/common';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
-  ApiParam, 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
   ApiBody,
   ApiBearerAuth
 } from '@nestjs/swagger';
+import { FairStatus } from './entity/fair.entity';
 import { FairsService } from './fairs.service';
 import { CreateInputFairDto } from './fair.dto';
 import { UpdateFairDto } from './dto/update-fair.dto';
@@ -31,16 +34,17 @@ export class FairsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Listar todas as feiras',
-    description: 'Retorna uma lista de todas as feiras cadastradas, ordenadas por data de criação (mais recentes primeiro)'
+    summary: 'Listar feiras',
+    description: 'Retorna feiras com filtros opcionais por UF e status, ordenadas por data de início.'
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Lista de feiras retornada com sucesso',
-    type: [FairResponseDto]
-  })
-  async findAll(): Promise<FairResponseDto[]> {
-    return await this.fairService.findAll();
+  @ApiQuery({ name: 'uf', required: false, description: 'Filtrar por UF (2 letras). Ex: AM, PA, SP' })
+  @ApiQuery({ name: 'status', required: false, enum: FairStatus, description: 'Filtrar por status' })
+  @ApiResponse({ status: 200, type: [FairResponseDto] })
+  async findAll(
+    @Query('uf') uf?: string,
+    @Query('status') status?: string,
+  ): Promise<FairResponseDto[]> {
+    return this.fairService.findAll(uf, status);
   }
 
   @Get(':id')

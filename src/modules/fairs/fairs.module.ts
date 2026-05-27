@@ -7,13 +7,14 @@ import { FairAnalysisService } from './fair-analysis.service';
 import { FairAnalysisController } from './fair-analysis.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Fair } from './entity/fair.entity';
+import { FairDaySchedule } from './entity/fair-day-schedule.entity';
 import { StandConfiguration } from './entity/stand-configuration.entity';
 import { RevenuesModule } from '../finance/revenues/revenues.module';
 import { ExpensesModule } from '../finance/expenses/expenses.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Fair, StandConfiguration]),
+    TypeOrmModule.forFeature([Fair, FairDaySchedule, StandConfiguration]),
     RevenuesModule,
     ExpensesModule,
   ],

@@ -15,6 +15,83 @@ function formatEventDate(isoString: string): string {
   }
 }
 
+export interface FairLocationInfo {
+  googleMapsUrl?: string;
+  latitude?: number;
+  longitude?: number;
+  venueName?: string;
+  address?: string;
+}
+
+function buildTransportButtons(loc: FairLocationInfo): string {
+  const buttons: string[] = [];
+  const lat = loc.latitude;
+  const lng = loc.longitude;
+  const venue = encodeURIComponent(loc.venueName ?? '');
+  const addr = encodeURIComponent(loc.address ?? '');
+
+  if (loc.googleMapsUrl) {
+    buttons.push(
+      `<a href="${loc.googleMapsUrl}" target="_blank"
+         style="display:inline-block;background-color:#4285F4;color:#fff;text-decoration:none;
+                padding:12px 20px;border-radius:50px;font-weight:bold;font-size:13px;margin:4px;">
+        🗺️ &nbsp;Ver no Maps
+      </a>`,
+    );
+  }
+
+  if (lat && lng) {
+    const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+    buttons.push(
+      `<a href="${wazeUrl}" target="_blank"
+         style="display:inline-block;background-color:#05C8F7;color:#fff;text-decoration:none;
+                padding:12px 20px;border-radius:50px;font-weight:bold;font-size:13px;margin:4px;">
+        📡 &nbsp;Ir pelo Waze
+      </a>`,
+    );
+
+    const uberUrl =
+      `https://m.uber.com/ul/?action=setPickup&pickup=my_location` +
+      `&dropoff[latitude]=${lat}&dropoff[longitude]=${lng}` +
+      `&dropoff[nickname]=${venue}&dropoff[formatted_address]=${addr}`;
+    buttons.push(
+      `<a href="${uberUrl}" target="_blank"
+         style="display:inline-block;background-color:#000000;color:#fff;text-decoration:none;
+                padding:12px 20px;border-radius:50px;font-weight:bold;font-size:13px;margin:4px;">
+        🚗 &nbsp;Pedir Uber
+      </a>`,
+    );
+
+    const taxi99Url =
+      `https://99app.com/corrida?dest_lat=${lat}&dest_lng=${lng}&dest_title=${venue}`;
+    buttons.push(
+      `<a href="${taxi99Url}" target="_blank"
+         style="display:inline-block;background-color:#F5A623;color:#fff;text-decoration:none;
+                padding:12px 20px;border-radius:50px;font-weight:bold;font-size:13px;margin:4px;">
+        🟡 &nbsp;Pedir 99
+      </a>`,
+    );
+  }
+
+  if (!buttons.length) return '';
+
+  return `
+    <!-- ── COMO CHEGAR ── -->
+    <tr>
+      <td style="background-color:#f8f9ff;padding:28px 30px;text-align:center;
+                 border-top:1px solid #eee;">
+        <h2 style="margin:0 0 8px;color:#0f0f2b;font-size:18px;font-weight:900;">
+          📍 Como chegar
+        </h2>
+        <p style="margin:0 0 18px;color:#666;font-size:13px;">
+          ${loc.venueName ? `<strong>${loc.venueName}</strong><br>` : ''}
+          ${loc.address ?? ''}
+        </p>
+        <div>${buttons.join('\n')}</div>
+      </td>
+    </tr>`;
+}
+
 export function generateConfirmationEmail(
   visitorName: string,
   registrationCode: string,
@@ -24,6 +101,7 @@ export function generateConfirmationEmail(
   eventEnd: string,
   eventLocation: string,
   eventDescription?: string,
+  locationInfo?: FairLocationInfo,
 ) {
   const calendarLink =
     eventStart && eventEnd
@@ -224,6 +302,8 @@ export function generateConfirmationEmail(
             </table>
           </td>
         </tr>
+
+        ${locationInfo ? buildTransportButtons(locationInfo) : ''}
 
         <!-- ── O QUE VOCÊ VAI ENCONTRAR ── -->
         <tr>

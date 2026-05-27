@@ -17,6 +17,6 @@ export class UserFairResponseDto {
     id: string;
     name: string;
     location: string;
-    date: Date;
+    date: Date | null;
   };
 }
