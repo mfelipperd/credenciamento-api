@@ -167,6 +167,14 @@ export class FairsService {
     const fair = await this.fairRepository.findOne({ where: { id } });
     if (!fair) throw new NotFoundException(`Feira com ID ${id} não encontrada`);
 
+    const manager = this.fairRepository.manager;
+
+    // Deletar registros em tabelas sem CASCADE definido no banco,
+    // para evitar FK constraint error no MySQL
+    await manager.query(`DELETE FROM fair_visitor    WHERE fairsId   = ?`, [id]);
+    await manager.query(`DELETE FROM stands          WHERE fair_id   = ?`, [id]);
+    await manager.query(`DELETE FROM fair_partners   WHERE fairId    = ?`, [id]);
+
     await this.fairRepository.remove(fair);
     this.logger.log(`Feira removida com sucesso: ${id}`);
     return { message: 'Feira removida com sucesso' };
