@@ -28,7 +28,7 @@ export class RevenueInstallment {
   @Column()
   dueDate: Date;
 
-  @Column('bigint')
+  @Column('bigint', { transformer: { to: (v: number) => v, from: (v: string) => Number(v) } })
   valueCents: number;
 
   @Column({

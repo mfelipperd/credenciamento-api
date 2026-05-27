@@ -26,10 +26,10 @@ export class EntryModel {
   @Column()
   name: string;
 
-  @Column('bigint')
+  @Column('bigint', { transformer: { to: (v: number) => v, from: (v: string) => Number(v) } })
   baseValue: number; // centavos
 
-  @Column('bigint', { nullable: true })
+  @Column('bigint', { nullable: true, transformer: { to: (v: number) => v, from: (v: string) => Number(v) } })
   costCents: number;
 
   @Column({ default: true })

@@ -26,7 +26,11 @@ export class OverheadExpenseAllocation {
    * Percentual desta feira na despesa (0.0001 a 1.0000).
    * Ex: 0.5000 = 50 %
    */
-  @Column('decimal', { precision: 5, scale: 4 })
+  @Column('decimal', {
+    precision: 5,
+    scale: 4,
+    transformer: { to: (v: number) => v, from: (v: string) => Number(v) },
+  })
   percentual: number;
 
   // ── Relations ──────────────────────────────────────────────────────────────
