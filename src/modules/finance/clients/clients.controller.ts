@@ -53,12 +53,20 @@ export class ClientsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar todos os clientes' })
+  @ApiOperation({
+    summary: 'Listar todos os expositores',
+    description:
+      'Retorna todos os expositores independente da feira. Quando fairId é informado, adiciona o campo isParticipatingInFair indicando quais estão participando daquela feira específica.',
+  })
   @ApiQuery({ name: 'search', required: false, description: 'Buscar por nome' })
-  @ApiQuery({ name: 'fairId', required: false, description: 'Filtrar por feira' })
+  @ApiQuery({
+    name: 'fairId',
+    required: false,
+    description: 'Quando informado, adiciona isParticipatingInFair em cada expositor',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Lista de clientes',
+    description: 'Lista de todos os expositores',
     type: [ClientResponseDto],
   })
   async findAll(

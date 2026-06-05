@@ -124,7 +124,7 @@ export class ClientResponseDto {
   @ApiProperty({ description: 'ID do cliente' })
   id: string;
 
-  @ApiProperty({ description: 'ID da feira' })
+  @ApiProperty({ description: 'ID da feira à qual o cliente pertence' })
   fairId: string;
 
   @ApiProperty({ description: 'Nome do cliente' })
@@ -147,6 +147,11 @@ export class ClientResponseDto {
 
   @ApiProperty({ type: [BrandResponseDto], description: 'Marcas associadas ao cliente', required: false })
   brands?: BrandResponseDto[];
+
+  @ApiPropertyOptional({
+    description: 'Indica se o expositor está participando da feira consultada (presente quando fairId é informado na query)',
+  })
+  isParticipatingInFair?: boolean;
 
   @ApiProperty({ description: 'Data de criação' })
   createdAt: Date;

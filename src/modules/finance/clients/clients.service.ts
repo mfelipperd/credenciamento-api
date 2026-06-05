@@ -21,16 +21,17 @@ export class ClientsService {
     return await this.clientRepository.save(client);
   }
 
-  async findAll(fairId?: string): Promise<Client[]> {
-    const where: any = {};
-    if (fairId) {
-      where.fairId = fairId;
-    }
-    return await this.clientRepository.find({
-      where,
+  async findAll(fairId?: string): Promise<(Client & { isParticipatingInFair?: boolean })[]> {
+    const clients = await this.clientRepository.find({
       relations: ['brands'],
       order: { createdAt: 'DESC' },
     });
+
+    if (!fairId) return clients;
+
+    return clients.map((client) =>
+      Object.assign(client, { isParticipatingInFair: client.fairId === fairId }),
+    );
   }
 
   async findOne(id: string): Promise<Client> {
@@ -81,17 +82,19 @@ export class ClientsService {
     });
   }
 
-  async searchByName(name: string, fairId?: string): Promise<Client[]> {
-    const query = this.clientRepository
+  async searchByName(name: string, fairId?: string): Promise<(Client & { isParticipatingInFair?: boolean })[]> {
+    const clients = await this.clientRepository
       .createQueryBuilder('client')
       .leftJoinAndSelect('client.brands', 'brand')
-      .where('client.name LIKE :name', { name: `%${name}%` });
+      .where('client.name LIKE :name', { name: `%${name}%` })
+      .orderBy('client.name', 'ASC')
+      .getMany();
 
-    if (fairId) {
-      query.andWhere('client.fairId = :fairId', { fairId });
-    }
+    if (!fairId) return clients;
 
-    return await query.orderBy('client.name', 'ASC').getMany();
+    return clients.map((client) =>
+      Object.assign(client, { isParticipatingInFair: client.fairId === fairId }),
+    );
   }
 
   // --- Operações de Marcas ---
