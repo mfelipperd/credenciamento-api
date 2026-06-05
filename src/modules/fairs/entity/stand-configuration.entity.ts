@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Fair } from './fair.entity';
 
 @Entity('stand_configurations')
@@ -51,7 +59,9 @@ export class StandConfiguration {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne(() => Fair, fair => fair.standConfigurations, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Fair, (fair) => fair.standConfigurations, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'fairId' })
   fair: Fair;
 }

@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { User } from '../entitie/users.entity';
 import { Fair } from '../../fairs/entity/fair.entity';
 
@@ -28,11 +36,11 @@ export class UserFair {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne(() => User, user => user.userFairs, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.userFairs, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @ManyToOne(() => Fair, fair => fair.userFairs, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Fair, (fair) => fair.userFairs, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'fairId' })
   fair: Fair;
 }

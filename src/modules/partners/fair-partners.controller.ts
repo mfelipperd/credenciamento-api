@@ -10,14 +10,12 @@ import {
   Request,
   ParseUUIDPipe,
   ParseIntPipe,
-  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
-  ApiQuery,
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
@@ -42,7 +40,8 @@ export class FairPartnersController {
   @Post()
   @ApiOperation({
     summary: 'Associar sócio à feira',
-    description: 'Associa um sócio a uma feira com porcentagem específica (apenas admins)',
+    description:
+      'Associa um sócio a uma feira com porcentagem específica (apenas admins)',
   })
   @ApiBody({ type: CreateFairPartnerDto })
   @ApiResponse({
@@ -50,9 +49,15 @@ export class FairPartnersController {
     description: 'Sócio associado à feira com sucesso',
     type: FairPartnerResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Dados inválidos ou porcentagem excedida' })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados inválidos ou porcentagem excedida',
+  })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
-  async create(@Body() createFairPartnerDto: CreateFairPartnerDto, @Request() req) {
+  async create(
+    @Body() createFairPartnerDto: CreateFairPartnerDto,
+    @Request() req,
+  ) {
     // Verificar se é admin
     if (req.user.role !== EUserRole.ADMIN) {
       throw new Error('Apenas administradores podem associar sócios a feiras');
@@ -73,7 +78,10 @@ export class FairPartnersController {
     type: [FairPartnerResponseDto],
   })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
-  async findAllByFair(@Param('fairId', ParseUUIDPipe) fairId: string, @Request() req) {
+  async findAllByFair(
+    @Param('fairId', ParseUUIDPipe) fairId: string,
+    @Request() req,
+  ) {
     // Verificar se é admin
     if (req.user.role !== EUserRole.ADMIN) {
       throw new Error('Apenas administradores podem listar sócios de feiras');
@@ -85,7 +93,8 @@ export class FairPartnersController {
   @Get('partner/:partnerId')
   @ApiOperation({
     summary: 'Listar feiras de um sócio por UUID',
-    description: 'Retorna todas as feiras associadas a um sócio específico (UUID do sócio)',
+    description:
+      'Retorna todas as feiras associadas a um sócio específico (UUID do sócio)',
   })
   @ApiParam({ name: 'partnerId', description: 'UUID do sócio' })
   @ApiResponse({
@@ -94,7 +103,10 @@ export class FairPartnersController {
     type: [FairPartnerResponseDto],
   })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
-  async findAllByPartner(@Param('partnerId', ParseUUIDPipe) partnerId: string, @Request() req) {
+  async findAllByPartner(
+    @Param('partnerId', ParseUUIDPipe) partnerId: string,
+    @Request() req,
+  ) {
     // Verificar se é admin ou o próprio sócio
     if (req.user.role !== EUserRole.ADMIN) {
       // Se partnerId é um número (ID do usuário), buscar o sócio correspondente
@@ -125,7 +137,6 @@ export class FairPartnersController {
     return await this.fairPartnersService.findAllByPartner(partnerId);
   }
 
-
   @Get('me/fairs')
   @ApiOperation({
     summary: 'Minhas feiras',
@@ -146,7 +157,8 @@ export class FairPartnersController {
   @Get('user/:userId')
   @ApiOperation({
     summary: 'Listar feiras de um sócio por ID do usuário',
-    description: 'Retorna todas as feiras associadas a um sócio específico (ID do usuário)',
+    description:
+      'Retorna todas as feiras associadas a um sócio específico (ID do usuário)',
   })
   @ApiParam({ name: 'userId', description: 'ID do usuário' })
   @ApiResponse({
@@ -155,7 +167,10 @@ export class FairPartnersController {
     type: [FairPartnerResponseDto],
   })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
-  async findAllByUserId(@Param('userId', ParseIntPipe) userId: number, @Request() req) {
+  async findAllByUserId(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Request() req,
+  ) {
     // Verificar se é admin ou o próprio usuário
     if (req.user.role !== EUserRole.ADMIN && req.user.id !== userId) {
       throw new Error('Acesso negado');
@@ -185,9 +200,12 @@ export class FairPartnersController {
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async findOne(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
     const fairPartner = await this.fairPartnersService.findOne(id);
-    
+
     // Verificar se é admin ou o próprio sócio
-    if (req.user.role !== EUserRole.ADMIN && fairPartner.partnerId !== req.user.id) {
+    if (
+      req.user.role !== EUserRole.ADMIN &&
+      fairPartner.partnerId !== req.user.id
+    ) {
       throw new Error('Acesso negado');
     }
 
@@ -249,10 +267,15 @@ export class FairPartnersController {
   @ApiParam({ name: 'fairId', description: 'ID da feira' })
   @ApiResponse({ status: 200, description: 'Resumo retornado com sucesso' })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
-  async getFairSummary(@Param('fairId', ParseUUIDPipe) fairId: string, @Request() req) {
+  async getFairSummary(
+    @Param('fairId', ParseUUIDPipe) fairId: string,
+    @Request() req,
+  ) {
     // Verificar se é admin
     if (req.user.role !== EUserRole.ADMIN) {
-      throw new Error('Apenas administradores podem consultar resumo de feiras');
+      throw new Error(
+        'Apenas administradores podem consultar resumo de feiras',
+      );
     }
 
     return await this.fairPartnersService.getFairPartnersSummary(fairId);
@@ -261,11 +284,18 @@ export class FairPartnersController {
   @Get('fair/:fairId/partner/:partnerId/financial-summary')
   @ApiOperation({
     summary: 'Resumo financeiro do sócio na feira',
-    description: 'Retorna resumo financeiro de um sócio específico em uma feira (aceita ID do usuário ou UUID do sócio)',
+    description:
+      'Retorna resumo financeiro de um sócio específico em uma feira (aceita ID do usuário ou UUID do sócio)',
   })
   @ApiParam({ name: 'fairId', description: 'ID da feira' })
-  @ApiParam({ name: 'partnerId', description: 'ID do usuário (número) ou UUID do sócio' })
-  @ApiResponse({ status: 200, description: 'Resumo financeiro retornado com sucesso' })
+  @ApiParam({
+    name: 'partnerId',
+    description: 'ID do usuário (número) ou UUID do sócio',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Resumo financeiro retornado com sucesso',
+  })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async getFinancialSummary(
     @Param('fairId', ParseUUIDPipe) fairId: string,
@@ -299,7 +329,10 @@ export class FairPartnersController {
       }
     }
 
-    return await this.fairPartnersService.getFinancialSummary(fairId, actualPartnerId);
+    return await this.fairPartnersService.getFinancialSummary(
+      fairId,
+      actualPartnerId,
+    );
   }
 
   @Get('fair/:fairId/available-percentage')
@@ -308,22 +341,31 @@ export class FairPartnersController {
     description: 'Retorna a porcentagem máxima disponível para esta feira',
   })
   @ApiParam({ name: 'fairId', description: 'ID da feira' })
-  @ApiResponse({ status: 200, description: 'Porcentagem disponível retornada com sucesso' })
+  @ApiResponse({
+    status: 200,
+    description: 'Porcentagem disponível retornada com sucesso',
+  })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
-  async getAvailablePercentage(@Param('fairId', ParseUUIDPipe) fairId: string, @Request() req) {
+  async getAvailablePercentage(
+    @Param('fairId', ParseUUIDPipe) fairId: string,
+    @Request() req,
+  ) {
     // Verificar se é admin
     if (req.user.role !== EUserRole.ADMIN) {
-      throw new Error('Apenas administradores podem consultar porcentagem disponível');
+      throw new Error(
+        'Apenas administradores podem consultar porcentagem disponível',
+      );
     }
 
-    const availablePercentage = await this.fairPartnersService.getAvailablePercentage(fairId);
+    const availablePercentage =
+      await this.fairPartnersService.getAvailablePercentage(fairId);
     const usedPercentage = 100 - availablePercentage;
 
     return {
       fairId,
       availablePercentage,
       usedPercentage,
-      totalPercentage: 100
+      totalPercentage: 100,
     };
   }
 }

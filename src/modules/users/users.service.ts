@@ -26,21 +26,25 @@ export class UsersService {
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
     // Verificar se já existe usuário com este email
     const existingUser = await this.userRepository.findOne({
-      where: { email: createUserDto.email }
+      where: { email: createUserDto.email },
     });
 
     if (existingUser) {
-      throw new ConflictException('Já existe um usuário cadastrado com este email');
+      throw new ConflictException(
+        'Já existe um usuário cadastrado com este email',
+      );
     }
 
     // Verificar CPF único se fornecido
     if (createUserDto.cpf) {
       const existingCpf = await this.userRepository.findOne({
-        where: { cpf: createUserDto.cpf }
+        where: { cpf: createUserDto.cpf },
       });
 
       if (existingCpf) {
-        throw new ConflictException('Já existe um usuário cadastrado com este CPF');
+        throw new ConflictException(
+          'Já existe um usuário cadastrado com este CPF',
+        );
       }
     }
 
@@ -49,7 +53,7 @@ export class UsersService {
 
     const user = this.userRepository.create(userData);
     const savedUser = await this.userRepository.save(user);
-    
+
     // Associar usuário às feiras se fornecidas
     if (fairIds && fairIds.length > 0) {
       for (const fairId of fairIds) {
@@ -57,42 +61,44 @@ export class UsersService {
           await this.userFairService.create({
             userId: savedUser.id,
             fairId: fairId,
-            isActive: true
+            isActive: true,
           });
         } catch (error) {
-          this.logger.warn(`Erro ao associar usuário ${savedUser.id} à feira ${fairId}: ${error.message}`);
+          this.logger.warn(
+            `Erro ao associar usuário ${savedUser.id} à feira ${fairId}: ${error.message}`,
+          );
         }
       }
     }
-    
+
     this.logger.log(`Usuário criado: ${savedUser.name} (ID: ${savedUser.id})`);
-    
+
     // Buscar feiras associadas para retornar
     const userFairs = await this.userFairService.findByUser(savedUser.id);
-    const associatedFairIds = userFairs.map(uf => uf.fairId);
-    
+    const associatedFairIds = userFairs.map((uf) => uf.fairId);
+
     return new UserResponseDto(savedUser, associatedFairIds);
   }
 
   async findAll(): Promise<UserResponseDto[]> {
     const users = await this.userRepository.find({
-      order: { name: 'ASC' }
+      order: { name: 'ASC' },
     });
-    
+
     const usersWithFairs = await Promise.all(
       users.map(async (user) => {
         const userFairs = await this.userFairService.findByUser(user.id);
-        const fairIds = userFairs.map(uf => uf.fairId);
+        const fairIds = userFairs.map((uf) => uf.fairId);
         return new UserResponseDto(user, fairIds);
-      })
+      }),
     );
-    
+
     return usersWithFairs;
   }
 
   async findOne(id: number): Promise<UserResponseDto> {
     const user = await this.userRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!user) {
@@ -101,18 +107,21 @@ export class UsersService {
 
     // Buscar feiras associadas
     const userFairs = await this.userFairService.findByUser(id);
-    const fairIds = userFairs.map(uf => uf.fairId);
+    const fairIds = userFairs.map((uf) => uf.fairId);
 
     return new UserResponseDto(user, fairIds);
   }
 
   async findByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({
-      where: { email }
+      where: { email },
     });
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto): Promise<UserResponseDto> {
+  async update(
+    id: number,
+    updateUserDto: UpdateUserDto,
+  ): Promise<UserResponseDto> {
     const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
@@ -122,22 +131,26 @@ export class UsersService {
     // Verificar email único se estiver sendo alterado
     if (updateUserDto.email && updateUserDto.email !== user.email) {
       const existingUser = await this.userRepository.findOne({
-        where: { email: updateUserDto.email }
+        where: { email: updateUserDto.email },
       });
 
       if (existingUser) {
-        throw new ConflictException('Já existe um usuário cadastrado com este email');
+        throw new ConflictException(
+          'Já existe um usuário cadastrado com este email',
+        );
       }
     }
 
     // Verificar CPF único se estiver sendo alterado
     if (updateUserDto.cpf && updateUserDto.cpf !== user.cpf) {
       const existingCpf = await this.userRepository.findOne({
-        where: { cpf: updateUserDto.cpf }
+        where: { cpf: updateUserDto.cpf },
       });
 
       if (existingCpf) {
-        throw new ConflictException('Já existe um usuário cadastrado com este CPF');
+        throw new ConflictException(
+          'Já existe um usuário cadastrado com este CPF',
+        );
       }
     }
 
@@ -146,7 +159,7 @@ export class UsersService {
 
     Object.assign(user, userData);
     const updatedUser = await this.userRepository.save(user);
-    
+
     // Gerenciar associações com feiras se fornecidas
     if (fairIds !== undefined) {
       // Remover todas as associações existentes
@@ -155,7 +168,9 @@ export class UsersService {
         try {
           await this.userFairService.remove(userFair.id);
         } catch (error) {
-          this.logger.warn(`Erro ao remover associação ${userFair.id}: ${error.message}`);
+          this.logger.warn(
+            `Erro ao remover associação ${userFair.id}: ${error.message}`,
+          );
         }
       }
 
@@ -166,21 +181,25 @@ export class UsersService {
             await this.userFairService.create({
               userId: id,
               fairId: fairId,
-              isActive: true
+              isActive: true,
             });
           } catch (error) {
-            this.logger.warn(`Erro ao associar usuário ${id} à feira ${fairId}: ${error.message}`);
+            this.logger.warn(
+              `Erro ao associar usuário ${id} à feira ${fairId}: ${error.message}`,
+            );
           }
         }
       }
     }
-    
-    this.logger.log(`Usuário atualizado: ${updatedUser.name} (ID: ${updatedUser.id})`);
-    
+
+    this.logger.log(
+      `Usuário atualizado: ${updatedUser.name} (ID: ${updatedUser.id})`,
+    );
+
     // Buscar feiras associadas para retornar
     const userFairs = await this.userFairService.findByUser(id);
-    const associatedFairIds = userFairs.map(uf => uf.fairId);
-    
+    const associatedFairIds = userFairs.map((uf) => uf.fairId);
+
     return new UserResponseDto(updatedUser, associatedFairIds);
   }
 
@@ -195,7 +214,10 @@ export class UsersService {
     this.logger.log(`Usuário removido: ${user.name} (ID: ${id})`);
   }
 
-  async changePassword(id: number, changePasswordDto: ChangePasswordDto): Promise<void> {
+  async changePassword(
+    id: number,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<void> {
     const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
@@ -225,7 +247,7 @@ export class UsersService {
     const updatedUser = await this.userRepository.save(user);
 
     this.logger.log(
-      `Usuário ${updatedUser.isActive ? 'ativado' : 'desativado'}: ${updatedUser.name} (ID: ${id})`
+      `Usuário ${updatedUser.isActive ? 'ativado' : 'desativado'}: ${updatedUser.name} (ID: ${id})`,
     );
 
     return new UserResponseDto(updatedUser);
@@ -234,19 +256,19 @@ export class UsersService {
   async findByRole(role: string): Promise<UserResponseDto[]> {
     const users = await this.userRepository.find({
       where: { role: role as any },
-      order: { name: 'ASC' }
+      order: { name: 'ASC' },
     });
 
-    return users.map(user => new UserResponseDto(user));
+    return users.map((user) => new UserResponseDto(user));
   }
 
   async getActiveUsers(): Promise<UserResponseDto[]> {
     const users = await this.userRepository.find({
       where: { isActive: true },
-      order: { name: 'ASC' }
+      order: { name: 'ASC' },
     });
 
-    return users.map(user => new UserResponseDto(user));
+    return users.map((user) => new UserResponseDto(user));
   }
 
   async getUsersStats(): Promise<{
@@ -256,21 +278,24 @@ export class UsersService {
     usersByRole: Record<string, number>;
   }> {
     const users = await this.userRepository.find();
-    
+
     const totalUsers = users.length;
-    const activeUsers = users.filter(u => u.isActive).length;
+    const activeUsers = users.filter((u) => u.isActive).length;
     const inactiveUsers = totalUsers - activeUsers;
-    
-    const usersByRole = users.reduce((acc, user) => {
-      acc[user.role] = (acc[user.role] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+
+    const usersByRole = users.reduce(
+      (acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       totalUsers,
       activeUsers,
       inactiveUsers,
-      usersByRole
+      usersByRole,
     };
   }
 
@@ -290,6 +315,4 @@ export class UsersService {
   async updateUser(id: number, data: any) {
     return this.update(id, data);
   }
-
-
 }

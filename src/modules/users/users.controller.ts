@@ -9,14 +9,12 @@ import {
   UseGuards,
   Request,
   ParseIntPipe,
-  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
-  ApiQuery,
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
@@ -148,13 +146,13 @@ export class UsersController {
         totalUsers: { type: 'number', description: 'Total de usuários' },
         activeUsers: { type: 'number', description: 'Usuários ativos' },
         inactiveUsers: { type: 'number', description: 'Usuários inativos' },
-        usersByRole: { 
-          type: 'object', 
+        usersByRole: {
+          type: 'object',
           description: 'Contagem de usuários por role',
-          additionalProperties: { type: 'number' }
-        }
-      }
-    }
+          additionalProperties: { type: 'number' },
+        },
+      },
+    },
   })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async getStats(@Request() req) {
@@ -169,7 +167,8 @@ export class UsersController {
   @Get(':id')
   @ApiOperation({
     summary: 'Obter usuário por ID',
-    description: 'Retorna dados de um usuário específico (apenas admins ou próprio usuário)',
+    description:
+      'Retorna dados de um usuário específico (apenas admins ou próprio usuário)',
   })
   @ApiParam({ name: 'id', description: 'ID do usuário' })
   @ApiResponse({
@@ -191,7 +190,8 @@ export class UsersController {
   @Patch(':id')
   @ApiOperation({
     summary: 'Atualizar usuário',
-    description: 'Atualiza dados de um usuário (apenas admins ou próprio usuário)',
+    description:
+      'Atualiza dados de um usuário (apenas admins ou próprio usuário)',
   })
   @ApiParam({ name: 'id', description: 'ID do usuário' })
   @ApiBody({ type: UpdateUserDto })
@@ -290,6 +290,4 @@ export class UsersController {
     await this.usersService.remove(id);
     return { message: 'Usuário removido com sucesso' };
   }
-
-
 }

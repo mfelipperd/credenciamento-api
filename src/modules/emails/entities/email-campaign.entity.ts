@@ -1,4 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity('email_campaigns')
 export class EmailCampaign {
@@ -25,6 +30,9 @@ export class EmailCampaign {
 
   @Column({ default: 0 })
   totalQueued: number;
+
+  @Column({ default: 0 })
+  suppressedCount: number;
 
   @Column({ length: 50, unique: true })
   brevoTag: string;

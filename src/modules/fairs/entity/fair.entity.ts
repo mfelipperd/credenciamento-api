@@ -16,9 +16,9 @@ import {
 } from 'typeorm';
 
 export enum FairStatus {
-  UPCOMING  = 'upcoming',
-  ONGOING   = 'ongoing',
-  ENDED     = 'ended',
+  UPCOMING = 'upcoming',
+  ONGOING = 'ongoing',
+  ENDED = 'ended',
   CANCELLED = 'cancelled',
 }
 

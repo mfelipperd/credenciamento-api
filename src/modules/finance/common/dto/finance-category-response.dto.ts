@@ -25,7 +25,11 @@ export class FinanceCategoryResponseDto {
   @ApiProperty({ description: 'Categoria pai', required: false })
   parent?: FinanceCategoryResponseDto;
 
-  @ApiProperty({ description: 'Categorias filhas', type: [FinanceCategoryResponseDto], required: false })
+  @ApiProperty({
+    description: 'Categorias filhas',
+    type: [FinanceCategoryResponseDto],
+    required: false,
+  })
   children?: FinanceCategoryResponseDto[];
 }
 
@@ -33,9 +37,9 @@ export class RequiredCategoriesSummaryDto {
   @ApiProperty({ description: 'Total de categorias obrigatórias' })
   totalRequired: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Lista de categorias obrigatórias',
-    type: [Object]
+    type: [Object],
   })
   categories: {
     id: string;

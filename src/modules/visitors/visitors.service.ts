@@ -288,7 +288,6 @@ export class VisitorsService {
 
     // Empresas únicas
     const companiesQuery = query.clone();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const companiesResult = await companiesQuery
       .select('COUNT(DISTINCT visitor.company)', 'companies')
       .andWhere('visitor.company IS NOT NULL')
@@ -298,7 +297,6 @@ export class VisitorsService {
     return {
       total,
       recent,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       companies: Number.parseInt(String(companiesResult?.companies || '0')),
       recentPercentage: total > 0 ? Math.round((recent / total) * 100) : 0,
     };
@@ -355,9 +353,9 @@ export class VisitorsService {
 
     // Normaliza e filtra apenas os parâmetros enviados
     const filters = {
-      name:  name?.trim()  || null,
+      name: name?.trim() || null,
       phone: phone?.trim() || null,
-      cnpj:  cnpj?.replace(/\D/g, '') || null,
+      cnpj: cnpj?.replace(/\D/g, '') || null,
       email: email?.trim().toLowerCase() || null,
     };
 
@@ -389,16 +387,26 @@ export class VisitorsService {
     if (filters.phone) {
       // Compara dígitos para ignorar formatação (parênteses, traços, espaços)
       const cleanPhone = filters.phone.replace(/\D/g, '');
-      qb.andWhere('REPLACE(REPLACE(REPLACE(REPLACE(visitor.phone," ",""),"-",""),"(",""),")","") LIKE :phone', {
-        phone: `%${cleanPhone}%`,
-      });
+      qb.andWhere(
+        'REPLACE(REPLACE(REPLACE(REPLACE(visitor.phone," ",""),"-",""),"(",""),")","") LIKE :phone',
+        {
+          phone: `%${cleanPhone}%`,
+        },
+      );
     }
 
     const visitors = await qb.getMany();
 
     const REQUIRED_FIELDS: Array<keyof Visitor> = [
-      'name', 'company', 'email', 'cnpj', 'phone',
-      'zipCode', 'sectors', 'howDidYouKnow', 'category',
+      'name',
+      'company',
+      'email',
+      'cnpj',
+      'phone',
+      'zipCode',
+      'sectors',
+      'howDidYouKnow',
+      'category',
     ];
 
     return visitors.map((v) => {

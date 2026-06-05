@@ -62,7 +62,9 @@ export class PartnerWithdrawal {
   updatedAt: Date;
 
   // Relacionamentos
-  @ManyToOne(() => Partner, (partner) => partner.withdrawals, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Partner, (partner) => partner.withdrawals, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'partnerId' })
   partner: Partner;
 }

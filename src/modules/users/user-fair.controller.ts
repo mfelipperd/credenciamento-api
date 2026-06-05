@@ -10,14 +10,12 @@ import {
   Request,
   ParseUUIDPipe,
   ParseIntPipe,
-  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
-  ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { UserFairService } from './user-fair.service';
@@ -46,8 +44,13 @@ export class UserFairController {
   })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
   @ApiResponse({ status: 404, description: 'Usuário ou feira não encontrado' })
-  @ApiResponse({ status: 409, description: 'Usuário já está associado a esta feira' })
-  async create(@Body() createUserFairDto: CreateUserFairDto): Promise<UserFairResponseDto> {
+  @ApiResponse({
+    status: 409,
+    description: 'Usuário já está associado a esta feira',
+  })
+  async create(
+    @Body() createUserFairDto: CreateUserFairDto,
+  ): Promise<UserFairResponseDto> {
     return await this.userFairService.create(createUserFairDto);
   }
 
@@ -85,7 +88,7 @@ export class UserFairController {
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async findByUser(
     @Param('userId', ParseIntPipe) userId: number,
-    @Request() req
+    @Request() req,
   ): Promise<UserFairResponseDto[]> {
     // Usuário só pode ver suas próprias feiras, exceto se for admin
     if (req.user.role !== EUserRole.ADMIN && req.user.id !== userId) {
@@ -109,7 +112,7 @@ export class UserFairController {
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async findByFair(
     @Param('fairId', ParseUUIDPipe) fairId: string,
-    @Request() req
+    @Request() req,
   ): Promise<UserFairResponseDto[]> {
     // Apenas admins podem ver usuários de uma feira
     if (req.user.role !== EUserRole.ADMIN) {
@@ -133,7 +136,7 @@ export class UserFairController {
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async getActiveFairsByUser(
     @Param('userId', ParseIntPipe) userId: number,
-    @Request() req
+    @Request() req,
   ): Promise<UserFairResponseDto[]> {
     // Usuário só pode ver suas próprias feiras ativas, exceto se for admin
     if (req.user.role !== EUserRole.ADMIN && req.user.id !== userId) {
@@ -157,7 +160,7 @@ export class UserFairController {
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async getActiveUsersByFair(
     @Param('fairId', ParseUUIDPipe) fairId: string,
-    @Request() req
+    @Request() req,
   ): Promise<UserFairResponseDto[]> {
     // Apenas admins podem ver usuários ativos de uma feira
     if (req.user.role !== EUserRole.ADMIN) {
@@ -182,7 +185,7 @@ export class UserFairController {
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req
+    @Request() req,
   ): Promise<UserFairResponseDto> {
     const userFair = await this.userFairService.findOne(id);
 
@@ -210,9 +213,9 @@ export class UserFairController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserFairDto: UpdateUserFairDto,
-    @Request() req
+    @Request() req,
   ): Promise<UserFairResponseDto> {
-    const userFair = await this.userFairService.findOne(id);
+    await this.userFairService.findOne(id);
 
     // Apenas admins podem atualizar associações
     if (req.user.role !== EUserRole.ADMIN) {
@@ -237,7 +240,7 @@ export class UserFairController {
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async toggleActive(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req
+    @Request() req,
   ): Promise<UserFairResponseDto> {
     // Apenas admins podem alterar status de associações
     if (req.user.role !== EUserRole.ADMIN) {
@@ -261,7 +264,7 @@ export class UserFairController {
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req
+    @Request() req,
   ): Promise<{ message: string }> {
     // Apenas admins podem remover associações
     if (req.user.role !== EUserRole.ADMIN) {

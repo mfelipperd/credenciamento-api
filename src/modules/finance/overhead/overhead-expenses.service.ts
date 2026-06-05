@@ -100,7 +100,9 @@ export class OverheadExpensesService {
   // ── CRUD ────────────────────────────────────────────────────────────────────
 
   async create(dto: CreateOverheadExpenseDto): Promise<OverheadExpense> {
-    this.logger.log(`Criando overhead expense: categoryId=${dto.categoryId} — R$ ${dto.valor}`);
+    this.logger.log(
+      `Criando overhead expense: categoryId=${dto.categoryId} — R$ ${dto.valor}`,
+    );
 
     await this.validateCategory(dto.categoryId);
     const allocations = this.resolveAllocations(dto.fairs);
@@ -142,7 +144,9 @@ export class OverheadExpensesService {
       relations: ['category', 'account', 'allocations', 'allocations.fair'],
     });
     if (!expense) {
-      throw new NotFoundException(`Overhead expense com ID ${id} não encontrado`);
+      throw new NotFoundException(
+        `Overhead expense com ID ${id} não encontrado`,
+      );
     }
     return expense;
   }
@@ -281,7 +285,8 @@ export class OverheadExpensesService {
     if (dto.financeCategoryId) {
       financeCategory = await this.validateCategory(dto.financeCategoryId);
     } else {
-      const categoryName = directExpense.category?.name ?? directExpense.descricao ?? 'Overhead';
+      const categoryName =
+        directExpense.category?.name ?? directExpense.descricao ?? 'Overhead';
 
       // Tenta encontrar uma categoria global com o mesmo nome (case-insensitive)
       const existing = await this.financeCategoryRepo.findOne({

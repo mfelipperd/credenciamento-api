@@ -1,86 +1,100 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEmail, IsEnum, IsOptional, IsBoolean, MinLength, MaxLength, Length, Matches, IsArray, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsBoolean,
+  MinLength,
+  MaxLength,
+  Length,
+  Matches,
+  IsArray,
+  IsUUID,
+} from 'class-validator';
 import { EUserRole } from '../../../enum/role';
 
 export class CreateUserDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Nome completo do usuário',
-    example: 'João Silva Santos'
+    example: 'João Silva Santos',
   })
   @IsString()
   @Length(2, 255)
   name: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Email do usuário',
-    example: 'joao.silva@email.com'
+    example: 'joao.silva@email.com',
   })
   @IsEmail()
   email: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Senha do usuário (mínimo 8 caracteres)',
     example: 'minhasenha123',
-    minLength: 8
+    minLength: 8,
   })
   @IsString()
   @MinLength(8)
   @MaxLength(255)
   password: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Role do usuário',
     enum: EUserRole,
-    example: EUserRole.ADMIN
+    example: EUserRole.ADMIN,
   })
   @IsEnum(EUserRole)
   role: EUserRole;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'CPF do usuário (apenas números)',
     example: '12345678901',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
   @Length(11, 11)
-  @Matches(/^\d{11}$/, { message: 'CPF deve conter apenas números e ter 11 dígitos' })
+  @Matches(/^\d{11}$/, {
+    message: 'CPF deve conter apenas números e ter 11 dígitos',
+  })
   cpf?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Telefone do usuário',
     example: '11999999999',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
   @Length(10, 20)
   phone?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Se o usuário está ativo',
     example: true,
     default: true,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Observações sobre o usuário',
     example: 'Usuário responsável pela área de vendas',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
   notes?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'IDs das feiras que o usuário tem acesso',
     example: ['uuid-feira-1', 'uuid-feira-2'],
     type: [String],
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsArray()

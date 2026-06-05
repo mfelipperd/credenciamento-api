@@ -303,22 +303,26 @@ export class CashFlowService {
     }, 0);
     const revenueCount = revenues.length;
     const averageRevenue = revenueCount > 0 ? totalRevenue / revenueCount : 0;
-    const largestRevenue = revenueCount > 0 ? Math.max(...revenues.map(r => (Number(r.contractValue) || 0) / 100)) : 0;
+    const largestRevenue =
+      revenueCount > 0
+        ? Math.max(...revenues.map((r) => (Number(r.contractValue) || 0) / 100))
+        : 0;
 
     // Buscar despesas da feira (diretas + rateadas de ambos os sistemas)
     const totalExpenses = await this.getTotalExpenses(fairId);
 
-    const [directExpenses, allocatedDirect, allocatedLegacy] = await Promise.all([
-      this.expensesService.findAllByFair(fairId),
-      this.expensesService.findOverheadAllocatedForFair(fairId),
-      this.overheadExpensesService.findAllocatedForFair(fairId),
-    ]);
+    const [directExpenses, allocatedDirect, allocatedLegacy] =
+      await Promise.all([
+        this.expensesService.findAllByFair(fairId),
+        this.expensesService.findOverheadAllocatedForFair(fairId),
+        this.overheadExpensesService.findAllocatedForFair(fairId),
+      ]);
 
     // Todos os valores individuais (usando valorAlocado para os rateados)
     const allExpenseValues = [
-      ...directExpenses.map(e => e.valor),
-      ...allocatedDirect.map(e => e.valorAlocado),
-      ...allocatedLegacy.map(e => e.valorAlocado),
+      ...directExpenses.map((e) => e.valor),
+      ...allocatedDirect.map((e) => e.valorAlocado),
+      ...allocatedLegacy.map((e) => e.valorAlocado),
     ];
     const expenseCount = allExpenseValues.length;
     const averageExpense = expenseCount > 0 ? totalExpenses / expenseCount : 0;
@@ -326,7 +330,8 @@ export class CashFlowService {
 
     // Calcular métricas
     const netProfit = totalRevenue - totalExpenses;
-    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    const profitMargin =
+      totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
     const isProfitable = netProfit > 0;
 
     // Determinar performance
@@ -338,24 +343,34 @@ export class CashFlowService {
 
     // Gerar recomendações
     const recommendations: string[] = [];
-    
+
     if (profitMargin < 0) {
-      recommendations.push('Reduza custos operacionais para melhorar a lucratividade');
+      recommendations.push(
+        'Reduza custos operacionais para melhorar a lucratividade',
+      );
       recommendations.push('Revise preços dos produtos/serviços oferecidos');
     } else if (profitMargin < 10) {
-      recommendations.push('Considere otimizar processos para reduzir despesas');
+      recommendations.push(
+        'Considere otimizar processos para reduzir despesas',
+      );
       recommendations.push('Avalie oportunidades de aumentar receitas');
     } else if (profitMargin >= 30) {
       recommendations.push('Excelente performance! Mantenha os padrões atuais');
-      recommendations.push('Considere reinvestir parte do lucro para crescimento');
+      recommendations.push(
+        'Considere reinvestir parte do lucro para crescimento',
+      );
     }
 
     if (revenueCount === 0) {
-      recommendations.push('Nenhuma receita registrada - verifique se há vendas não cadastradas');
+      recommendations.push(
+        'Nenhuma receita registrada - verifique se há vendas não cadastradas',
+      );
     }
 
     if (expenseCount === 0) {
-      recommendations.push('Nenhuma despesa registrada - verifique se todos os custos foram contabilizados');
+      recommendations.push(
+        'Nenhuma despesa registrada - verifique se todos os custos foram contabilizados',
+      );
     }
 
     // Gerar resumo
@@ -387,7 +402,7 @@ export class CashFlowService {
       largestExpense,
       performance,
       recommendations,
-      summary
+      summary,
     };
   }
 
@@ -404,15 +419,21 @@ export class CashFlowService {
   }> {
     // Obter análise de fluxo de caixa da feira
     const analysis = await this.getFairCashFlowAnalysis(fairId);
-    
+
     if (!analysis.isProfitable) {
-      throw new Error('Não é possível distribuir lucro de uma feira que não teve lucro');
+      throw new Error(
+        'Não é possível distribuir lucro de uma feira que não teve lucro',
+      );
     }
 
     const totalProfit = analysis.netProfit;
 
     // Calcular distribuição sem efetuar
-    const distribution = await this.profitDistributionService.calculateProfitDistribution(fairId, totalProfit);
+    const distribution =
+      await this.profitDistributionService.calculateProfitDistribution(
+        fairId,
+        totalProfit,
+      );
 
     // Efetuar a distribuição
     await this.profitDistributionService.distributeProfit(fairId, totalProfit);
@@ -420,7 +441,7 @@ export class CashFlowService {
     return {
       fairId,
       totalProfit,
-      distribution
+      distribution,
     };
   }
 }

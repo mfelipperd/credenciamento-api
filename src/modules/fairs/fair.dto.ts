@@ -21,12 +21,16 @@ import { FairStatus } from './entity/fair.entity';
 export class CreateFairDayScheduleDto {
   /** Data do dia no formato YYYY-MM-DD */
   @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'date deve estar no formato YYYY-MM-DD' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'date deve estar no formato YYYY-MM-DD',
+  })
   date: string;
 
   /** Horário de abertura no formato HH:mm */
   @IsString()
-  @Matches(/^\d{2}:\d{2}$/, { message: 'startTime deve estar no formato HH:mm' })
+  @Matches(/^\d{2}:\d{2}$/, {
+    message: 'startTime deve estar no formato HH:mm',
+  })
   startTime: string;
 
   /** Horário de encerramento no formato HH:mm */
@@ -113,7 +117,9 @@ export class CreateInputFairDto {
   @IsOptional()
   @IsString()
   @Length(2, 2)
-  @Matches(/^[A-Z]{2}$/, { message: 'state deve ser a UF em 2 letras maiúsculas (ex: AM, PA)' })
+  @Matches(/^[A-Z]{2}$/, {
+    message: 'state deve ser a UF em 2 letras maiúsculas (ex: AM, PA)',
+  })
   state?: string;
 
   @IsOptional()
@@ -153,7 +159,9 @@ export class CreateInputFairDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^\d{2}:\d{2}$/, { message: 'startTime deve estar no formato HH:mm' })
+  @Matches(/^\d{2}:\d{2}$/, {
+    message: 'startTime deve estar no formato HH:mm',
+  })
   startTime?: string;
 
   @IsOptional()

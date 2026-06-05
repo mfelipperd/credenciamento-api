@@ -1,4 +1,11 @@
-import { IsNumber, IsUUID, IsString, IsOptional, IsBoolean, Length } from 'class-validator';
+import {
+  IsNumber,
+  IsUUID,
+  IsString,
+  IsOptional,
+  IsBoolean,
+  Length,
+} from 'class-validator';
 
 export class CreateUserFairDto {
   @IsNumber()

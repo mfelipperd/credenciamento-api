@@ -7,16 +7,13 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
   ParseUUIDPipe,
-  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
-  ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { StandConfigurationService } from './stand-configuration.service';
@@ -24,7 +21,6 @@ import { CreateStandConfigurationDto } from './dto/create-stand-configuration.dt
 import { UpdateStandConfigurationDto } from './dto/update-stand-configuration.dto';
 import { StandConfigurationResponseDto } from './dto/stand-configuration-response.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { EUserRole } from '../../enum/role';
 
 @ApiTags('Stand Configurations')
 @ApiBearerAuth()
@@ -36,7 +32,8 @@ export class StandConfigurationController {
   @Post('fair/:fairId')
   @ApiOperation({
     summary: 'Criar configuração de stand para uma feira',
-    description: 'Cria uma nova configuração de stand para uma feira específica',
+    description:
+      'Cria uma nova configuração de stand para uma feira específica',
   })
   @ApiParam({ name: 'fairId', description: 'ID da feira' })
   @ApiResponse({
@@ -45,10 +42,13 @@ export class StandConfigurationController {
     type: StandConfigurationResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
-  @ApiResponse({ status: 409, description: 'Já existe configuração com este nome' })
+  @ApiResponse({
+    status: 409,
+    description: 'Já existe configuração com este nome',
+  })
   async create(
     @Param('fairId', ParseUUIDPipe) fairId: string,
-    @Body() createDto: CreateStandConfigurationDto
+    @Body() createDto: CreateStandConfigurationDto,
   ): Promise<StandConfigurationResponseDto> {
     return await this.standConfigService.create(createDto, fairId);
   }
@@ -56,7 +56,8 @@ export class StandConfigurationController {
   @Get('fair/:fairId')
   @ApiOperation({
     summary: 'Listar configurações de stands de uma feira',
-    description: 'Retorna todas as configurações de stands de uma feira específica',
+    description:
+      'Retorna todas as configurações de stands de uma feira específica',
   })
   @ApiParam({ name: 'fairId', description: 'ID da feira' })
   @ApiResponse({
@@ -65,7 +66,7 @@ export class StandConfigurationController {
     type: [StandConfigurationResponseDto],
   })
   async findByFair(
-    @Param('fairId', ParseUUIDPipe) fairId: string
+    @Param('fairId', ParseUUIDPipe) fairId: string,
   ): Promise<StandConfigurationResponseDto[]> {
     return await this.standConfigService.findAllByFair(fairId);
   }
@@ -73,7 +74,8 @@ export class StandConfigurationController {
   @Get('fair/:fairId/statistics')
   @ApiOperation({
     summary: 'Estatísticas das configurações de stands',
-    description: 'Retorna estatísticas das configurações de stands de uma feira',
+    description:
+      'Retorna estatísticas das configurações de stands de uma feira',
   })
   @ApiParam({ name: 'fairId', description: 'ID da feira' })
   @ApiResponse({
@@ -81,7 +83,7 @@ export class StandConfigurationController {
     description: 'Estatísticas retornadas com sucesso',
   })
   async getStatistics(
-    @Param('fairId', ParseUUIDPipe) fairId: string
+    @Param('fairId', ParseUUIDPipe) fairId: string,
   ): Promise<any> {
     return await this.standConfigService.getStandStatistics(fairId);
   }
@@ -99,7 +101,7 @@ export class StandConfigurationController {
   })
   @ApiResponse({ status: 404, description: 'Configuração não encontrada' })
   async findOne(
-    @Param('id', ParseUUIDPipe) id: string
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<StandConfigurationResponseDto> {
     return await this.standConfigService.findOne(id);
   }
@@ -116,10 +118,13 @@ export class StandConfigurationController {
     type: StandConfigurationResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Configuração não encontrada' })
-  @ApiResponse({ status: 409, description: 'Já existe configuração com este nome' })
+  @ApiResponse({
+    status: 409,
+    description: 'Já existe configuração com este nome',
+  })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateDto: UpdateStandConfigurationDto
+    @Body() updateDto: UpdateStandConfigurationDto,
   ): Promise<StandConfigurationResponseDto> {
     return await this.standConfigService.update(id, updateDto);
   }
@@ -137,7 +142,7 @@ export class StandConfigurationController {
   })
   @ApiResponse({ status: 404, description: 'Configuração não encontrada' })
   async toggleActive(
-    @Param('id', ParseUUIDPipe) id: string
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<StandConfigurationResponseDto> {
     return await this.standConfigService.toggleActive(id);
   }
@@ -154,7 +159,7 @@ export class StandConfigurationController {
   })
   @ApiResponse({ status: 404, description: 'Configuração não encontrada' })
   async remove(
-    @Param('id', ParseUUIDPipe) id: string
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<{ message: string }> {
     await this.standConfigService.remove(id);
     return { message: 'Configuração removida com sucesso' };

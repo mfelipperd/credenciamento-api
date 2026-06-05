@@ -42,13 +42,19 @@ export class Revenue {
   @Column()
   clientId: string;
 
-  @Column('bigint', { transformer: { to: (v: number) => v, from: (v: string) => Number(v) } })
+  @Column('bigint', {
+    transformer: { to: (v: number) => v, from: (v: string) => Number(v) },
+  })
   baseValue: number;
 
-  @Column('bigint', { transformer: { to: (v: number) => v, from: (v: string) => Number(v) } })
+  @Column('bigint', {
+    transformer: { to: (v: number) => v, from: (v: string) => Number(v) },
+  })
   discountCents: number;
 
-  @Column('bigint', { transformer: { to: (v: number) => v, from: (v: string) => Number(v) } })
+  @Column('bigint', {
+    transformer: { to: (v: number) => v, from: (v: string) => Number(v) },
+  })
   contractValue: number;
 
   @Column({

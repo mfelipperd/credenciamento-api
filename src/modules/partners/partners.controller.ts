@@ -80,7 +80,8 @@ export class PartnersController {
   @Get('me')
   @ApiOperation({
     summary: 'Obter perfil do sócio logado',
-    description: 'Retorna o perfil do sócio com dados financeiros calculados baseado no usuário logado',
+    description:
+      'Retorna o perfil do sócio com dados financeiros calculados baseado no usuário logado',
   })
   @ApiResponse({
     status: 200,
@@ -111,12 +112,12 @@ export class PartnersController {
               fairName: { type: 'string' },
               percentage: { type: 'number' },
               earnings: { type: 'number' },
-              isProfitable: { type: 'boolean' }
-            }
-          }
-        }
-      }
-    }
+              isProfitable: { type: 'boolean' },
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({ status: 404, description: 'Sócio não encontrado' })
   async findMe(@Request() req) {
@@ -202,8 +203,14 @@ export class PartnersController {
   })
   @ApiParam({ name: 'id', description: 'ID do sócio' })
   @ApiBody({ type: CreateWithdrawalDto })
-  @ApiResponse({ status: 201, description: 'Solicitação de saque criada com sucesso' })
-  @ApiResponse({ status: 400, description: 'Valor inválido ou saldo insuficiente' })
+  @ApiResponse({
+    status: 201,
+    description: 'Solicitação de saque criada com sucesso',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Valor inválido ou saldo insuficiente',
+  })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async createWithdrawal(
     @Param('id', ParseUUIDPipe) id: string,
@@ -224,15 +231,24 @@ export class PartnersController {
   @Get(':fairId/withdrawals')
   @ApiOperation({
     summary: 'Listar saques por feira',
-    description: 'Retorna todas as solicitações de saque dos sócios de uma feira específica',
+    description:
+      'Retorna todas as solicitações de saque dos sócios de uma feira específica',
   })
   @ApiParam({ name: 'fairId', description: 'ID da feira' })
-  @ApiResponse({ status: 200, description: 'Solicitações de saque da feira retornadas com sucesso' })
+  @ApiResponse({
+    status: 200,
+    description: 'Solicitações de saque da feira retornadas com sucesso',
+  })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
-  async getWithdrawalsByFair(@Param('fairId', ParseUUIDPipe) fairId: string, @Request() req) {
+  async getWithdrawalsByFair(
+    @Param('fairId', ParseUUIDPipe) fairId: string,
+    @Request() req,
+  ) {
     // Apenas administradores podem visualizar saques por feira
     if (req.user.role !== EUserRole.ADMIN) {
-      throw new Error('Apenas administradores podem visualizar saques por feira');
+      throw new Error(
+        'Apenas administradores podem visualizar saques por feira',
+      );
     }
 
     return await this.partnersService.getWithdrawalsByFair(fairId);
@@ -241,17 +257,24 @@ export class PartnersController {
   @Get(':partnerId/withdrawals/fair/:fairId')
   @ApiOperation({
     summary: 'Histórico de saques do sócio por feira',
-    description: 'Lista o histórico de saques de um sócio específico para uma feira específica',
+    description:
+      'Lista o histórico de saques de um sócio específico para uma feira específica',
   })
   @ApiParam({ name: 'partnerId', description: 'ID do sócio' })
   @ApiParam({ name: 'fairId', description: 'ID da feira' })
-  @ApiResponse({ status: 200, description: 'Histórico de saques retornado com sucesso' })
-  @ApiResponse({ status: 404, description: 'Sócio não encontrado ou sem participação na feira' })
+  @ApiResponse({
+    status: 200,
+    description: 'Histórico de saques retornado com sucesso',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Sócio não encontrado ou sem participação na feira',
+  })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async getWithdrawalsByPartnerAndFair(
     @Param('partnerId', ParseUUIDPipe) partnerId: string,
     @Param('fairId', ParseUUIDPipe) fairId: string,
-    @Request() req
+    @Request() req,
   ) {
     // Verificar se é admin ou o próprio sócio
     if (req.user.role !== EUserRole.ADMIN) {
@@ -261,7 +284,10 @@ export class PartnersController {
       }
     }
 
-    return await this.partnersService.getWithdrawalsByPartnerAndFair(partnerId, fairId);
+    return await this.partnersService.getWithdrawalsByPartnerAndFair(
+      partnerId,
+      fairId,
+    );
   }
 
   @Get(':id/financial-summary')
@@ -271,13 +297,16 @@ export class PartnersController {
   })
   @ApiParam({ name: 'id', description: 'ID do sócio' })
   @ApiQuery({ name: 'fairId', description: 'ID da feira', required: true })
-  @ApiResponse({ status: 200, description: 'Resumo financeiro retornado com sucesso' })
+  @ApiResponse({
+    status: 200,
+    description: 'Resumo financeiro retornado com sucesso',
+  })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   @ApiResponse({ status: 400, description: 'fairId é obrigatório' })
   async getFinancialSummary(
-    @Param('id', ParseUUIDPipe) id: string, 
+    @Param('id', ParseUUIDPipe) id: string,
     @Query('fairId', ParseUUIDPipe) fairId: string,
-    @Request() req
+    @Request() req,
   ) {
     // Verificar se é admin ou o próprio sócio
     if (req.user.role !== EUserRole.ADMIN) {
@@ -309,7 +338,10 @@ export class PartnersController {
       throw new Error('Apenas administradores podem aprovar saques');
     }
 
-    return await this.partnersService.approveWithdrawal(withdrawalId, req.user.id);
+    return await this.partnersService.approveWithdrawal(
+      withdrawalId,
+      req.user.id,
+    );
   }
 
   @Post('withdrawals/:withdrawalId/reject')
@@ -322,10 +354,10 @@ export class PartnersController {
     schema: {
       type: 'object',
       properties: {
-        rejectionReason: { type: 'string', description: 'Motivo da rejeição' }
+        rejectionReason: { type: 'string', description: 'Motivo da rejeição' },
       },
-      required: ['rejectionReason']
-    }
+      required: ['rejectionReason'],
+    },
   })
   @ApiResponse({ status: 200, description: 'Saque rejeitado com sucesso' })
   @ApiResponse({ status: 404, description: 'Solicitação não encontrada' })
@@ -340,7 +372,10 @@ export class PartnersController {
       throw new Error('Apenas administradores podem rejeitar saques');
     }
 
-    return await this.partnersService.rejectWithdrawal(withdrawalId, rejectionReason);
+    return await this.partnersService.rejectWithdrawal(
+      withdrawalId,
+      rejectionReason,
+    );
   }
 
   @Get('available-percentage')
@@ -354,26 +389,35 @@ export class PartnersController {
     schema: {
       type: 'object',
       properties: {
-        availablePercentage: { type: 'number', description: 'Porcentagem máxima disponível' },
-        usedPercentage: { type: 'number', description: 'Porcentagem já utilizada' },
-        totalPercentage: { type: 'number', description: 'Total (sempre 100%)' }
-      }
-    }
+        availablePercentage: {
+          type: 'number',
+          description: 'Porcentagem máxima disponível',
+        },
+        usedPercentage: {
+          type: 'number',
+          description: 'Porcentagem já utilizada',
+        },
+        totalPercentage: { type: 'number', description: 'Total (sempre 100%)' },
+      },
+    },
   })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
   async getAvailablePercentage(@Request() req) {
     // Verificar se é admin
     if (req.user.role !== EUserRole.ADMIN) {
-      throw new Error('Apenas administradores podem consultar porcentagem disponível');
+      throw new Error(
+        'Apenas administradores podem consultar porcentagem disponível',
+      );
     }
 
-    const availablePercentage = await this.partnersService.getAvailablePercentage();
+    const availablePercentage =
+      await this.partnersService.getAvailablePercentage();
     const usedPercentage = 100 - availablePercentage;
 
     return {
       availablePercentage,
       usedPercentage,
-      totalPercentage: 100
+      totalPercentage: 100,
     };
   }
 }

@@ -26,7 +26,10 @@ export class FairPartnerResponseDto {
   @ApiProperty({ description: 'Se está ativo nesta feira' })
   isActive: boolean;
 
-  @ApiProperty({ description: 'Observações específicas desta feira', required: false })
+  @ApiProperty({
+    description: 'Observações específicas desta feira',
+    required: false,
+  })
   notes?: string;
 
   @ApiProperty({ description: 'Data de criação' })

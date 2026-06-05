@@ -11,7 +11,13 @@ import { OverheadExpensesModule } from '../overhead/overhead-expenses.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Expense, ExpenseFairAllocation, Fair, Category, Account]),
+    TypeOrmModule.forFeature([
+      Expense,
+      ExpenseFairAllocation,
+      Fair,
+      Category,
+      Account,
+    ]),
     OverheadExpensesModule,
   ],
   controllers: [ExpensesController],

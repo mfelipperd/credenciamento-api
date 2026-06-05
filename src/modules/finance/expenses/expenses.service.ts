@@ -23,7 +23,11 @@ export interface DirectOverheadItem {
   percentualDesteFair: number;
   valorAlocado: number;
   account: { id: string; nomeConta: string; banco: string } | null;
-  feirasRateadas: Array<{ fairId: string; fairName: string; percentual: number }>;
+  feirasRateadas: Array<{
+    fairId: string;
+    fairName: string;
+    percentual: number;
+  }>;
   source: 'direct_overhead'; // distingue de overhead_expenses
 }
 
@@ -56,7 +60,9 @@ export class ExpensesService {
         fairId: f.fairId,
         percentual: i < fairs.length - 1 ? equal : 0,
       }));
-      const sumOthers = allocs.slice(0, -1).reduce((s, a) => s + a.percentual, 0);
+      const sumOthers = allocs
+        .slice(0, -1)
+        .reduce((s, a) => s + a.percentual, 0);
       allocs[allocs.length - 1].percentual =
         Math.round((1 - sumOthers) * 10000) / 10000;
       return allocs;
@@ -95,7 +101,10 @@ export class ExpensesService {
       }
 
       const category = await this.categoryRepository.findOne({
-        where: { id: createExpenseDto.categoryId, fairId: createExpenseDto.fairId },
+        where: {
+          id: createExpenseDto.categoryId,
+          fairId: createExpenseDto.fairId,
+        },
       });
 
       if (!category) {
@@ -157,7 +166,9 @@ export class ExpensesService {
    * Retorna despesas diretas marcadas como overhead (isOverhead = true)
    * que possuem alocação para a feira informada.
    */
-  async findOverheadAllocatedForFair(fairId: string): Promise<DirectOverheadItem[]> {
+  async findOverheadAllocatedForFair(
+    fairId: string,
+  ): Promise<DirectOverheadItem[]> {
     const allocations = await this.allocationRepository.find({
       where: { fairId },
       relations: [
@@ -178,14 +189,20 @@ export class ExpensesService {
 
       return {
         id: exp.id,
-        category: exp.category ? { id: exp.category.id, name: exp.category.name } : null,
+        category: exp.category
+          ? { id: exp.category.id, name: exp.category.name }
+          : null,
         descricao: exp.descricao ?? null,
         data: exp.data,
         valorTotal,
         percentualDesteFair: pct,
         valorAlocado: Math.round(valorTotal * pct * 100) / 100,
         account: exp.account
-          ? { id: exp.account.id, nomeConta: exp.account.nomeConta, banco: exp.account.banco }
+          ? {
+              id: exp.account.id,
+              nomeConta: exp.account.nomeConta,
+              banco: exp.account.banco,
+            }
           : null,
         feirasRateadas: exp.fairAllocations.map((a) => ({
           fairId: a.fairId,
@@ -206,7 +223,13 @@ export class ExpensesService {
   async findOne(id: string): Promise<Expense> {
     const expense = await this.expensesRepository.findOne({
       where: { id },
-      relations: ['category', 'account', 'fair', 'fairAllocations', 'fairAllocations.fair'],
+      relations: [
+        'category',
+        'account',
+        'fair',
+        'fairAllocations',
+        'fairAllocations.fair',
+      ],
     });
 
     if (!expense) {
@@ -216,7 +239,10 @@ export class ExpensesService {
     return expense;
   }
 
-  async update(id: string, updateExpenseDto: UpdateExpenseDto): Promise<Expense> {
+  async update(
+    id: string,
+    updateExpenseDto: UpdateExpenseDto,
+  ): Promise<Expense> {
     const expense = await this.findOne(id);
     Object.assign(expense, updateExpenseDto);
     return await this.expensesRepository.save(expense);
@@ -301,7 +327,9 @@ export class ExpensesService {
       .createQueryBuilder('expense')
       .select('expense.categoryId', 'categoryId')
       .addSelect('SUM(expense.valor)', 'total')
-      .where('expense.fairId = :fairId AND expense.isOverhead = false', { fairId })
+      .where('expense.fairId = :fairId AND expense.isOverhead = false', {
+        fairId,
+      })
       .groupBy('expense.categoryId')
       .getRawMany();
   }
@@ -313,7 +341,9 @@ export class ExpensesService {
       .createQueryBuilder('expense')
       .select('expense.accountId', 'accountId')
       .addSelect('SUM(expense.valor)', 'total')
-      .where('expense.fairId = :fairId AND expense.isOverhead = false', { fairId })
+      .where('expense.fairId = :fairId AND expense.isOverhead = false', {
+        fairId,
+      })
       .groupBy('expense.accountId')
       .getRawMany();
   }

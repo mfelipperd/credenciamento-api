@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Fair } from './entity/fair.entity';
 import { StandConfiguration } from './entity/stand-configuration.entity';
-import { FairAnalysisDto, StandConfigurationAnalysisDto, BusinessInsightDto } from './dto/fair-analysis.dto';
+import {
+  StandConfigurationAnalysisDto,
+  BusinessInsightDto,
+} from './dto/fair-analysis.dto';
 
 @Injectable()
 export class FairAnalysisService {
@@ -19,9 +22,9 @@ export class FairAnalysisService {
   async analyzeFair(fairId: string): Promise<any> {
     try {
       this.logger.log(`Iniciando análise da feira: ${fairId}`);
-      
+
       const fair = await this.fairRepository.findOne({
-        where: { id: fairId }
+        where: { id: fairId },
       });
 
       if (!fair) {
@@ -44,7 +47,7 @@ export class FairAnalysisService {
         averageSetupCostPerSquareMeter: 0,
         standConfigurations: [],
         insights: [],
-        recommendations: ['Configure stands para começar a análise']
+        recommendations: ['Configure stands para começar a análise'],
       };
     } catch (error) {
       this.logger.error(`Erro na análise da feira ${fairId}:`, error);
@@ -60,50 +63,62 @@ export class FairAnalysisService {
     let totalPricePerSquareMeter = 0;
     let totalSetupCostPerSquareMeter = 0;
 
-    const standConfigurations: StandConfigurationAnalysisDto[] = standConfigs.map(config => {
-      const area = config.width * config.height;
-      const totalPrice = area * config.pricePerSquareMeter;
-      const totalSetupCost = area * config.setupCostPerSquareMeter;
-      const profitPerStand = totalPrice - totalSetupCost;
-      const profitMargin = totalPrice > 0 ? (profitPerStand / totalPrice) * 100 : 0;
-      const efficiency = area > 0 ? profitPerStand / area : 0;
-      const totalConfigRevenue = totalPrice * config.quantity;
-      const totalConfigCost = totalSetupCost * config.quantity;
-      const totalConfigProfit = totalConfigRevenue - totalConfigCost;
+    const standConfigurations: StandConfigurationAnalysisDto[] =
+      standConfigs.map((config) => {
+        const area = config.width * config.height;
+        const totalPrice = area * config.pricePerSquareMeter;
+        const totalSetupCost = area * config.setupCostPerSquareMeter;
+        const profitPerStand = totalPrice - totalSetupCost;
+        const profitMargin =
+          totalPrice > 0 ? (profitPerStand / totalPrice) * 100 : 0;
+        const efficiency = area > 0 ? profitPerStand / area : 0;
+        const totalConfigRevenue = totalPrice * config.quantity;
+        const totalConfigCost = totalSetupCost * config.quantity;
+        const totalConfigProfit = totalConfigRevenue - totalConfigCost;
 
-      totalStands += config.quantity;
-      totalArea += area * config.quantity;
-      totalRevenue += totalConfigRevenue;
-      totalCosts += totalConfigCost;
-      totalPricePerSquareMeter += config.pricePerSquareMeter;
-      totalSetupCostPerSquareMeter += config.setupCostPerSquareMeter;
+        totalStands += config.quantity;
+        totalArea += area * config.quantity;
+        totalRevenue += totalConfigRevenue;
+        totalCosts += totalConfigCost;
+        totalPricePerSquareMeter += config.pricePerSquareMeter;
+        totalSetupCostPerSquareMeter += config.setupCostPerSquareMeter;
 
-      const recommendation = this.getStandRecommendation(profitMargin, efficiency);
+        const recommendation = this.getStandRecommendation(
+          profitMargin,
+          efficiency,
+        );
 
-      return {
-        id: config.id,
-        name: config.name,
-        dimensions: `${config.width}x${config.height}`,
-        area,
-        quantity: config.quantity,
-        pricePerSquareMeter: config.pricePerSquareMeter,
-        setupCostPerSquareMeter: config.setupCostPerSquareMeter,
-        totalPrice,
-        totalSetupCost,
-        profitPerStand,
-        profitMargin,
-        totalRevenue: totalConfigRevenue,
-        totalCost: totalConfigCost,
-        totalProfit: totalConfigProfit,
-        efficiency,
-        recommendation
-      };
-    });
+        return {
+          id: config.id,
+          name: config.name,
+          dimensions: `${config.width}x${config.height}`,
+          area,
+          quantity: config.quantity,
+          pricePerSquareMeter: config.pricePerSquareMeter,
+          setupCostPerSquareMeter: config.setupCostPerSquareMeter,
+          totalPrice,
+          totalSetupCost,
+          profitPerStand,
+          profitMargin,
+          totalRevenue: totalConfigRevenue,
+          totalCost: totalConfigCost,
+          totalProfit: totalConfigProfit,
+          efficiency,
+          recommendation,
+        };
+      });
 
     const totalProfit = totalRevenue - totalCosts;
-    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-    const averagePricePerSquareMeter = standConfigs.length > 0 ? totalPricePerSquareMeter / standConfigs.length : 0;
-    const averageSetupCostPerSquareMeter = standConfigs.length > 0 ? totalSetupCostPerSquareMeter / standConfigs.length : 0;
+    const profitMargin =
+      totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+    const averagePricePerSquareMeter =
+      standConfigs.length > 0
+        ? totalPricePerSquareMeter / standConfigs.length
+        : 0;
+    const averageSetupCostPerSquareMeter =
+      standConfigs.length > 0
+        ? totalSetupCostPerSquareMeter / standConfigs.length
+        : 0;
 
     return {
       totalStands,
@@ -114,11 +129,14 @@ export class FairAnalysisService {
       profitMargin,
       averagePricePerSquareMeter,
       averageSetupCostPerSquareMeter,
-      standConfigurations
+      standConfigurations,
     };
   }
 
-  private getStandRecommendation(profitMargin: number, efficiency: number): 'highly_recommended' | 'recommended' | 'moderate' | 'not_recommended' {
+  private getStandRecommendation(
+    profitMargin: number,
+    efficiency: number,
+  ): 'highly_recommended' | 'recommended' | 'moderate' | 'not_recommended' {
     if (profitMargin >= 60 && efficiency >= 100) return 'highly_recommended';
     if (profitMargin >= 40 && efficiency >= 75) return 'recommended';
     if (profitMargin >= 20 && efficiency >= 50) return 'moderate';
@@ -136,7 +154,8 @@ export class FairAnalysisService {
         description: `A margem de lucro atual é de ${analysis.profitMargin.toFixed(2)}%, considerada baixa para o setor.`,
         impact: 'high',
         potentialIncrease: 25,
-        action: 'Considere aumentar os preços por m² ou reduzir custos de montagem.'
+        action:
+          'Considere aumentar os preços por m² ou reduzir custos de montagem.',
       });
     } else if (analysis.profitMargin > 60) {
       insights.push({
@@ -145,16 +164,17 @@ export class FairAnalysisService {
         description: `Margem de lucro de ${analysis.profitMargin.toFixed(2)}% está excelente!`,
         impact: 'low',
         potentialIncrease: 0,
-        action: 'Mantenha a estratégia atual ou considere expandir com mais stands.'
+        action:
+          'Mantenha a estratégia atual ou considere expandir com mais stands.',
       });
     }
 
     // Insight 2: Análise de eficiência por stand
-    const mostEfficient = analysis.standConfigurations.reduce((max, current) => 
-      current.efficiency > max.efficiency ? current : max
+    const mostEfficient = analysis.standConfigurations.reduce((max, current) =>
+      current.efficiency > max.efficiency ? current : max,
     );
-    const leastEfficient = analysis.standConfigurations.reduce((min, current) => 
-      current.efficiency < min.efficiency ? current : min
+    const leastEfficient = analysis.standConfigurations.reduce(
+      (min, current) => (current.efficiency < min.efficiency ? current : min),
     );
 
     if (mostEfficient.efficiency > leastEfficient.efficiency * 1.5) {
@@ -164,14 +184,14 @@ export class FairAnalysisService {
         description: `O stand ${mostEfficient.name} é ${(mostEfficient.efficiency / leastEfficient.efficiency).toFixed(1)}x mais eficiente que o ${leastEfficient.name}.`,
         impact: 'medium',
         potentialIncrease: 15,
-        action: `Considere focar mais na venda de stands ${mostEfficient.name} ou ajustar preços do ${leastEfficient.name}.`
+        action: `Considere focar mais na venda de stands ${mostEfficient.name} ou ajustar preços do ${leastEfficient.name}.`,
       });
     }
 
     // Insight 3: Análise de preço por m²
     const avgPrice = analysis.averagePricePerSquareMeter;
     const avgCost = analysis.averageSetupCostPerSquareMeter;
-    
+
     if (avgPrice < avgCost * 2) {
       insights.push({
         type: 'pricing_strategy',
@@ -179,7 +199,8 @@ export class FairAnalysisService {
         description: `O preço médio por m² (R$ ${avgPrice.toFixed(2)}) está muito próximo do custo de montagem (R$ ${avgCost.toFixed(2)}).`,
         impact: 'high',
         potentialIncrease: 30,
-        action: 'Considere aumentar os preços por m² em 20-30% para melhorar a margem.'
+        action:
+          'Considere aumentar os preços por m² em 20-30% para melhorar a margem.',
       });
     }
 
@@ -192,7 +213,8 @@ export class FairAnalysisService {
         description: `A feira tem apenas ${totalCapacity} stands disponíveis.`,
         impact: 'medium',
         potentialIncrease: 0,
-        action: 'Considere expandir a capacidade ou focar em stands de maior valor.'
+        action:
+          'Considere expandir a capacidade ou focar em stands de maior valor.',
       });
     }
 
@@ -204,51 +226,68 @@ export class FairAnalysisService {
 
     // Recomendação 1: Baseada na margem de lucro
     if (analysis.profitMargin < 30) {
-      recommendations.push('Aumente os preços por m² em 15-25% para melhorar a margem de lucro');
-      recommendations.push('Negocie melhores condições com fornecedores de montagem');
+      recommendations.push(
+        'Aumente os preços por m² em 15-25% para melhorar a margem de lucro',
+      );
+      recommendations.push(
+        'Negocie melhores condições com fornecedores de montagem',
+      );
     }
 
     // Recomendação 2: Baseada na eficiência dos stands
-    const efficientStands = analysis.standConfigurations.filter(s => s.recommendation === 'highly_recommended');
+    const efficientStands = analysis.standConfigurations.filter(
+      (s) => s.recommendation === 'highly_recommended',
+    );
     if (efficientStands.length > 0) {
-      recommendations.push(`Foque na venda de stands ${efficientStands.map(s => s.name).join(', ')} que têm melhor margem`);
+      recommendations.push(
+        `Foque na venda de stands ${efficientStands.map((s) => s.name).join(', ')} que têm melhor margem`,
+      );
     }
 
     // Recomendação 3: Baseada no preço médio
     if (analysis.averagePricePerSquareMeter < 100) {
-      recommendations.push('Considere posicionar a feira como um evento premium com preços mais altos');
+      recommendations.push(
+        'Considere posicionar a feira como um evento premium com preços mais altos',
+      );
     }
 
     // Recomendação 4: Baseada na área total
     if (analysis.totalArea > 1000) {
-      recommendations.push('Com uma área grande, considere oferecer pacotes corporativos com desconto');
+      recommendations.push(
+        'Com uma área grande, considere oferecer pacotes corporativos com desconto',
+      );
     }
 
     return recommendations;
   }
 
-  async optimizePricing(fairId: string, targetMargin: number = 50): Promise<any> {
+  async optimizePricing(
+    fairId: string,
+    targetMargin: number = 50,
+  ): Promise<any> {
     const analysis = await this.analyzeFair(fairId);
-    
-    const optimizedConfigs = analysis.standConfigurations.map(config => {
-      const currentMargin = config.profitMargin;
+
+    const optimizedConfigs = analysis.standConfigurations.map((config) => {
       const targetPrice = config.totalSetupCost / (1 - targetMargin / 100);
       const newPricePerSquareMeter = targetPrice / config.area;
-      const priceIncrease = ((newPricePerSquareMeter - config.pricePerSquareMeter) / config.pricePerSquareMeter) * 100;
+      const priceIncrease =
+        ((newPricePerSquareMeter - config.pricePerSquareMeter) /
+          config.pricePerSquareMeter) *
+        100;
 
       return {
         ...config,
         optimizedPricePerSquareMeter: newPricePerSquareMeter,
         priceIncrease: priceIncrease,
         newTotalPrice: targetPrice,
-        newProfitMargin: targetMargin
+        newProfitMargin: targetMargin,
       };
     });
 
     return {
       currentAnalysis: analysis,
       optimizedConfigurations: optimizedConfigs,
-      targetMargin
+      targetMargin,
     };
   }
 }

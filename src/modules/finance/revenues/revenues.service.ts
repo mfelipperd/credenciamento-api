@@ -388,7 +388,8 @@ export class RevenuesService {
 
     const totalValue = parseFloat(result.totalValue) || 0;
     const totalRevenues = parseInt(result.totalRevenues) || 0;
-    const averagePerRevenue = totalRevenues > 0 ? totalValue / totalRevenues : 0;
+    const averagePerRevenue =
+      totalRevenues > 0 ? totalValue / totalRevenues : 0;
 
     return {
       totalValue,

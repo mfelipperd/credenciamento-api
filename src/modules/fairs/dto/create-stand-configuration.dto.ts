@@ -1,78 +1,86 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsBoolean, Min, Max, Length } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  Min,
+  Max,
+  Length,
+} from 'class-validator';
 
 export class CreateStandConfigurationDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Nome da configuração do stand',
     example: 'Stand 2x3',
-    maxLength: 50
+    maxLength: 50,
   })
   @IsString()
   @Length(1, 50)
   name: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Largura do stand em metros',
     example: 2,
     minimum: 1,
-    maximum: 20
+    maximum: 20,
   })
   @IsNumber()
   @Min(1)
   @Max(20)
   width: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Altura do stand em metros',
     example: 3,
     minimum: 1,
-    maximum: 20
+    maximum: 20,
   })
   @IsNumber()
   @Min(1)
   @Max(20)
   height: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Quantidade disponível deste tipo de stand',
     example: 10,
-    minimum: 0
+    minimum: 0,
   })
   @IsNumber()
   @Min(0)
   quantity: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Preço por metro quadrado',
-    example: 150.00,
-    minimum: 0
+    example: 150.0,
+    minimum: 0,
   })
   @IsNumber()
   @Min(0)
   pricePerSquareMeter: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Custo de montagem por metro quadrado',
-    example: 50.00,
-    minimum: 0
+    example: 50.0,
+    minimum: 0,
   })
   @IsNumber()
   @Min(0)
   setupCostPerSquareMeter: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Descrição do stand',
     example: 'Stand padrão 2x3 metros, ideal para pequenas empresas',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Se a configuração está ativa',
     example: true,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsBoolean()

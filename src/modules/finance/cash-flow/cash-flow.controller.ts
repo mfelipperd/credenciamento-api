@@ -422,7 +422,8 @@ export class CashFlowController {
   @Get('analysis/fair/:fairId')
   @ApiOperation({
     summary: 'Análise completa de fluxo de caixa por feira',
-    description: 'Retorna análise detalhada de receitas, despesas, lucro e recomendações para uma feira específica',
+    description:
+      'Retorna análise detalhada de receitas, despesas, lucro e recomendações para uma feira específica',
   })
   @ApiParam({
     name: 'fairId',
@@ -447,23 +448,25 @@ export class CashFlowController {
         averageExpense: { type: 'number', description: 'Média por despesa' },
         largestRevenue: { type: 'number', description: 'Maior receita' },
         largestExpense: { type: 'number', description: 'Maior despesa' },
-        performance: { 
-          type: 'string', 
+        performance: {
+          type: 'string',
           enum: ['excellent', 'good', 'average', 'poor'],
-          description: 'Classificação de performance' 
+          description: 'Classificação de performance',
         },
-        recommendations: { 
-          type: 'array', 
+        recommendations: {
+          type: 'array',
           items: { type: 'string' },
-          description: 'Recomendações baseadas na análise' 
+          description: 'Recomendações baseadas na análise',
         },
-        summary: { type: 'string', description: 'Resumo executivo' }
-      }
-    }
+        summary: { type: 'string', description: 'Resumo executivo' },
+      },
+    },
   })
   @ApiResponse({ status: 404, description: 'Feira não encontrada' })
   @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
-  async getFairCashFlowAnalysis(@Param('fairId', ParseUUIDPipe) fairId: string) {
+  async getFairCashFlowAnalysis(
+    @Param('fairId', ParseUUIDPipe) fairId: string,
+  ) {
     return await this.cashFlowService.getFairCashFlowAnalysis(fairId);
   }
 
@@ -471,7 +474,8 @@ export class CashFlowController {
   @Post('distribute-profit/:fairId')
   @ApiOperation({
     summary: 'Distribuir lucro entre sócios',
-    description: 'Distribui o lucro de uma feira entre os sócios ativos baseado em suas porcentagens',
+    description:
+      'Distribui o lucro de uma feira entre os sócios ativos baseado em suas porcentagens',
   })
   @ApiParam({
     name: 'fairId',
@@ -494,12 +498,12 @@ export class CashFlowController {
               partnerId: { type: 'string' },
               partnerName: { type: 'string' },
               percentage: { type: 'number' },
-              share: { type: 'number' }
-            }
-          }
-        }
-      }
-    }
+              share: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({ status: 404, description: 'Feira não encontrada' })
   @ApiResponse({ status: 500, description: 'Erro interno do servidor' })

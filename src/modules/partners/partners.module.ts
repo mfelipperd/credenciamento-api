@@ -14,8 +14,14 @@ import { CashFlowModule } from '../finance/cash-flow/cash-flow.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Partner, PartnerWithdrawal, FairPartner, User, Fair]),
-    forwardRef(() => CashFlowModule)
+    TypeOrmModule.forFeature([
+      Partner,
+      PartnerWithdrawal,
+      FairPartner,
+      User,
+      Fair,
+    ]),
+    forwardRef(() => CashFlowModule),
   ],
   controllers: [PartnersController, FairPartnersController],
   providers: [PartnersService, FairPartnersService, ProfitDistributionService],

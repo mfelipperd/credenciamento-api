@@ -19,7 +19,11 @@ import { ExpensesModule } from '../finance/expenses/expenses.module';
     ExpensesModule,
   ],
   providers: [FairsService, StandConfigurationService, FairAnalysisService],
-  controllers: [FairsController, StandConfigurationController, FairAnalysisController],
+  controllers: [
+    FairsController,
+    StandConfigurationController,
+    FairAnalysisController,
+  ],
   exports: [FairsService, StandConfigurationService, FairAnalysisService],
 })
 export class FairsModule {}

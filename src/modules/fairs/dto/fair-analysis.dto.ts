@@ -29,11 +29,19 @@ export class StandConfigurationAnalysisDto {
   totalCost: number;
   totalProfit: number;
   efficiency: number; // Lucro por m²
-  recommendation: 'highly_recommended' | 'recommended' | 'moderate' | 'not_recommended';
+  recommendation:
+    | 'highly_recommended'
+    | 'recommended'
+    | 'moderate'
+    | 'not_recommended';
 }
 
 export class BusinessInsightDto {
-  type: 'profit_optimization' | 'pricing_strategy' | 'stand_efficiency' | 'market_analysis';
+  type:
+    | 'profit_optimization'
+    | 'pricing_strategy'
+    | 'stand_efficiency'
+    | 'market_analysis';
   title: string;
   description: string;
   impact: 'high' | 'medium' | 'low';

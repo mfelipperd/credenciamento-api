@@ -96,7 +96,9 @@ export class RevenuesController {
   }
 
   @Get('/fairs/:fairId/revenues')
-  @ApiOperation({ summary: 'Listar receitas de uma feira específica (URL amigável)' })
+  @ApiOperation({
+    summary: 'Listar receitas de uma feira específica (URL amigável)',
+  })
   @ApiParam({ name: 'fairId', description: 'ID da feira' })
   @ApiQuery({
     name: 'status',
@@ -279,9 +281,18 @@ export class RevenuesController {
     schema: {
       type: 'object',
       properties: {
-        totalValue: { type: 'number', description: 'Valor total das receitas (soma de contractValue)' },
-        totalRevenues: { type: 'number', description: 'Quantidade total de receitas' },
-        averagePerRevenue: { type: 'number', description: 'Média por receita (totalValue / totalRevenues)' },
+        totalValue: {
+          type: 'number',
+          description: 'Valor total das receitas (soma de contractValue)',
+        },
+        totalRevenues: {
+          type: 'number',
+          description: 'Quantidade total de receitas',
+        },
+        averagePerRevenue: {
+          type: 'number',
+          description: 'Média por receita (totalValue / totalRevenues)',
+        },
       },
     },
   })
@@ -291,11 +302,14 @@ export class RevenuesController {
     if (!fairId) {
       throw new BadRequestException('fairId é obrigatório');
     }
-    
+
     try {
       return await this.revenuesService.getRevenueStatsByFair(fairId);
     } catch (error) {
-      console.error(`Erro ao buscar estatísticas de receitas da feira ${fairId}:`, error);
+      console.error(
+        `Erro ao buscar estatísticas de receitas da feira ${fairId}:`,
+        error,
+      );
       throw new BadRequestException('Erro ao buscar estatísticas de receitas');
     }
   }

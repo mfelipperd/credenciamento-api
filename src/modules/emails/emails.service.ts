@@ -65,23 +65,67 @@ export class EmailsService {
     const res = await fetch(`https://api.brevo.com/v3${path}`, {
       headers: { 'api-key': this.brevoApiKey, accept: 'application/json' },
     });
-    if (!res.ok) throw new InternalServerErrorException(`Brevo API error: ${res.status}`);
+    if (!res.ok)
+      throw new InternalServerErrorException(`Brevo API error: ${res.status}`);
     return res.json() as Promise<T>;
+  }
+
+  // Fetches all transactional blocked/suppressed emails from Brevo (hard bounces, spam, unsubscribes)
+  private async getBrevoBlockedEmails(): Promise<Set<string>> {
+    const blocked = new Set<string>();
+    const limit = 100;
+    let offset = 0;
+
+    // Cap at 2000 to avoid excessive API calls on very large suppression lists
+    while (offset < 2000) {
+      const result = await this.brevoGet<any>(
+        `/smtp/blockedContacts?limit=${limit}&offset=${offset}`,
+      );
+      const contacts: any[] = result.contacts ?? [];
+      contacts.forEach((c) => blocked.add((c.email as string).toLowerCase()));
+
+      if (contacts.length < limit) break;
+      offset += limit;
+    }
+
+    return blocked;
   }
 
   // ── Account & global stats ────────────────────────────────────────────────
 
   async getAccountStats() {
-    const [account, report] = await Promise.all([
+    const [account, report, blockedResult, dailyData] = await Promise.all([
       this.brevoGet<any>('/account'),
       this.brevoGet<any>('/smtp/statistics/aggregatedReport?days=30'),
+      this.brevoGet<any>('/smtp/blockedContacts?limit=1'),
+      this.brevoGet<any>('/smtp/statistics/reports?days=30'),
     ]);
 
-    const plan = account.plan?.find((p: any) => p.creditsType === 'sendLimit') ?? {};
+    const plan =
+      account.plan?.find((p: any) => p.creditsType === 'sendLimit') ?? {};
     const vertical = account.planVerticals?.[0] ?? {};
 
     const delivered30 = report.delivered ?? 0;
     const opens30 = report.opens ?? 0;
+
+    // Day-of-week open rate analysis from the last 30 days of daily reports
+    const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const byDay: Record<number, { opens: number; delivered: number }> = {};
+    for (const r of (dailyData.reports ?? []) as any[]) {
+      const idx = new Date(r.date as string).getDay();
+      if (!byDay[idx]) byDay[idx] = { opens: 0, delivered: 0 };
+      byDay[idx].opens += r.opens ?? 0;
+      byDay[idx].delivered += r.delivered ?? 0;
+    }
+    const dayBreakdown = Object.entries(byDay)
+      .map(([idx, data]) => ({
+        day: dayLabels[Number(idx)],
+        openRate:
+          data.delivered > 0
+            ? +((data.opens / data.delivered) * 100).toFixed(1)
+            : 0,
+      }))
+      .sort((a, b) => b.openRate - a.openRate);
 
     return {
       plan: {
@@ -103,14 +147,21 @@ export class EmailsService {
           : 0,
         opens: opens30,
         uniqueOpens: report.uniqueOpens ?? 0,
-        openRate: delivered30
-          ? +((opens30 / delivered30) * 100).toFixed(1)
-          : 0,
+        openRate: delivered30 ? +((opens30 / delivered30) * 100).toFixed(1) : 0,
         clicks: report.clickers ?? 0,
         uniqueClicks: report.uniqueClickers ?? 0,
         bounced: (report.hardBounces ?? 0) + (report.softBounces ?? 0),
         spam: report.spamReports ?? 0,
         unsubscribed: report.unsubscribed ?? 0,
+      },
+      suppressedContacts: {
+        total: blockedResult.count ?? 0,
+        note: 'Endereços bloqueados (bounce, spam, descadastro) — excluídos automaticamente dos próximos disparos',
+      },
+      sendingInsights: {
+        bestDaysToSend: dayBreakdown.slice(0, 3).map((d) => d.day),
+        dayBreakdown,
+        note: 'Ranking baseado na taxa de abertura dos últimos 30 dias. A Brevo não expõe dados por hora via API transacional; boas práticas indicam disparos entre 09h–12h.',
       },
     };
   }
@@ -120,7 +171,18 @@ export class EmailsService {
   async getCampaigns() {
     const campaigns = await this.campaignRepository.find({
       order: { sentAt: 'DESC' },
-      select: ['id', 'title', 'subject', 'targetFairId', 'templateFairId', 'sendTo', 'totalQueued', 'brevoTag', 'sentAt'],
+      select: [
+        'id',
+        'title',
+        'subject',
+        'targetFairId',
+        'templateFairId',
+        'sendTo',
+        'totalQueued',
+        'suppressedCount',
+        'brevoTag',
+        'sentAt',
+      ],
     });
     return campaigns;
   }
@@ -147,6 +209,8 @@ export class EmailsService {
         templateFairId: campaign.templateFairId,
         sendTo: campaign.sendTo,
         totalQueued: queued,
+        suppressedByBrevo: campaign.suppressedCount,
+        totalRecipients: queued + campaign.suppressedCount,
         brevoTag: campaign.brevoTag,
         sentAt: campaign.sentAt,
       },
@@ -211,8 +275,10 @@ export class EmailsService {
         latitude: fair.latitude ? Number(fair.latitude) : undefined,
         longitude: fair.longitude ? Number(fair.longitude) : undefined,
         venueName: fair.venueName ?? undefined,
-        address: [fair.address, fair.number, fair.neighborhood, fair.city, fair.state]
-          .filter(Boolean).join(', ') || fair.location,
+        address:
+          [fair.address, fair.number, fair.neighborhood, fair.city, fair.state]
+            .filter(Boolean)
+            .join(', ') || fair.location,
       },
     );
 
@@ -275,7 +341,31 @@ export class EmailsService {
       };
     }
 
-    const jobs = absentVisitors.map((visitor) => ({
+    const blockedEmails = await this.getBrevoBlockedEmails();
+    const filtered = absentVisitors.filter(
+      (v) => !blockedEmails.has(v.email.toLowerCase()),
+    );
+    const suppressedCount = absentVisitors.length - filtered.length;
+
+    if (suppressedCount > 0) {
+      this.logger.log(
+        `${suppressedCount} destinatário(s) suprimidos (bounce/spam/descadastro) na feira ${fair.name}`,
+      );
+    }
+
+    if (filtered.length === 0) {
+      return {
+        success: true,
+        message: 'Todos os destinatários estão na lista de supressão da Brevo',
+        fairId,
+        totalAbsent: absentVisitors.length,
+        suppressedByBrevo: suppressedCount,
+        totalQueued: 0,
+        status: 'SUPPRESSED',
+      };
+    }
+
+    const jobs = filtered.map((visitor) => ({
       name: 'send-marketing-email',
       data: {
         to: visitor.email,
@@ -294,15 +384,17 @@ export class EmailsService {
     await this.emailQueue.addBulk(jobs);
 
     this.logger.log(
-      `${absentVisitors.length} emails enfileirados para a feira ${fair.name}`,
+      `${filtered.length} emails enfileirados para a feira ${fair.name}`,
     );
 
     return {
       success: true,
-      message: `${absentVisitors.length} email(s) enfileirados para envio`,
+      message: `${filtered.length} email(s) enfileirados para envio`,
       fairId,
       totalAbsent: absentVisitors.length,
-      absentVisitors: absentVisitors.map((v) => ({
+      suppressedByBrevo: suppressedCount,
+      totalQueued: filtered.length,
+      absentVisitors: filtered.map((v) => ({
         name: v.name,
         email: v.email,
         company: v.company,
@@ -326,8 +418,10 @@ export class EmailsService {
       this.fairsService.findOne(templateFairId),
     ]);
 
-    if (!targetFair) throw new BadRequestException('Feira destino não encontrada.');
-    if (!templateFair) throw new BadRequestException('Feira template não encontrada.');
+    if (!targetFair)
+      throw new BadRequestException('Feira destino não encontrada.');
+    if (!templateFair)
+      throw new BadRequestException('Feira template não encontrada.');
 
     const qb = this.visitorsRepository
       .createQueryBuilder('visitor')
@@ -356,8 +450,36 @@ export class EmailsService {
         targetFairId,
         templateFairId,
         sendTo,
+        totalRecipients: 0,
+        suppressedByBrevo: 0,
         totalQueued: 0,
         status: 'QUEUED',
+      };
+    }
+
+    const blockedEmails = await this.getBrevoBlockedEmails();
+    const filtered = recipients.filter(
+      (v) => !blockedEmails.has(v.email.toLowerCase()),
+    );
+    const suppressedCount = recipients.length - filtered.length;
+
+    if (suppressedCount > 0) {
+      this.logger.log(
+        `[CAMPAIGN] ${suppressedCount} destinatário(s) suprimidos (bounce/spam/descadastro)`,
+      );
+    }
+
+    if (filtered.length === 0) {
+      return {
+        success: true,
+        message: 'Todos os destinatários estão na lista de supressão da Brevo',
+        targetFairId,
+        templateFairId,
+        sendTo,
+        totalRecipients: recipients.length,
+        suppressedByBrevo: suppressedCount,
+        totalQueued: 0,
+        status: 'SUPPRESSED',
       };
     }
 
@@ -370,12 +492,13 @@ export class EmailsService {
       targetFairId,
       templateFairId,
       sendTo,
-      totalQueued: recipients.length,
+      totalQueued: filtered.length,
+      suppressedCount,
       brevoTag,
     });
     const savedCampaign = await this.campaignRepository.save(campaign);
 
-    const jobs = recipients.map((visitor) => ({
+    const jobs = filtered.map((visitor) => ({
       name: 'send-marketing-email',
       data: {
         to: visitor.email,
@@ -395,18 +518,20 @@ export class EmailsService {
     await this.emailQueue.addBulk(jobs);
 
     this.logger.log(
-      `[CAMPAIGN ${savedCampaign.id}] ${recipients.length} emails enfileirados — target: ${targetFair.name}, template: ${templateFair.name}`,
+      `[CAMPAIGN ${savedCampaign.id}] ${filtered.length} emails enfileirados — target: ${targetFair.name}, template: ${templateFair.name}`,
     );
 
     return {
       success: true,
-      message: `${recipients.length} email(s) enfileirados para envio`,
+      message: `${filtered.length} email(s) enfileirados para envio`,
       campaignId: savedCampaign.id,
       brevoTag,
       targetFairId,
       templateFairId,
       sendTo,
-      totalQueued: recipients.length,
+      totalRecipients: recipients.length,
+      suppressedByBrevo: suppressedCount,
+      totalQueued: filtered.length,
       status: 'QUEUED',
     };
   }

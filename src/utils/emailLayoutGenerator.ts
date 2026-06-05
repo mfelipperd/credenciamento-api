@@ -62,8 +62,7 @@ function buildTransportButtons(loc: FairLocationInfo): string {
       </a>`,
     );
 
-    const taxi99Url =
-      `https://99app.com/corrida?dest_lat=${lat}&dest_lng=${lng}&dest_title=${venue}`;
+    const taxi99Url = `https://99app.com/corrida?dest_lat=${lat}&dest_lng=${lng}&dest_title=${venue}`;
     buttons.push(
       `<a href="${taxi99Url}" target="_blank"
          style="display:inline-block;background-color:#F5A623;color:#fff;text-decoration:none;

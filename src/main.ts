@@ -20,11 +20,7 @@ async function bootstrap() {
       'https://expo-mm-site.vercel.app',
     ],
     credentials: true,
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'x-frontend-auth',
-    ],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-frontend-auth'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   });
 

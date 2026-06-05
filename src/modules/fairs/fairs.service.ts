@@ -30,13 +30,15 @@ export class FairsService {
     totalExpensesCount: number;
   }> {
     try {
-      const revenueStats = await this.revenuesService.getRevenueStatsByFair(fairId);
+      const revenueStats =
+        await this.revenuesService.getRevenueStatsByFair(fairId);
       const totalExpenses = await this.expensesService.getTotalByFair(fairId);
       const expenses = await this.expensesService.findAllByFair(fairId);
       const totalExpensesCount = expenses.length;
       const totalRevenue = revenueStats.totalValue;
       const netBalance = totalRevenue - totalExpenses;
-      const profitMargin = totalRevenue > 0 ? (netBalance / totalRevenue) * 100 : 0;
+      const profitMargin =
+        totalRevenue > 0 ? (netBalance / totalRevenue) * 100 : 0;
 
       return {
         totalRevenue,
@@ -47,8 +49,17 @@ export class FairsService {
         totalExpensesCount,
       };
     } catch (error) {
-      this.logger.warn(`Erro ao buscar dados financeiros da feira ${fairId}: ${error.message}`);
-      return { totalRevenue: 0, totalExpenses: 0, netBalance: 0, profitMargin: 0, totalRevenues: 0, totalExpensesCount: 0 };
+      this.logger.warn(
+        `Erro ao buscar dados financeiros da feira ${fairId}: ${(error as Error).message}`,
+      );
+      return {
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netBalance: 0,
+        profitMargin: 0,
+        totalRevenues: 0,
+        totalExpensesCount: 0,
+      };
     }
   }
 
@@ -56,7 +67,10 @@ export class FairsService {
 
   private relations = ['standConfigurations', 'daySchedules'];
 
-  private async saveDaySchedules(fairId: string, schedules: CreateInputFairDto['daySchedules']) {
+  private async saveDaySchedules(
+    fairId: string,
+    schedules: CreateInputFairDto['daySchedules'],
+  ) {
     if (!schedules?.length) return;
     const entities = schedules.map((s) =>
       this.dayScheduleRepository.create({
@@ -75,7 +89,7 @@ export class FairsService {
   async createFair(dto: CreateInputFairDto): Promise<FairResponseDto> {
     this.logger.log(`Criando nova feira: ${dto.name}`);
 
-    const { standConfigurations, daySchedules, ...fairData } = dto;
+    const { standConfigurations: _sc, daySchedules, ...fairData } = dto;
     const newFair = this.fairRepository.create(fairData);
     const result = await this.fairRepository.save(newFair);
 
@@ -91,7 +105,9 @@ export class FairsService {
   }
 
   async findAll(uf?: string, status?: string): Promise<FairResponseDto[]> {
-    this.logger.log(`Buscando feiras — uf: ${uf ?? 'all'} | status: ${status ?? 'all'}`);
+    this.logger.log(
+      `Buscando feiras — uf: ${uf ?? 'all'} | status: ${status ?? 'all'}`,
+    );
 
     const qb = this.fairRepository
       .createQueryBuilder('fair')
@@ -142,7 +158,7 @@ export class FairsService {
     });
     if (!fair) throw new NotFoundException(`Feira com ID ${id} não encontrada`);
 
-    const { daySchedules, standConfigurations, ...fairData } = dto as any;
+    const { daySchedules, standConfigurations: _sc, ...fairData } = dto as any;
     Object.assign(fair, fairData);
     await this.fairRepository.save(fair);
 
@@ -171,9 +187,15 @@ export class FairsService {
 
     // Deletar registros em tabelas sem CASCADE definido no banco,
     // para evitar FK constraint error no MySQL
-    await manager.query(`DELETE FROM fair_visitor    WHERE fairsId   = ?`, [id]);
-    await manager.query(`DELETE FROM stands          WHERE fair_id   = ?`, [id]);
-    await manager.query(`DELETE FROM fair_partners   WHERE fairId    = ?`, [id]);
+    await manager.query(`DELETE FROM fair_visitor    WHERE fairsId   = ?`, [
+      id,
+    ]);
+    await manager.query(`DELETE FROM stands          WHERE fair_id   = ?`, [
+      id,
+    ]);
+    await manager.query(`DELETE FROM fair_partners   WHERE fairId    = ?`, [
+      id,
+    ]);
 
     await this.fairRepository.remove(fair);
     this.logger.log(`Feira removida com sucesso: ${id}`);
@@ -192,7 +214,9 @@ export class FairsService {
     fair.isActive = !fair.isActive;
     await this.fairRepository.save(fair);
 
-    this.logger.log(`Status da feira alterado para: ${fair.isActive ? 'ativo' : 'inativo'}`);
+    this.logger.log(
+      `Status da feira alterado para: ${fair.isActive ? 'ativo' : 'inativo'}`,
+    );
     return new FairResponseDto(fair);
   }
 

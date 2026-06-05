@@ -39,7 +39,6 @@ export class CategoriesController {
     return this.categoriesService.getRequiredCategoriesSummary(fairId);
   }
 
-
   @Get(':id')
   getCategoryById(@Param('id') id: string) {
     return this.categoriesService.getCategoryById(id);

@@ -5,13 +5,17 @@ import { StandConfigurationResponseDto } from './stand-configuration-response.dt
 export class FairDayScheduleResponseDto {
   @ApiProperty() id: string;
   @ApiProperty({ description: 'Data (YYYY-MM-DD)' }) date: string;
-  @ApiProperty({ description: 'Horário de abertura (HH:mm)' }) startTime: string;
-  @ApiProperty({ description: 'Horário de encerramento (HH:mm)' }) endTime: string;
+  @ApiProperty({ description: 'Horário de abertura (HH:mm)' })
+  startTime: string;
+  @ApiProperty({ description: 'Horário de encerramento (HH:mm)' })
+  endTime: string;
   @ApiProperty({ required: false }) note?: string | null;
 }
 
 export class FairTransportLinksDto {
-  @ApiProperty({ description: 'Link do Google Maps' }) googleMaps?: string | null;
+  @ApiProperty({ description: 'Link do Google Maps' }) googleMaps?:
+    | string
+    | null;
   @ApiProperty({ description: 'Link do Waze' }) waze?: string | null;
   @ApiProperty({ description: 'Link do Uber (web)' }) uber?: string | null;
   @ApiProperty({ description: 'Link do 99 (web)' }) taxi99?: string | null;
@@ -76,7 +80,8 @@ export class FairResponseDto {
   @ApiProperty({ required: false }) complement?: string | null;
   @ApiProperty({ required: false }) neighborhood?: string | null;
   @ApiProperty({ required: false }) city?: string | null;
-  @ApiProperty({ required: false, description: 'UF em 2 letras: AM, PA' }) state?: string | null;
+  @ApiProperty({ required: false, description: 'UF em 2 letras: AM, PA' })
+  state?: string | null;
   @ApiProperty({ required: false }) zipCode?: string | null;
   @ApiProperty({ required: false }) country?: string | null;
   @ApiProperty({ required: false }) googleMapsUrl?: string | null;
@@ -90,8 +95,16 @@ export class FairResponseDto {
   // ── Datas e horários ──────────────────────────────────────────────────────
   @ApiProperty({ required: false }) startDate?: Date | null;
   @ApiProperty({ required: false }) endDate?: Date | null;
-  @ApiProperty({ required: false, description: 'Horário padrão de abertura (HH:mm)' }) startTime?: string | null;
-  @ApiProperty({ required: false, description: 'Horário padrão de encerramento (HH:mm)' }) endTime?: string | null;
+  @ApiProperty({
+    required: false,
+    description: 'Horário padrão de abertura (HH:mm)',
+  })
+  startTime?: string | null;
+  @ApiProperty({
+    required: false,
+    description: 'Horário padrão de encerramento (HH:mm)',
+  })
+  endTime?: string | null;
   @ApiProperty({ required: false }) startDateTime?: Date | null;
   @ApiProperty({ required: false }) endDateTime?: Date | null;
 

@@ -49,9 +49,15 @@ export class ExpensesController {
       this.logger.error(`Erro ao criar despesa: ${error.message}`, error.stack);
       if (error instanceof HttpException) throw error;
       if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-        throw new HttpException('Categoria ou conta bancária não encontrada', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Categoria ou conta bancária não encontrada',
+          HttpStatus.BAD_REQUEST,
+        );
       }
-      throw new HttpException('Erro interno ao criar despesa', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Erro interno ao criar despesa',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -69,30 +75,45 @@ export class ExpensesController {
   @Get('fairs/:fairId/expenses')
   async findAllByFair(@Param('fairId', ParseUUIDPipe) fairId: string) {
     try {
-      const [directExpenses, allocatedOverhead, allocatedDirect] = await Promise.all([
-        this.expensesService.findAllByFair(fairId),
-        this.overheadExpensesService.findAllocatedForFair(fairId),
-        this.expensesService.findOverheadAllocatedForFair(fairId),
-      ]);
+      const [directExpenses, allocatedOverhead, allocatedDirect] =
+        await Promise.all([
+          this.expensesService.findAllByFair(fairId),
+          this.overheadExpensesService.findAllocatedForFair(fairId),
+          this.expensesService.findOverheadAllocatedForFair(fairId),
+        ]);
 
-      const totalDireto = directExpenses.reduce((sum, e) => sum + Number(e.valor), 0);
-      const totalRateadoLegado = allocatedOverhead.reduce((sum, e) => sum + e.valorAlocado, 0);
-      const totalRateadoDireto = allocatedDirect.reduce((sum, e) => sum + e.valorAlocado, 0);
+      const totalDireto = directExpenses.reduce(
+        (sum, e) => sum + Number(e.valor),
+        0,
+      );
+      const totalRateadoLegado = allocatedOverhead.reduce(
+        (sum, e) => sum + e.valorAlocado,
+        0,
+      );
+      const totalRateadoDireto = allocatedDirect.reduce(
+        (sum, e) => sum + e.valorAlocado,
+        0,
+      );
       const totalRateado = totalRateadoLegado + totalRateadoDireto;
 
       return {
         directExpenses,
-        allocatedOverhead,   // overhead da tabela overhead_expenses
-        allocatedDirect,     // despesas diretas com isOverhead = true
+        allocatedOverhead, // overhead da tabela overhead_expenses
+        allocatedDirect, // despesas diretas com isOverhead = true
         summary: {
-          totalDireto:  Math.round(totalDireto  * 100) / 100,
+          totalDireto: Math.round(totalDireto * 100) / 100,
           totalRateado: Math.round(totalRateado * 100) / 100,
-          totalGeral:   Math.round((totalDireto + totalRateado) * 100) / 100,
+          totalGeral: Math.round((totalDireto + totalRateado) * 100) / 100,
         },
       };
     } catch (error) {
-      this.logger.error(`Erro ao buscar despesas da feira ${fairId}: ${error.message}`);
-      throw new HttpException('Erro ao buscar despesas da feira', HttpStatus.INTERNAL_SERVER_ERROR);
+      this.logger.error(
+        `Erro ao buscar despesas da feira ${fairId}: ${error.message}`,
+      );
+      throw new HttpException(
+        'Erro ao buscar despesas da feira',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -103,7 +124,10 @@ export class ExpensesController {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`Erro ao buscar despesa ${id}: ${error.message}`);
-      throw new HttpException('Erro ao buscar despesa', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Erro ao buscar despesa',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -122,7 +146,9 @@ export class ExpensesController {
     try {
       return await this.expensesService.setOverhead(id, dto);
     } catch (error) {
-      this.logger.error(`Erro ao marcar despesa ${id} como overhead: ${error.message}`);
+      this.logger.error(
+        `Erro ao marcar despesa ${id} como overhead: ${error.message}`,
+      );
       if (error instanceof HttpException) throw error;
       throw new HttpException(
         error.message || 'Erro ao marcar despesa como overhead',
@@ -140,9 +166,14 @@ export class ExpensesController {
     try {
       return await this.expensesService.unsetOverhead(id);
     } catch (error) {
-      this.logger.error(`Erro ao desmarcar overhead da despesa ${id}: ${error.message}`);
+      this.logger.error(
+        `Erro ao desmarcar overhead da despesa ${id}: ${error.message}`,
+      );
       if (error instanceof HttpException) throw error;
-      throw new HttpException('Erro ao desmarcar overhead', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Erro ao desmarcar overhead',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -158,9 +189,14 @@ export class ExpensesController {
     @Body() dto: ConvertExpenseToOverheadDto,
   ) {
     try {
-      return await this.overheadExpensesService.convertExpenseToOverhead(id, dto);
+      return await this.overheadExpensesService.convertExpenseToOverhead(
+        id,
+        dto,
+      );
     } catch (error) {
-      this.logger.error(`Erro ao converter despesa ${id} para overhead: ${error.message}`);
+      this.logger.error(
+        `Erro ao converter despesa ${id} para overhead: ${error.message}`,
+      );
       if (error instanceof HttpException) throw error;
       throw new HttpException(
         error.message || 'Erro ao converter despesa para overhead',
@@ -181,7 +217,10 @@ export class ExpensesController {
     } catch (error) {
       this.logger.error(`Erro ao atualizar despesa ${id}: ${error.message}`);
       if (error instanceof HttpException) throw error;
-      throw new HttpException('Erro ao atualizar despesa', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Erro ao atualizar despesa',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -193,7 +232,10 @@ export class ExpensesController {
     } catch (error) {
       this.logger.error(`Erro ao remover despesa ${id}: ${error.message}`);
       if (error instanceof HttpException) throw error;
-      throw new HttpException('Erro ao remover despesa', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Erro ao remover despesa',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -202,22 +244,28 @@ export class ExpensesController {
   @Get('fairs/:fairId/expenses/total')
   async getTotalByFair(@Param('fairId', ParseUUIDPipe) fairId: string) {
     try {
-      const [totalDireto, totalRateadoLegado, totalRateadoDireto] = await Promise.all([
-        this.expensesService.getTotalByFair(fairId),
-        this.overheadExpensesService.getTotalAllocatedForFair(fairId),
-        this.expensesService.getTotalDirectOverheadForFair(fairId),
-      ]);
+      const [totalDireto, totalRateadoLegado, totalRateadoDireto] =
+        await Promise.all([
+          this.expensesService.getTotalByFair(fairId),
+          this.overheadExpensesService.getTotalAllocatedForFair(fairId),
+          this.expensesService.getTotalDirectOverheadForFair(fairId),
+        ]);
 
       const totalRateado = totalRateadoLegado + totalRateadoDireto;
 
       return {
-        totalDireto:  Math.round(totalDireto  * 100) / 100,
+        totalDireto: Math.round(totalDireto * 100) / 100,
         totalRateado: Math.round(totalRateado * 100) / 100,
-        totalGeral:   Math.round((totalDireto + totalRateado) * 100) / 100,
+        totalGeral: Math.round((totalDireto + totalRateado) * 100) / 100,
       };
     } catch (error) {
-      this.logger.error(`Erro ao buscar total de despesas da feira ${fairId}: ${error.message}`);
-      throw new HttpException('Erro ao buscar total de despesas', HttpStatus.INTERNAL_SERVER_ERROR);
+      this.logger.error(
+        `Erro ao buscar total de despesas da feira ${fairId}: ${error.message}`,
+      );
+      throw new HttpException(
+        'Erro ao buscar total de despesas',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -226,8 +274,13 @@ export class ExpensesController {
     try {
       return await this.expensesService.getTotalByCategory(fairId);
     } catch (error) {
-      this.logger.error(`Erro ao buscar total por categoria da feira ${fairId}: ${error.message}`);
-      throw new HttpException('Erro ao buscar total por categoria', HttpStatus.INTERNAL_SERVER_ERROR);
+      this.logger.error(
+        `Erro ao buscar total por categoria da feira ${fairId}: ${error.message}`,
+      );
+      throw new HttpException(
+        'Erro ao buscar total por categoria',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -236,8 +289,13 @@ export class ExpensesController {
     try {
       return await this.expensesService.getTotalByAccount(fairId);
     } catch (error) {
-      this.logger.error(`Erro ao buscar total por conta da feira ${fairId}: ${error.message}`);
-      throw new HttpException('Erro ao buscar total por conta', HttpStatus.INTERNAL_SERVER_ERROR);
+      this.logger.error(
+        `Erro ao buscar total por conta da feira ${fairId}: ${error.message}`,
+      );
+      throw new HttpException(
+        'Erro ao buscar total por conta',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

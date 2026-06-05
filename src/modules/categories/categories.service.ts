@@ -22,11 +22,11 @@ export class CategoriesService {
       throw new Error('Fair not found');
     }
 
-    const category = this.categoryRepository.create({ 
-      name: data.name, 
+    const category = this.categoryRepository.create({
+      name: data.name,
       fair,
       isRequired: data.isRequired || false,
-      description: data.description
+      description: data.description,
     });
     return this.categoryRepository.save(category);
   }
@@ -40,7 +40,6 @@ export class CategoriesService {
   async getCategoryById(id: string) {
     return this.categoryRepository.findOne({ where: { id } });
   }
-
 
   async updateCategory(id: string, data: Partial<CreateCategoryDto>) {
     await this.categoryRepository.update(id, data);
@@ -70,7 +69,7 @@ export class CategoriesService {
     if (!category) {
       throw new Error('Category not found');
     }
-    
+
     category.isRequired = !category.isRequired;
     return this.categoryRepository.save(category);
   }

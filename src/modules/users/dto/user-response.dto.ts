@@ -33,10 +33,10 @@ export class UserResponseDto {
   @ApiProperty({ description: 'Data de atualização' })
   updatedAt: Date;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Feiras associadas ao usuário',
     type: [String],
-    required: false
+    required: false,
   })
   fairIds?: string[];
 

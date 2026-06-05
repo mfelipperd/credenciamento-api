@@ -11,7 +11,7 @@ import { CategoriesModule } from '../../categories/categories.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([FinanceCategory, Account]),
-    CategoriesModule
+    CategoriesModule,
   ],
   controllers: [FinanceCategoriesController, AccountsController],
   providers: [FinanceCategoriesService, AccountsService],

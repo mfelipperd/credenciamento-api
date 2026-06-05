@@ -48,7 +48,12 @@ export class CashFlow {
     type: 'number',
     format: 'decimal',
   })
-  @Column('decimal', { precision: 15, scale: 2, default: 0, transformer: { to: (v: number) => v, from: (v: string) => Number(v) } })
+  @Column('decimal', {
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: { to: (v: number) => v, from: (v: string) => Number(v) },
+  })
   totalRevenue: number; // Total de receitas
 
   @ApiProperty({
@@ -57,7 +62,12 @@ export class CashFlow {
     type: 'number',
     format: 'decimal',
   })
-  @Column('decimal', { precision: 15, scale: 2, default: 0, transformer: { to: (v: number) => v, from: (v: string) => Number(v) } })
+  @Column('decimal', {
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: { to: (v: number) => v, from: (v: string) => Number(v) },
+  })
   totalExpenses: number; // Total de despesas
 
   @ApiProperty({
@@ -66,7 +76,12 @@ export class CashFlow {
     type: 'number',
     format: 'decimal',
   })
-  @Column('decimal', { precision: 15, scale: 2, default: 0, transformer: { to: (v: number) => v, from: (v: string) => Number(v) } })
+  @Column('decimal', {
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: { to: (v: number) => v, from: (v: string) => Number(v) },
+  })
   netBalance: number; // Saldo líquido (receitas - despesas)
 
   @ApiProperty({
@@ -75,7 +90,12 @@ export class CashFlow {
     type: 'number',
     format: 'decimal',
   })
-  @Column('decimal', { precision: 5, scale: 2, default: 0, transformer: { to: (v: number) => v, from: (v: string) => Number(v) } })
+  @Column('decimal', {
+    precision: 5,
+    scale: 2,
+    default: 0,
+    transformer: { to: (v: number) => v, from: (v: string) => Number(v) },
+  })
   profitMargin: number; // Margem de lucro em porcentagem
 
   @ApiProperty({
