@@ -5,11 +5,12 @@ import { ClientsController } from './clients.controller';
 import { BrandsController } from './brands.controller';
 import { Client } from './entities/client.entity';
 import { Brand } from './entities/brand.entity';
+import { ClientImage, ClientImageFair } from './entities/client-image.entity';
 import { StorageModule } from '../../storage/storage.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Client, Brand]),
+    TypeOrmModule.forFeature([Client, Brand, ClientImage, ClientImageFair]),
     StorageModule,
   ],
   controllers: [ClientsController, BrandsController],

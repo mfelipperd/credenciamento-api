@@ -7,6 +7,51 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class ClientImageFairDto {
+  @ApiProperty({ description: 'ID da relação imagem-feira' })
+  id: string;
+
+  @ApiProperty({ description: 'ID da feira' })
+  fairId: string;
+
+  @ApiProperty({ description: 'Data de vinculação' })
+  createdAt: Date;
+}
+
+export class ClientImageResponseDto {
+  @ApiProperty({ description: 'ID da imagem' })
+  id: string;
+
+  @ApiProperty({ description: 'ID do cliente' })
+  clientId: string;
+
+  @ApiProperty({ description: 'ID da feira de origem' })
+  registeredFairId: string;
+
+  @ApiProperty({ description: 'URL pública da imagem' })
+  url: string;
+
+  @ApiPropertyOptional({ description: 'Legenda da imagem' })
+  caption?: string;
+
+  @ApiProperty({ type: [ClientImageFairDto], description: 'Feiras vinculadas à imagem' })
+  fairs: ClientImageFairDto[];
+
+  @ApiProperty({ description: 'Data de criação' })
+  createdAt: Date;
+}
+
+export class UploadClientImagesDto {
+  @ApiProperty({ type: 'array', items: { type: 'string', format: 'binary' }, description: 'Arquivos de imagem (máx. 10)' })
+  images: any[];
+
+  @ApiPropertyOptional({ description: 'Legenda para todas as imagens do lote' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  caption?: string;
+}
+
 export class CreateClientDto {
   @ApiProperty({
     description: 'ID da feira',

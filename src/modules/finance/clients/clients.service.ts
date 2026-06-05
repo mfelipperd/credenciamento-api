@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Client } from './entities/client.entity';
 import { Brand } from './entities/brand.entity';
+import { ClientImage, ClientImageFair } from './entities/client-image.entity';
 import { CreateClientDto, UpdateClientDto } from './clients.dto';
 import { StorageService } from '../../storage/storage.service';
 
@@ -13,6 +14,10 @@ export class ClientsService {
     private readonly clientRepository: Repository<Client>,
     @InjectRepository(Brand)
     private readonly brandRepository: Repository<Brand>,
+    @InjectRepository(ClientImage)
+    private readonly imageRepository: Repository<ClientImage>,
+    @InjectRepository(ClientImageFair)
+    private readonly imageFairRepository: Repository<ClientImageFair>,
     private readonly storageService: StorageService,
   ) {}
 
@@ -150,5 +155,91 @@ export class ClientsService {
 
   async findBrandById(brandId: string): Promise<Brand | null> {
     return await this.brandRepository.findOne({ where: { id: brandId } });
+  }
+
+  // --- Operações de Imagens ---
+
+  async uploadImages(
+    clientId: string,
+    fairId: string,
+    files: any[],
+    caption?: string,
+  ): Promise<ClientImage[]> {
+    await this.findOne(clientId);
+
+    const uploaded: ClientImage[] = [];
+
+    for (const file of files) {
+      const url = await this.storageService.uploadFile(file, 'client-images');
+
+      const image = this.imageRepository.create({ clientId, registeredFairId: fairId, url, caption });
+      const saved = await this.imageRepository.save(image);
+
+      const imageFair = this.imageFairRepository.create({ imageId: saved.id, fairId });
+      await this.imageFairRepository.save(imageFair);
+
+      uploaded.push(await this.findImageById(saved.id));
+    }
+
+    return uploaded;
+  }
+
+  async findImagesByClient(clientId: string, fairId?: string): Promise<ClientImage[]> {
+    const qb = this.imageRepository
+      .createQueryBuilder('img')
+      .leftJoinAndSelect('img.imageFairs', 'imageFairs')
+      .where('img.clientId = :clientId', { clientId })
+      .orderBy('img.createdAt', 'DESC');
+
+    if (fairId) {
+      qb.innerJoin(
+        ClientImageFair,
+        'cif_filter',
+        'cif_filter.imageId = img.id AND cif_filter.fairId = :fairId',
+        { fairId },
+      );
+    }
+
+    return qb.getMany();
+  }
+
+  async findImagesByFair(fairId: string): Promise<ClientImage[]> {
+    return this.imageRepository
+      .createQueryBuilder('img')
+      .leftJoinAndSelect('img.imageFairs', 'imageFairs')
+      .innerJoin(ClientImageFair, 'cif', 'cif.imageId = img.id AND cif.fairId = :fairId', { fairId })
+      .orderBy('img.createdAt', 'DESC')
+      .getMany();
+  }
+
+  async linkImageToFair(imageId: string, fairId: string): Promise<ClientImage> {
+    const image = await this.findImageById(imageId);
+
+    const alreadyLinked = image.imageFairs.some((f) => f.fairId === fairId);
+    if (alreadyLinked) {
+      throw new BadRequestException(`Imagem já está vinculada à feira ${fairId}.`);
+    }
+
+    const imageFair = this.imageFairRepository.create({ imageId, fairId });
+    await this.imageFairRepository.save(imageFair);
+
+    return this.findImageById(imageId);
+  }
+
+  async deleteImage(imageId: string): Promise<void> {
+    const image = await this.findImageById(imageId);
+    await this.storageService.deleteLocalFile(image.url);
+    await this.imageRepository.remove(image);
+  }
+
+  private async findImageById(imageId: string): Promise<ClientImage> {
+    const image = await this.imageRepository.findOne({
+      where: { id: imageId },
+      relations: ['imageFairs'],
+    });
+    if (!image) {
+      throw new NotFoundException(`Imagem com ID ${imageId} não encontrada.`);
+    }
+    return image;
   }
 }

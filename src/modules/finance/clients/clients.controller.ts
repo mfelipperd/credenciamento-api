@@ -9,6 +9,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   BadRequestException,
 } from '@nestjs/common';
 import {
@@ -18,16 +19,20 @@ import {
   ApiParam,
   ApiQuery,
   ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ClientsService } from './clients.service';
 import { StorageService } from '../../storage/storage.service';
+import { IsPublicRoute } from '../../../auth/public.route';
 import {
   CreateClientDto,
   UpdateClientDto,
   ClientResponseDto,
   CreateBrandDto,
   BrandResponseDto,
+  ClientImageResponseDto,
+  UploadClientImagesDto,
 } from './clients.dto';
 
 @ApiTags('Clientes')
@@ -173,5 +178,110 @@ export class ClientsController {
 
     const logoUrl = await this.storageService.uploadFile(file, 'brands');
     return await this.clientsService.addBrand(id, body.name, logoUrl);
+  }
+
+  // --- Rotas de Imagens ---
+
+  @Post(':id/images')
+  @ApiOperation({
+    summary: 'Upload de imagens do cliente (a partir de uma feira)',
+    description: 'Envia até 10 imagens de um cliente vinculadas a uma feira. A feira informada em fairId é obrigatória e registra a origem do upload.',
+  })
+  @ApiParam({ name: 'id', description: 'ID do cliente' })
+  @ApiQuery({ name: 'fairId', required: true, description: 'ID da feira de origem do upload' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadClientImagesDto })
+  @ApiResponse({ status: 201, description: 'Imagens enviadas com sucesso', type: [ClientImageResponseDto] })
+  @ApiResponse({ status: 400, description: 'Nenhum arquivo enviado ou fairId ausente' })
+  @UseInterceptors(FilesInterceptor('images', 10))
+  async uploadImages(
+    @Param('id') clientId: string,
+    @Query('fairId') fairId: string,
+    @UploadedFiles() files: any[],
+    @Body('caption') caption?: string,
+  ): Promise<ClientImageResponseDto[]> {
+    if (!fairId) {
+      throw new BadRequestException('O parâmetro fairId é obrigatório.');
+    }
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Nenhum arquivo de imagem foi enviado.');
+    }
+
+    const images = await this.clientsService.uploadImages(clientId, fairId, files, caption);
+    return images.map(this.mapImageResponse);
+  }
+
+  @Get(':id/images')
+  @ApiOperation({
+    summary: 'Listar imagens do cliente',
+    description: 'Retorna todas as imagens do cliente. Filtre por feira com fairId.',
+  })
+  @ApiParam({ name: 'id', description: 'ID do cliente' })
+  @ApiQuery({ name: 'fairId', required: false, description: 'Filtrar por feira' })
+  @ApiResponse({ status: 200, description: 'Lista de imagens', type: [ClientImageResponseDto] })
+  async findImages(
+    @Param('id') clientId: string,
+    @Query('fairId') fairId?: string,
+  ): Promise<ClientImageResponseDto[]> {
+    const images = await this.clientsService.findImagesByClient(clientId, fairId);
+    return images.map(this.mapImageResponse);
+  }
+
+  @Get('images/by-fair/:fairId')
+  @IsPublicRoute()
+  @ApiOperation({
+    summary: 'Listar imagens públicas por feira (rota pública)',
+    description: 'Retorna todas as imagens de clientes vinculadas a uma feira. Usado no site e em e-mails marketing.',
+  })
+  @ApiParam({ name: 'fairId', description: 'ID da feira' })
+  @ApiResponse({ status: 200, description: 'Lista de imagens', type: [ClientImageResponseDto] })
+  async findImagesByFair(
+    @Param('fairId') fairId: string,
+  ): Promise<ClientImageResponseDto[]> {
+    const images = await this.clientsService.findImagesByFair(fairId);
+    return images.map(this.mapImageResponse);
+  }
+
+  @Post('images/:imageId/link-fair/:fairId')
+  @ApiOperation({
+    summary: 'Vincular imagem a outra feira',
+    description: 'Permite que uma imagem já cadastrada seja exibida em outra feira.',
+  })
+  @ApiParam({ name: 'imageId', description: 'ID da imagem' })
+  @ApiParam({ name: 'fairId', description: 'ID da feira a vincular' })
+  @ApiResponse({ status: 201, description: 'Imagem vinculada com sucesso', type: ClientImageResponseDto })
+  @ApiResponse({ status: 400, description: 'Imagem já vinculada a essa feira' })
+  async linkImageToFair(
+    @Param('imageId') imageId: string,
+    @Param('fairId') fairId: string,
+  ): Promise<ClientImageResponseDto> {
+    const image = await this.clientsService.linkImageToFair(imageId, fairId);
+    return this.mapImageResponse(image);
+  }
+
+  @Delete('images/:imageId')
+  @ApiOperation({ summary: 'Deletar imagem do cliente' })
+  @ApiParam({ name: 'imageId', description: 'ID da imagem' })
+  @ApiResponse({ status: 200, description: 'Imagem deletada com sucesso' })
+  @ApiResponse({ status: 404, description: 'Imagem não encontrada' })
+  async deleteImage(@Param('imageId') imageId: string): Promise<{ message: string }> {
+    await this.clientsService.deleteImage(imageId);
+    return { message: 'Imagem deletada com sucesso.' };
+  }
+
+  private mapImageResponse(image: any): ClientImageResponseDto {
+    return {
+      id: image.id,
+      clientId: image.clientId,
+      registeredFairId: image.registeredFairId,
+      url: image.url,
+      caption: image.caption,
+      fairs: (image.imageFairs ?? []).map((f: any) => ({
+        id: f.id,
+        fairId: f.fairId,
+        createdAt: f.createdAt,
+      })),
+      createdAt: image.createdAt,
+    };
   }
 }

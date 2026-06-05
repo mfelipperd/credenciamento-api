@@ -8,6 +8,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Brand } from './brand.entity';
+import { ClientImage } from './client-image.entity';
 
 @Entity('finance_clients')
 @Index(['name'])
@@ -42,6 +43,9 @@ export class Client {
 
   @OneToMany(() => Brand, (brand) => brand.client, { cascade: true })
   brands: Brand[];
+
+  @OneToMany(() => ClientImage, (image) => image.client)
+  images: ClientImage[];
 
   // Relacionamento será adicionado depois
   // @OneToMany(() => Revenue, (revenue) => revenue.client)
