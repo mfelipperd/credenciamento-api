@@ -378,6 +378,41 @@ export class PartnersController {
     );
   }
 
+  @Get(':id/complete-dashboard')
+  @ApiOperation({
+    summary: 'Dashboard completo do sócio',
+    description:
+      'Retorna visão completa do sócio em todas as feiras: projeções, saques, saldo, excedentes e histórico de saques',
+  })
+  @ApiParam({ name: 'id', description: 'ID (UUID) do sócio' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dashboard retornado com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        partner: { type: 'object' },
+        totais: { type: 'object' },
+        feiras: { type: 'array' },
+        ultimosSaques: { type: 'array' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Sócio não encontrado' })
+  @ApiResponse({ status: 403, description: 'Acesso negado' })
+  async getCompleteDashboard(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req,
+  ) {
+    if (req.user.role !== EUserRole.ADMIN) {
+      const partner = await this.partnersService.findByUserId(req.user.id);
+      if (!partner || partner.id !== id) {
+        throw new Error('Acesso negado');
+      }
+    }
+    return await this.partnersService.getPartnerCompleteDashboard(id);
+  }
+
   @Get('available-percentage')
   @ApiOperation({
     summary: 'Obter porcentagem disponível',

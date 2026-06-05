@@ -315,12 +315,21 @@ export class PartnersService {
       throw new BadRequestException('Esta solicitação já foi processada');
     }
 
-    // Atualizar status do saque
     withdrawal.status = WithdrawalStatus.APPROVED;
     withdrawal.approvedBy = approvedBy;
     withdrawal.approvedAt = new Date();
 
     const updatedWithdrawal = await this.withdrawalRepository.save(withdrawal);
+
+    // Atualizar saldo do FairPartner para refletir o saque aprovado
+    const fairPartner = await this.fairPartnerRepository.findOne({
+      where: { partnerId: withdrawal.partnerId, fairId: withdrawal.fairId },
+    });
+    if (fairPartner) {
+      fairPartner.totalWithdrawn = this.r2(Number(fairPartner.totalWithdrawn) + Number(withdrawal.amount));
+      fairPartner.availableBalance = this.r2(Number(fairPartner.availableBalance) - Number(withdrawal.amount));
+      await this.fairPartnerRepository.save(fairPartner);
+    }
 
     this.logger.log(
       `Saque aprovado: ${withdrawal.partner.name} - R$ ${Number(withdrawal.amount).toFixed(2)}`,
@@ -738,5 +747,277 @@ export class PartnersService {
       updatedAt: partner.updatedAt,
       fairEarnings,
     };
+  }
+
+  async getFairPartnersOverview(fairId: string) {
+    const [fair, fairPartners] = await Promise.all([
+      this.fairRepository.findOne({ where: { id: fairId } }),
+      this.fairPartnerRepository.find({
+        where: { fairId },
+        relations: ['partner'],
+        order: { percentage: 'DESC' },
+      }),
+    ]);
+
+    if (!fair) throw new NotFoundException('Feira não encontrada');
+
+    let fairProfit = 0;
+    let isProfitable = false;
+    try {
+      const analysis = await this.cashFlowService.getFairCashFlowAnalysis(fairId);
+      isProfitable = analysis.isProfitable;
+      fairProfit = isProfitable ? analysis.netProfit : 0;
+    } catch (e) {
+      this.logger.warn(`Erro ao analisar cash flow da feira ${fairId}: ${e.message}`);
+    }
+
+    const totalActivePercentage = fairPartners
+      .filter((fp) => fp.isActive)
+      .reduce((s, fp) => s + fp.percentage, 0);
+
+    const partners = await Promise.all(
+      fairPartners.map(async (fp) => {
+        const withdrawals = await this.withdrawalRepository.find({
+          where: { partnerId: fp.partnerId, fairId },
+          order: { createdAt: 'DESC' },
+        });
+
+        const sacadoAprovado = this.r2(
+          withdrawals
+            .filter((w) =>
+              w.status === WithdrawalStatus.APPROVED ||
+              w.status === WithdrawalStatus.COMPLETED,
+            )
+            .reduce((s, w) => s + Number(w.amount), 0),
+        );
+        const sacadoPendente = this.r2(
+          withdrawals
+            .filter((w) => w.status === WithdrawalStatus.PENDING)
+            .reduce((s, w) => s + Number(w.amount), 0),
+        );
+        const sacadoRejeitado = this.r2(
+          withdrawals
+            .filter((w) => w.status === WithdrawalStatus.REJECTED)
+            .reduce((s, w) => s + Number(w.amount), 0),
+        );
+
+        const projectedEarnings = isProfitable
+          ? this.r2((fairProfit * fp.percentage) / 100)
+          : 0;
+
+        const sacadoTotal = this.r2(sacadoAprovado + sacadoPendente);
+        const saldoDisponivel = this.r2(projectedEarnings - sacadoAprovado);
+        const saldoConsiderandoPendentes = this.r2(projectedEarnings - sacadoTotal);
+        const valorExcedente = this.r2(Math.max(0, sacadoTotal - projectedEarnings));
+        const isOverdrawn = sacadoTotal > projectedEarnings;
+        const taxaSaque =
+          projectedEarnings > 0
+            ? this.r2((sacadoAprovado / projectedEarnings) * 100)
+            : 0;
+
+        const alertas: string[] = [];
+        if (isOverdrawn) {
+          alertas.push(
+            `Saques excedem o direito em R$ ${valorExcedente.toFixed(2)}`,
+          );
+        }
+        if (sacadoPendente > 0 && sacadoPendente > saldoDisponivel) {
+          alertas.push(
+            `Saque pendente (R$ ${sacadoPendente.toFixed(2)}) maior que saldo disponível (R$ ${saldoDisponivel.toFixed(2)})`,
+          );
+        }
+        if (!fp.isActive) {
+          alertas.push('Sócio inativo nesta feira');
+        }
+        if (!isProfitable && sacadoAprovado > 0) {
+          alertas.push('Saques realizados em feira não lucrativa');
+        }
+
+        return {
+          fairPartnerId: fp.id,
+          partnerId: fp.partnerId,
+          partnerName: fp.partner?.name ?? '',
+          partnerEmail: fp.partner?.email ?? '',
+          partnerPhone: fp.partner?.phone ?? '',
+          percentage: fp.percentage,
+          isActive: fp.isActive,
+          projectedEarnings,
+          sacadoAprovado,
+          sacadoPendente,
+          sacadoRejeitado,
+          sacadoTotal,
+          saldoDisponivel,
+          saldoConsiderandoPendentes,
+          valorExcedente,
+          isOverdrawn,
+          taxaSaque,
+          totalWithdrawals: withdrawals.length,
+          pendingWithdrawalsCount: withdrawals.filter(
+            (w) => w.status === WithdrawalStatus.PENDING,
+          ).length,
+          alertas,
+        };
+      }),
+    );
+
+    const totalSacado = this.r2(partners.reduce((s, p) => s + p.sacadoAprovado, 0));
+    const totalPendente = this.r2(partners.reduce((s, p) => s + p.sacadoPendente, 0));
+    const totalProjetadoSocios = this.r2(partners.reduce((s, p) => s + p.projectedEarnings, 0));
+
+    return {
+      fairId,
+      fairName: fair.name,
+      lucroFeira: this.r2(fairProfit),
+      isProfitable,
+      totalPartnerPercentage: this.r2(totalActivePercentage),
+      percentagemEmpresa: this.r2(100 - totalActivePercentage),
+      totalProjetadoSocios,
+      totalSacado,
+      totalPendente,
+      totalDisponivelSocios: this.r2(totalProjetadoSocios - totalSacado),
+      totalSociosAtivos: fairPartners.filter((fp) => fp.isActive).length,
+      totalSociosInativos: fairPartners.filter((fp) => !fp.isActive).length,
+      sociosEmExcesso: partners.filter((p) => p.isOverdrawn).length,
+      sociosComPendentes: partners.filter((p) => p.sacadoPendente > 0).length,
+      partners,
+    };
+  }
+
+  async getPartnerCompleteDashboard(partnerId: string) {
+    const partner = await this.partnerRepository.findOne({
+      where: { id: partnerId },
+    });
+    if (!partner) throw new NotFoundException('Sócio não encontrado');
+
+    const [fairPartners, allWithdrawals] = await Promise.all([
+      this.fairPartnerRepository.find({
+        where: { partnerId },
+        order: { createdAt: 'DESC' },
+      }),
+      this.withdrawalRepository.find({
+        where: { partnerId },
+        order: { createdAt: 'DESC' },
+      }),
+    ]);
+
+    let globalProjected = 0;
+    let globalApproved = 0;
+    let globalPending = 0;
+
+    const feiras = await Promise.all(
+      fairPartners.map(async (fp) => {
+        const fair = await this.fairRepository.findOne({ where: { id: fp.fairId } });
+
+        let fairProfit = 0;
+        let isProfitable = false;
+        try {
+          const analysis = await this.cashFlowService.getFairCashFlowAnalysis(fp.fairId);
+          isProfitable = analysis.isProfitable;
+          fairProfit = isProfitable ? analysis.netProfit : 0;
+        } catch (e) {
+          this.logger.warn(`Erro ao analisar feira ${fp.fairId}: ${e.message}`);
+        }
+
+        const fairWithdrawals = allWithdrawals.filter((w) => w.fairId === fp.fairId);
+
+        const sacadoAprovado = this.r2(
+          fairWithdrawals
+            .filter(
+              (w) =>
+                w.status === WithdrawalStatus.APPROVED ||
+                w.status === WithdrawalStatus.COMPLETED,
+            )
+            .reduce((s, w) => s + Number(w.amount), 0),
+        );
+        const sacadoPendente = this.r2(
+          fairWithdrawals
+            .filter((w) => w.status === WithdrawalStatus.PENDING)
+            .reduce((s, w) => s + Number(w.amount), 0),
+        );
+
+        const projectedEarnings = isProfitable
+          ? this.r2((fairProfit * fp.percentage) / 100)
+          : 0;
+
+        const sacadoTotal = this.r2(sacadoAprovado + sacadoPendente);
+        const saldoDisponivel = this.r2(projectedEarnings - sacadoAprovado);
+        const isOverdrawn = sacadoTotal > projectedEarnings;
+        const valorExcedente = this.r2(Math.max(0, sacadoTotal - projectedEarnings));
+
+        globalProjected += projectedEarnings;
+        globalApproved += sacadoAprovado;
+        globalPending += sacadoPendente;
+
+        return {
+          fairId: fp.fairId,
+          fairName: fair?.name ?? `Feira ${fp.fairId}`,
+          fairIsActive: (fair as any)?.isActive ?? false,
+          percentage: fp.percentage,
+          isActive: fp.isActive,
+          lucroFeira: this.r2(fairProfit),
+          isProfitable,
+          projectedEarnings,
+          sacadoAprovado,
+          sacadoPendente,
+          sacadoTotal,
+          saldoDisponivel,
+          saldoConsiderandoPendentes: this.r2(projectedEarnings - sacadoTotal),
+          isOverdrawn,
+          valorExcedente,
+          taxaSaque:
+            projectedEarnings > 0
+              ? this.r2((sacadoAprovado / projectedEarnings) * 100)
+              : 0,
+          totalWithdrawals: fairWithdrawals.length,
+        };
+      }),
+    );
+
+    const totalSacadoTotal = this.r2(globalApproved + globalPending);
+    const isGloballyOverdrawn = totalSacadoTotal > globalProjected;
+
+    return {
+      partner: {
+        id: partner.id,
+        name: partner.name,
+        cpf: partner.cpf,
+        email: partner.email,
+        phone: partner.phone,
+        isActive: partner.isActive,
+        notes: partner.notes,
+        createdAt: partner.createdAt,
+      },
+      totais: {
+        totalFeiras: fairPartners.length,
+        totalFeirasAtivas: fairPartners.filter((fp) => fp.isActive).length,
+        totalProjected: this.r2(globalProjected),
+        totalApproved: this.r2(globalApproved),
+        totalPending: this.r2(globalPending),
+        totalSacadoTotal,
+        saldoDisponivel: this.r2(globalProjected - globalApproved),
+        saldoConsiderandoPendentes: this.r2(globalProjected - totalSacadoTotal),
+        isOverdrawn: isGloballyOverdrawn,
+        valorExcedente: this.r2(Math.max(0, totalSacadoTotal - globalProjected)),
+        taxaSaqueGlobal:
+          globalProjected > 0
+            ? this.r2((globalApproved / globalProjected) * 100)
+            : 0,
+      },
+      feiras,
+      ultimosSaques: allWithdrawals.slice(0, 20).map((w) => ({
+        id: w.id,
+        fairId: w.fairId,
+        amount: Number(w.amount),
+        status: w.status,
+        reason: w.reason,
+        bankDetails: w.bankDetails,
+        approvedAt: w.approvedAt,
+        createdAt: w.createdAt,
+      })),
+    };
+  }
+
+  private r2(n: number): number {
+    return Math.round(n * 100) / 100;
   }
 }

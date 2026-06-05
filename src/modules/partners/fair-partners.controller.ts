@@ -259,6 +259,49 @@ export class FairPartnersController {
   }
 
   // Endpoints para controle financeiro específico por feira
+  @Get('fair/:fairId/financial-overview')
+  @ApiOperation({
+    summary: 'Visão financeira completa dos sócios da feira',
+    description:
+      'Retorna análise financeira detalhada de todos os sócios de uma feira, incluindo projeções, saques, excedentes e alertas (apenas admins)',
+  })
+  @ApiParam({ name: 'fairId', description: 'ID da feira' })
+  @ApiResponse({
+    status: 200,
+    description: 'Visão financeira retornada com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        fairId: { type: 'string' },
+        fairName: { type: 'string' },
+        lucroFeira: { type: 'number' },
+        isProfitable: { type: 'boolean' },
+        totalPartnerPercentage: { type: 'number' },
+        percentagemEmpresa: { type: 'number' },
+        totalProjetadoSocios: { type: 'number' },
+        totalSacado: { type: 'number' },
+        totalPendente: { type: 'number' },
+        totalDisponivelSocios: { type: 'number' },
+        totalSociosAtivos: { type: 'number' },
+        totalSociosInativos: { type: 'number' },
+        sociosEmExcesso: { type: 'number' },
+        sociosComPendentes: { type: 'number' },
+        partners: { type: 'array' },
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Acesso negado' })
+  @ApiResponse({ status: 404, description: 'Feira não encontrada' })
+  async getFairFinancialOverview(
+    @Param('fairId', ParseUUIDPipe) fairId: string,
+    @Request() req,
+  ) {
+    if (req.user.role !== EUserRole.ADMIN) {
+      throw new Error('Apenas administradores podem acessar a visão financeira');
+    }
+    return await this.partnersService.getFairPartnersOverview(fairId);
+  }
+
   @Get('fair/:fairId/summary')
   @ApiOperation({
     summary: 'Resumo dos sócios da feira',
