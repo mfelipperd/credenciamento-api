@@ -80,6 +80,46 @@ export class UpdateClientDto {
   responsavel?: string;
 }
 
+export class BrandResponseDto {
+  @ApiProperty({ description: 'ID da marca' })
+  id: string;
+
+  @ApiProperty({ description: 'ID do cliente' })
+  clientId: string;
+
+  @ApiProperty({ description: 'Nome da marca' })
+  name: string;
+
+  @ApiProperty({ description: 'URL do logotipo da marca' })
+  logoUrl: string;
+
+  @ApiProperty({ description: 'Data de criação' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Data de atualização' })
+  updatedAt: Date;
+}
+
+export class CreateBrandDto {
+  @ApiProperty({ description: 'Nome da marca', example: 'Minha Marca' })
+  @IsString()
+  name: string;
+
+  @ApiProperty({ type: 'string', format: 'binary', description: 'Logotipo da marca (imagem)' })
+  logo: any;
+}
+
+export class UpdateBrandDto {
+  @ApiPropertyOptional({ description: 'Nome da marca', example: 'Minha Nova Marca' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({ type: 'string', format: 'binary', description: 'Novo logotipo da marca (imagem)' })
+  @IsOptional()
+  logo?: any;
+}
+
 export class ClientResponseDto {
   @ApiProperty({ description: 'ID do cliente' })
   id: string;
@@ -105,9 +145,13 @@ export class ClientResponseDto {
   })
   responsavel?: string;
 
+  @ApiProperty({ type: [BrandResponseDto], description: 'Marcas associadas ao cliente', required: false })
+  brands?: BrandResponseDto[];
+
   @ApiProperty({ description: 'Data de criação' })
   createdAt: Date;
 
   @ApiProperty({ description: 'Data de atualização' })
   updatedAt: Date;
 }
+

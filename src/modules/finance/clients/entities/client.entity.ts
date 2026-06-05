@@ -5,7 +5,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
+import { Brand } from './brand.entity';
 
 @Entity('finance_clients')
 @Index(['name'])
@@ -38,7 +40,11 @@ export class Client {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @OneToMany(() => Brand, (brand) => brand.client, { cascade: true })
+  brands: Brand[];
+
   // Relacionamento será adicionado depois
   // @OneToMany(() => Revenue, (revenue) => revenue.client)
   // revenues: Revenue[];
 }
+

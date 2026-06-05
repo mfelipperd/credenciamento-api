@@ -7,6 +7,9 @@ import {
   Param,
   Delete,
   Query,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,18 +17,26 @@ import {
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ClientsService } from './clients.service';
+import { StorageService } from '../../storage/storage.service';
 import {
   CreateClientDto,
   UpdateClientDto,
   ClientResponseDto,
+  CreateBrandDto,
+  BrandResponseDto,
 } from './clients.dto';
 
 @ApiTags('Clientes')
 @Controller('finance/clients')
 export class ClientsController {
-  constructor(private readonly clientsService: ClientsService) {}
+  constructor(
+    private readonly clientsService: ClientsService,
+    private readonly storageService: StorageService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Criar um novo cliente' })
@@ -44,6 +55,7 @@ export class ClientsController {
   @Get()
   @ApiOperation({ summary: 'Listar todos os clientes' })
   @ApiQuery({ name: 'search', required: false, description: 'Buscar por nome' })
+  @ApiQuery({ name: 'fairId', required: false, description: 'Filtrar por feira' })
   @ApiResponse({
     status: 200,
     description: 'Lista de clientes',
@@ -51,11 +63,12 @@ export class ClientsController {
   })
   async findAll(
     @Query('search') search?: string,
+    @Query('fairId') fairId?: string,
   ): Promise<ClientResponseDto[]> {
     if (search) {
-      return await this.clientsService.searchByName(search);
+      return await this.clientsService.searchByName(search, fairId);
     }
-    return await this.clientsService.findAll();
+    return await this.clientsService.findAll(fairId);
   }
 
   @Get(':id')
@@ -125,5 +138,32 @@ export class ClientsController {
     @Param('cnpj') cnpj: string,
   ): Promise<ClientResponseDto | null> {
     return await this.clientsService.findByCnpj(cnpj);
+  }
+
+  @Post(':id/brands')
+  @ApiOperation({ summary: 'Adicionar uma marca ao cliente' })
+  @ApiParam({ name: 'id', description: 'ID do cliente' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('logo'))
+  @ApiResponse({
+    status: 201,
+    description: 'Marca adicionada com sucesso',
+    type: BrandResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Dados inválidos ou arquivo ausente' })
+  async addBrand(
+    @Param('id') id: string,
+    @Body() body: CreateBrandDto,
+    @UploadedFile() file: any,
+  ): Promise<BrandResponseDto> {
+    if (!file) {
+      throw new BadRequestException('O arquivo de logotipo (logo) é obrigatório.');
+    }
+    if (!body.name) {
+      throw new BadRequestException('O nome da marca é obrigatório.');
+    }
+
+    const logoUrl = await this.storageService.uploadFile(file, 'brands');
+    return await this.clientsService.addBrand(id, body.name, logoUrl);
   }
 }
