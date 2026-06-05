@@ -43,17 +43,63 @@ export class ClientsController {
     private readonly storageService: StorageService,
   ) {}
 
+  // ----------------------------------------------------------------
+  // Rotas estáticas de imagem — declaradas ANTES das rotas com :id
+  // para que o Express não capture "images" como parâmetro.
+  // ----------------------------------------------------------------
+
+  @Get('images')
+  @IsPublicRoute()
+  @ApiOperation({
+    summary: 'Listar todas as imagens de clientes (público)',
+    description:
+      'Retorna todas as imagens cadastradas. Filtre por feira com ?fairId=. Usado no site e e-mails marketing.',
+  })
+  @ApiQuery({ name: 'fairId', required: false, description: 'Filtrar por feira (opcional)' })
+  @ApiResponse({ status: 200, description: 'Lista de imagens', type: [ClientImageResponseDto] })
+  async findAllImages(
+    @Query('fairId') fairId?: string,
+  ): Promise<ClientImageResponseDto[]> {
+    const images = await this.clientsService.findImages(fairId);
+    return images.map(mapImageResponse);
+  }
+
+  @Post('images/:imageId/link-fair/:fairId')
+  @ApiOperation({
+    summary: 'Vincular imagem a outra feira',
+    description: 'Permite que uma imagem já cadastrada seja exibida em outra feira.',
+  })
+  @ApiParam({ name: 'imageId', description: 'ID da imagem' })
+  @ApiParam({ name: 'fairId', description: 'ID da feira a vincular' })
+  @ApiResponse({ status: 201, description: 'Imagem vinculada com sucesso', type: ClientImageResponseDto })
+  @ApiResponse({ status: 400, description: 'Imagem já vinculada a essa feira' })
+  async linkImageToFair(
+    @Param('imageId') imageId: string,
+    @Param('fairId') fairId: string,
+  ): Promise<ClientImageResponseDto> {
+    const image = await this.clientsService.linkImageToFair(imageId, fairId);
+    return mapImageResponse(image);
+  }
+
+  @Delete('images/:imageId')
+  @ApiOperation({ summary: 'Deletar imagem do cliente' })
+  @ApiParam({ name: 'imageId', description: 'ID da imagem' })
+  @ApiResponse({ status: 200, description: 'Imagem deletada com sucesso' })
+  @ApiResponse({ status: 404, description: 'Imagem não encontrada' })
+  async deleteImage(@Param('imageId') imageId: string): Promise<{ message: string }> {
+    await this.clientsService.deleteImage(imageId);
+    return { message: 'Imagem deletada com sucesso.' };
+  }
+
+  // ----------------------------------------------------------------
+  // Rotas de clientes
+  // ----------------------------------------------------------------
+
   @Post()
   @ApiOperation({ summary: 'Criar um novo cliente' })
-  @ApiResponse({
-    status: 201,
-    description: 'Cliente criado com sucesso',
-    type: ClientResponseDto,
-  })
+  @ApiResponse({ status: 201, description: 'Cliente criado com sucesso', type: ClientResponseDto })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
-  async create(
-    @Body() createClientDto: CreateClientDto,
-  ): Promise<ClientResponseDto> {
+  async create(@Body() createClientDto: CreateClientDto): Promise<ClientResponseDto> {
     return await this.clientsService.create(createClientDto);
   }
 
@@ -69,11 +115,7 @@ export class ClientsController {
     required: false,
     description: 'Quando informado, adiciona isParticipatingInFair em cada expositor',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Lista de todos os expositores',
-    type: [ClientResponseDto],
-  })
+  @ApiResponse({ status: 200, description: 'Lista de todos os expositores', type: [ClientResponseDto] })
   async findAll(
     @Query('search') search?: string,
     @Query('fairId') fairId?: string,
@@ -84,14 +126,28 @@ export class ClientsController {
     return await this.clientsService.findAll(fairId);
   }
 
+  @Get('email/:email')
+  @ApiOperation({ summary: 'Buscar cliente por email' })
+  @ApiParam({ name: 'email', description: 'Email do cliente' })
+  @ApiResponse({ status: 200, description: 'Cliente encontrado', type: ClientResponseDto })
+  @ApiResponse({ status: 404, description: 'Cliente não encontrado' })
+  async findByEmail(@Param('email') email: string): Promise<ClientResponseDto | null> {
+    return await this.clientsService.findByEmail(email);
+  }
+
+  @Get('cnpj/:cnpj')
+  @ApiOperation({ summary: 'Buscar cliente por CNPJ' })
+  @ApiParam({ name: 'cnpj', description: 'CNPJ do cliente' })
+  @ApiResponse({ status: 200, description: 'Cliente encontrado', type: ClientResponseDto })
+  @ApiResponse({ status: 404, description: 'Cliente não encontrado' })
+  async findByCnpj(@Param('cnpj') cnpj: string): Promise<ClientResponseDto | null> {
+    return await this.clientsService.findByCnpj(cnpj);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Buscar cliente por ID' })
   @ApiParam({ name: 'id', description: 'ID do cliente' })
-  @ApiResponse({
-    status: 200,
-    description: 'Cliente encontrado',
-    type: ClientResponseDto,
-  })
+  @ApiResponse({ status: 200, description: 'Cliente encontrado', type: ClientResponseDto })
   @ApiResponse({ status: 404, description: 'Cliente não encontrado' })
   async findOne(@Param('id') id: string): Promise<ClientResponseDto> {
     return await this.clientsService.findOne(id);
@@ -100,11 +156,7 @@ export class ClientsController {
   @Patch(':id')
   @ApiOperation({ summary: 'Atualizar cliente' })
   @ApiParam({ name: 'id', description: 'ID do cliente' })
-  @ApiResponse({
-    status: 200,
-    description: 'Cliente atualizado com sucesso',
-    type: ClientResponseDto,
-  })
+  @ApiResponse({ status: 200, description: 'Cliente atualizado com sucesso', type: ClientResponseDto })
   @ApiResponse({ status: 404, description: 'Cliente não encontrado' })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
   async update(
@@ -123,46 +175,12 @@ export class ClientsController {
     await this.clientsService.remove(id);
   }
 
-  @Get('email/:email')
-  @ApiOperation({ summary: 'Buscar cliente por email' })
-  @ApiParam({ name: 'email', description: 'Email do cliente' })
-  @ApiResponse({
-    status: 200,
-    description: 'Cliente encontrado',
-    type: ClientResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Cliente não encontrado' })
-  async findByEmail(
-    @Param('email') email: string,
-  ): Promise<ClientResponseDto | null> {
-    return await this.clientsService.findByEmail(email);
-  }
-
-  @Get('cnpj/:cnpj')
-  @ApiOperation({ summary: 'Buscar cliente por CNPJ' })
-  @ApiParam({ name: 'cnpj', description: 'CNPJ do cliente' })
-  @ApiResponse({
-    status: 200,
-    description: 'Cliente encontrado',
-    type: ClientResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Cliente não encontrado' })
-  async findByCnpj(
-    @Param('cnpj') cnpj: string,
-  ): Promise<ClientResponseDto | null> {
-    return await this.clientsService.findByCnpj(cnpj);
-  }
-
   @Post(':id/brands')
   @ApiOperation({ summary: 'Adicionar uma marca ao cliente' })
   @ApiParam({ name: 'id', description: 'ID do cliente' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('logo'))
-  @ApiResponse({
-    status: 201,
-    description: 'Marca adicionada com sucesso',
-    type: BrandResponseDto,
-  })
+  @ApiResponse({ status: 201, description: 'Marca adicionada com sucesso', type: BrandResponseDto })
   @ApiResponse({ status: 400, description: 'Dados inválidos ou arquivo ausente' })
   async addBrand(
     @Param('id') id: string,
@@ -180,12 +198,10 @@ export class ClientsController {
     return await this.clientsService.addBrand(id, body.name, logoUrl);
   }
 
-  // --- Rotas de Imagens ---
-
   @Post(':id/images')
   @ApiOperation({
     summary: 'Upload de imagens do cliente (a partir de uma feira)',
-    description: 'Envia até 10 imagens de um cliente vinculadas a uma feira. A feira informada em fairId é obrigatória e registra a origem do upload.',
+    description: 'Envia até 10 imagens de um cliente vinculadas a uma feira.',
   })
   @ApiParam({ name: 'id', description: 'ID do cliente' })
   @ApiQuery({ name: 'fairId', required: true, description: 'ID da feira de origem do upload' })
@@ -207,8 +223,8 @@ export class ClientsController {
       throw new BadRequestException('Nenhum arquivo de imagem foi enviado.');
     }
 
-    const images = await this.clientsService.uploadImages(clientId, fairId, files, caption);
-    return images.map(this.mapImageResponse);
+    const images = await this.clientsService.uploadImages(fairId, files, clientId, caption);
+    return images.map(mapImageResponse);
   }
 
   @Get(':id/images')
@@ -219,69 +235,27 @@ export class ClientsController {
   @ApiParam({ name: 'id', description: 'ID do cliente' })
   @ApiQuery({ name: 'fairId', required: false, description: 'Filtrar por feira' })
   @ApiResponse({ status: 200, description: 'Lista de imagens', type: [ClientImageResponseDto] })
-  async findImages(
+  async findClientImages(
     @Param('id') clientId: string,
     @Query('fairId') fairId?: string,
   ): Promise<ClientImageResponseDto[]> {
     const images = await this.clientsService.findImagesByClient(clientId, fairId);
-    return images.map(this.mapImageResponse);
+    return images.map(mapImageResponse);
   }
+}
 
-  @Get('images/by-fair/:fairId')
-  @IsPublicRoute()
-  @ApiOperation({
-    summary: 'Listar imagens públicas por feira (rota pública)',
-    description: 'Retorna todas as imagens de clientes vinculadas a uma feira. Usado no site e em e-mails marketing.',
-  })
-  @ApiParam({ name: 'fairId', description: 'ID da feira' })
-  @ApiResponse({ status: 200, description: 'Lista de imagens', type: [ClientImageResponseDto] })
-  async findImagesByFair(
-    @Param('fairId') fairId: string,
-  ): Promise<ClientImageResponseDto[]> {
-    const images = await this.clientsService.findImagesByFair(fairId);
-    return images.map(this.mapImageResponse);
-  }
-
-  @Post('images/:imageId/link-fair/:fairId')
-  @ApiOperation({
-    summary: 'Vincular imagem a outra feira',
-    description: 'Permite que uma imagem já cadastrada seja exibida em outra feira.',
-  })
-  @ApiParam({ name: 'imageId', description: 'ID da imagem' })
-  @ApiParam({ name: 'fairId', description: 'ID da feira a vincular' })
-  @ApiResponse({ status: 201, description: 'Imagem vinculada com sucesso', type: ClientImageResponseDto })
-  @ApiResponse({ status: 400, description: 'Imagem já vinculada a essa feira' })
-  async linkImageToFair(
-    @Param('imageId') imageId: string,
-    @Param('fairId') fairId: string,
-  ): Promise<ClientImageResponseDto> {
-    const image = await this.clientsService.linkImageToFair(imageId, fairId);
-    return this.mapImageResponse(image);
-  }
-
-  @Delete('images/:imageId')
-  @ApiOperation({ summary: 'Deletar imagem do cliente' })
-  @ApiParam({ name: 'imageId', description: 'ID da imagem' })
-  @ApiResponse({ status: 200, description: 'Imagem deletada com sucesso' })
-  @ApiResponse({ status: 404, description: 'Imagem não encontrada' })
-  async deleteImage(@Param('imageId') imageId: string): Promise<{ message: string }> {
-    await this.clientsService.deleteImage(imageId);
-    return { message: 'Imagem deletada com sucesso.' };
-  }
-
-  private mapImageResponse(image: any): ClientImageResponseDto {
-    return {
-      id: image.id,
-      clientId: image.clientId,
-      registeredFairId: image.registeredFairId,
-      url: image.url,
-      caption: image.caption,
-      fairs: (image.imageFairs ?? []).map((f: any) => ({
-        id: f.id,
-        fairId: f.fairId,
-        createdAt: f.createdAt,
-      })),
-      createdAt: image.createdAt,
-    };
-  }
+function mapImageResponse(image: any): ClientImageResponseDto {
+  return {
+    id: image.id,
+    clientId: image.clientId,
+    registeredFairId: image.registeredFairId,
+    url: image.url,
+    caption: image.caption,
+    fairs: (image.imageFairs ?? []).map((f: any) => ({
+      id: f.id,
+      fairId: f.fairId,
+      createdAt: f.createdAt,
+    })),
+    createdAt: image.createdAt,
+  };
 }

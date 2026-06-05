@@ -17,8 +17,8 @@ export class ClientImage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  clientId: string;
+  @Column({ nullable: true })
+  clientId: string | null;
 
   @Column()
   registeredFairId: string;

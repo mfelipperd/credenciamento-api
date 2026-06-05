@@ -160,25 +160,32 @@ export class ClientsService {
   // --- Operações de Imagens ---
 
   async uploadImages(
-    clientId: string,
     fairId: string,
     files: any[],
+    clientId?: string,
     caption?: string,
   ): Promise<ClientImage[]> {
-    await this.findOne(clientId);
+    if (clientId) {
+      await this.findOne(clientId);
+    }
 
     const uploaded: ClientImage[] = [];
 
     for (const file of files) {
       const url = await this.storageService.uploadFile(file, 'client-images');
 
-      const image = this.imageRepository.create({ clientId, registeredFairId: fairId, url, caption });
-      const saved = await this.imageRepository.save(image);
+      const image = this.imageRepository.create({
+        clientId: clientId ?? undefined,
+        registeredFairId: fairId,
+        url,
+        caption,
+      });
+      const savedImage = await this.imageRepository.save(image);
 
-      const imageFair = this.imageFairRepository.create({ imageId: saved.id, fairId });
+      const imageFair = this.imageFairRepository.create({ imageId: savedImage.id, fairId });
       await this.imageFairRepository.save(imageFair);
 
-      uploaded.push(await this.findImageById(saved.id));
+      uploaded.push(await this.findImageById(savedImage.id));
     }
 
     return uploaded;
@@ -203,13 +210,26 @@ export class ClientsService {
     return qb.getMany();
   }
 
-  async findImagesByFair(fairId: string): Promise<ClientImage[]> {
-    return this.imageRepository
+  async findImages(fairId?: string): Promise<ClientImage[]> {
+    const qb = this.imageRepository
       .createQueryBuilder('img')
       .leftJoinAndSelect('img.imageFairs', 'imageFairs')
-      .innerJoin(ClientImageFair, 'cif', 'cif.imageId = img.id AND cif.fairId = :fairId', { fairId })
-      .orderBy('img.createdAt', 'DESC')
-      .getMany();
+      .orderBy('img.createdAt', 'DESC');
+
+    if (fairId) {
+      qb.innerJoin(
+        ClientImageFair,
+        'cif',
+        'cif.imageId = img.id AND cif.fairId = :fairId',
+        { fairId },
+      );
+    }
+
+    return qb.getMany();
+  }
+
+  async findImagesByFair(fairId: string): Promise<ClientImage[]> {
+    return this.findImages(fairId);
   }
 
   async linkImageToFair(imageId: string, fairId: string): Promise<ClientImage> {
