@@ -70,6 +70,8 @@ export class VisitorsService {
       searchField = 'all',
       sortBy = 'name',
       sortOrder = 'asc',
+      dateFrom,
+      dateTo,
     } = dto;
 
     const query = this.visitorRepository
@@ -205,6 +207,18 @@ export class VisitorsService {
           query.andWhere(`${relevanceScore} > 0`);
         }
       }
+    }
+
+    // Filtro por período de cadastro
+    if (dateFrom) {
+      query.andWhere('visitor.registrationDate >= :dateFrom', {
+        dateFrom: new Date(dateFrom),
+      });
+    }
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      query.andWhere('visitor.registrationDate <= :dateTo', { dateTo: end });
     }
 
     // Aplicar ordenação - se há busca, ordena por relevância primeiro

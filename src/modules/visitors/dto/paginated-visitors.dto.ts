@@ -40,6 +40,14 @@ export class PaginatedVisitorsDto {
   @IsString()
   @IsIn(['asc', 'desc'])
   sortOrder?: 'asc' | 'desc' = 'asc';
+
+  @IsOptional()
+  @IsString()
+  dateFrom?: string;
+
+  @IsOptional()
+  @IsString()
+  dateTo?: string;
 }
 
 export interface PaginatedResponse<T> {
