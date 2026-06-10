@@ -36,7 +36,7 @@ export class FairsController {
   @ApiOperation({
     summary: 'Listar feiras',
     description:
-      'Retorna feiras com filtros opcionais por UF e status, ordenadas por data de início.',
+      'Retorna feiras com filtros opcionais por UF, status, nome e isActive, ordenadas por data de início.',
   })
   @ApiQuery({
     name: 'uf',
@@ -49,12 +49,52 @@ export class FairsController {
     enum: FairStatus,
     description: 'Filtrar por status',
   })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Filtrar pelo nome da feira (case-insensitive)',
+  })
+  @ApiQuery({
+    name: 'isActive',
+    required: false,
+    type: Boolean,
+    description: 'Filtrar por feiras ativas (true) ou inativas (false)',
+  })
   @ApiResponse({ status: 200, type: [FairResponseDto] })
   async findAll(
     @Query('uf') uf?: string,
     @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('isActive') isActive?: string,
   ): Promise<FairResponseDto[]> {
-    return this.fairService.findAll(uf, status);
+    const isActiveParsed =
+      isActive === 'true' ? true : isActive === 'false' ? false : undefined;
+    return this.fairService.findAll(uf, status, search, isActiveParsed);
+  }
+
+  @Get('stats')
+  @ApiOperation({
+    summary: 'Estatísticas de feiras',
+    description:
+      'Retorna totais e médias agregadas de todas as feiras para exibição nos cards do dashboard.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Estatísticas calculadas com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        totalFairs: { type: 'number' },
+        activeFairs: { type: 'number' },
+        inactiveFairs: { type: 'number' },
+        totalExpectedRevenue: { type: 'number' },
+        totalExpectedProfit: { type: 'number' },
+        averageProfitMargin: { type: 'number' },
+      },
+    },
+  })
+  async getStats() {
+    return this.fairService.getFairStats();
   }
 
   @Get(':id')

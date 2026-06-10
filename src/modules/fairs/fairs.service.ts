@@ -104,9 +104,14 @@ export class FairsService {
     return new FairResponseDto(created!);
   }
 
-  async findAll(uf?: string, status?: string): Promise<FairResponseDto[]> {
+  async findAll(
+    uf?: string,
+    status?: string,
+    search?: string,
+    isActive?: boolean,
+  ): Promise<FairResponseDto[]> {
     this.logger.log(
-      `Buscando feiras — uf: ${uf ?? 'all'} | status: ${status ?? 'all'}`,
+      `Buscando feiras — uf: ${uf ?? 'all'} | status: ${status ?? 'all'} | search: ${search ?? '-'} | isActive: ${isActive ?? 'all'}`,
     );
 
     const qb = this.fairRepository
@@ -124,6 +129,12 @@ export class FairsService {
     if (status) {
       qb.andWhere('fair.status = :status', { status });
     }
+    if (search) {
+      qb.andWhere('fair.name LIKE :search', { search: `%${search}%` });
+    }
+    if (isActive !== undefined) {
+      qb.andWhere('fair.isActive = :isActive', { isActive });
+    }
 
     const fairs = await qb.getMany();
 
@@ -133,6 +144,54 @@ export class FairsService {
         return new FairResponseDto({ ...fair, ...financial } as Fair);
       }),
     );
+  }
+
+  async getFairStats(): Promise<{
+    totalFairs: number;
+    activeFairs: number;
+    inactiveFairs: number;
+    totalExpectedRevenue: number;
+    totalExpectedProfit: number;
+    averageProfitMargin: number;
+  }> {
+    this.logger.log('Buscando estatísticas de feiras');
+
+    const [total, active] = await Promise.all([
+      this.fairRepository.count(),
+      this.fairRepository.find({ where: { isActive: true } }),
+    ]);
+
+    const activeFairs = active.length;
+    const inactiveFairs = total - activeFairs;
+
+    const totalExpectedRevenue = active.reduce(
+      (sum, f) => sum + (f.expectedRevenue ?? 0),
+      0,
+    );
+    const totalExpectedProfit = active.reduce(
+      (sum, f) => sum + (f.expectedProfit ?? 0),
+      0,
+    );
+
+    const fairsWithMargin = active.filter(
+      (f) => (f.expectedProfitMargin ?? 0) > 0,
+    );
+    const averageProfitMargin =
+      fairsWithMargin.length > 0
+        ? fairsWithMargin.reduce(
+            (sum, f) => sum + (f.expectedProfitMargin ?? 0),
+            0,
+          ) / fairsWithMargin.length
+        : 0;
+
+    return {
+      totalFairs: total,
+      activeFairs,
+      inactiveFairs,
+      totalExpectedRevenue,
+      totalExpectedProfit,
+      averageProfitMargin,
+    };
   }
 
   async findOne(id: string): Promise<FairResponseDto> {
