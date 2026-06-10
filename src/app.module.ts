@@ -19,6 +19,7 @@ import { SectorsModule } from './modules/sectors/sectors.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { PartnersModule } from './modules/partners/partners.module';
+import { PublicFairsModule } from './modules/public-fairs/public-fairs.module';
 
 @Module({
   providers: [
@@ -55,6 +56,7 @@ import { PartnersModule } from './modules/partners/partners.module';
     CategoriesModule,
     FinanceModule,
     PartnersModule,
+    PublicFairsModule,
   ],
   controllers: [],
 })
