@@ -21,7 +21,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "migration:generate": "npx typeorm migration:generate -d src/database/migrations",
     "migration:run": "npx typeorm migration:run -d src/database/migrations",
-    "migration:revert": "npx typeorm migration:revert -d src/database/migrations"
+    "migration:revert": "npx typeorm migration:revert -d src/database/migrations",
+    "normalize-csv": "node scripts/normalize-csv.mjs"
   },
   "dependencies": {
     "@getbrevo/brevo": "^5.0.4",

@@ -20,6 +20,7 @@ import {
   ApiQuery,
   ApiConsumes,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ClientsService } from './clients.service';
@@ -36,6 +37,7 @@ import {
 } from './clients.dto';
 
 @ApiTags('Clientes')
+@ApiBearerAuth('JWT-auth')
 @Controller('finance/clients')
 export class ClientsController {
   constructor(

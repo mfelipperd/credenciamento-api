@@ -18,6 +18,7 @@ import {
   ApiQuery,
   ApiConsumes,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { IsPublicRoute } from '../../../auth/public.route';
@@ -25,6 +26,7 @@ import { ClientsService } from './clients.service';
 import { ClientImageResponseDto, UploadClientImagesDto } from './clients.dto';
 
 @ApiTags('Imagens da Feira')
+@ApiBearerAuth('JWT-auth')
 @Controller('fairs')
 export class FairImagesController {
   constructor(private readonly clientsService: ClientsService) {}

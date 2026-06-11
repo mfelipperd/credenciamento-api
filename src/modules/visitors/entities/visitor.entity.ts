@@ -62,6 +62,9 @@ export class Visitor {
   @Column()
   category: string;
 
+  @Column({ type: 'boolean', default: false })
+  whatsappOptOut: boolean;
+
   @CreateDateColumn()
   registrationDate: Date;
 
