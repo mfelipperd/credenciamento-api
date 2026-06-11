@@ -1,92 +1,137 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { ChartsService, parseFairIds } from './charts.service';
 
+@ApiTags('Gráficos & KPIs')
+@ApiBearerAuth('JWT-auth')
 @Controller('charts')
 export class ChartsController {
   constructor(private readonly chartsService: ChartsService) {}
 
-  // ─── KPI Cards ─────────────────────────────────────────────────────────────
-  //
-  //  Retorna todos os KPIs de uma feira em uma única chamada.
-  //  Use os campos individuais para cada card separado no frontend:
-  //
-  //  receita.totalContrato    → Card "Receita Total"
-  //  receita.totalRecebido    → Card "Recebido"
-  //  receita.totalAReceber    → Card "A Receber"
-  //  receita.totalVencido     → Card "Em Atraso"
-  //  receita.inadimplencia    → Card "Inadimplência %" (badge colorido)
-  //  despesas.total           → Card "Total de Despesas"
-  //  resultado.lucroLiquido   → Card "Lucro Líquido"
-  //  resultado.margemLiquida  → Card "Margem Líquida %"
-  //  visitantes.total         → Card "Inscritos"
-  //  visitantes.checkins      → Card "Check-ins"
-  //  visitantes.taxaComparecimento → Card "Taxa de Comparecimento %"
-  //  visitantes.custoPorVisitante  → Card "Custo por Visitante"
-
   @Get('fair/:fairId/kpi')
+  @ApiOperation({
+    summary: 'KPIs consolidados da feira',
+    description: `Retorna todos os KPIs de uma feira em uma única chamada.
+Campos de referência para os cards do frontend:
+- receita.totalContrato → "Receita Total"
+- receita.totalRecebido → "Recebido"
+- receita.totalAReceber → "A Receber"
+- receita.totalVencido  → "Em Atraso"
+- receita.inadimplencia → "Inadimplência %"
+- despesas.total        → "Total de Despesas"
+- resultado.lucroLiquido → "Lucro Líquido"
+- resultado.margemLiquida → "Margem Líquida %"
+- visitantes.total      → "Inscritos"
+- visitantes.checkins   → "Check-ins"
+- visitantes.taxaComparecimento → "Taxa de Comparecimento %"
+- visitantes.custoPorVisitante  → "Custo por Visitante"`,
+  })
+  @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
+  @ApiResponse({ status: 200, description: 'KPIs consolidados da feira' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   fairKpi(@Param('fairId', ParseUUIDPipe) fairId: string) {
     return this.chartsService.fairKpi(fairId);
   }
 
-  // ─── Gráficos por feira ────────────────────────────────────────────────────
-
-  // Donut — distribuição de despesas por categoria (inclui rateadas)
-  // ApexCharts: type: 'donut' | options.labels = labels | series = values
   @Get('fair/:fairId/expenses-by-category')
+  @ApiOperation({
+    summary: 'Despesas por categoria (Donut)',
+    description: 'Inclui despesas diretas e rateadas. Use com ApexCharts type: "donut" — options.labels = labels, series = values.',
+  })
+  @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
+  @ApiResponse({ status: 200, description: 'Dados para gráfico donut de despesas por categoria', schema: { example: { labels: ['Marketing', 'Estrutura'], series: [3500, 7000] } } })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   expensesByCategory(@Param('fairId', ParseUUIDPipe) fairId: string) {
     return this.chartsService.expensesByCategory(fairId);
   }
 
-  // Donut — receitas por status (PAGO / EM_ANDAMENTO / PENDENTE / EM_ATRASO)
-  // ApexCharts: type: 'donut'
   @Get('fair/:fairId/revenues-by-status')
+  @ApiOperation({
+    summary: 'Receitas por status (Donut)',
+    description: 'Agrupa receitas por status: PAGO, EM_ANDAMENTO, PENDENTE, EM_ATRASO. Use com ApexCharts type: "donut".',
+  })
+  @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
+  @ApiResponse({ status: 200, description: 'Dados para gráfico donut de receitas por status' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   revenuesByStatus(@Param('fairId', ParseUUIDPipe) fairId: string) {
     return this.chartsService.revenuesByStatus(fairId);
   }
 
-  // Stacked Bar — parcelas a receber e vencidas agrupadas por mês
-  // ApexCharts: type: 'bar', stacked: true, colors: ['#008FFB','#FF4560']
   @Get('fair/:fairId/revenue-forecast')
+  @ApiOperation({
+    summary: 'Previsão de receitas por mês (Stacked Bar)',
+    description: 'Parcelas a receber e vencidas agrupadas por mês. Use com ApexCharts type: "bar", stacked: true, colors: ["#008FFB","#FF4560"].',
+  })
+  @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
+  @ApiResponse({ status: 200, description: 'Dados para gráfico de previsão de receitas por mês' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   revenueForecast(@Param('fairId', ParseUUIDPipe) fairId: string) {
     return this.chartsService.revenueForecast(fairId);
   }
 
-  // Line — evolução de inscrições ao longo do tempo (acumulado + diário)
-  // ApexCharts: type: 'line' | series[0]=acumulado (eixo y), series[1]=diário (barras)
   @Get('fair/:fairId/visitors-timeline')
+  @ApiOperation({
+    summary: 'Evolução de inscrições ao longo do tempo (Line)',
+    description: 'series[0] = acumulado (line), series[1] = diário (bar). Use com ApexCharts type: "line".',
+  })
+  @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
+  @ApiResponse({ status: 200, description: 'Dados para gráfico de linha de inscrições ao longo do tempo' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   visitorsTimeline(@Param('fairId', ParseUUIDPipe) fairId: string) {
     return this.chartsService.visitorsTimeline(fairId);
   }
 
-  // Bar — check-ins por horário do dia (00h–23h)
-  // ApexCharts: type: 'bar' | mostra pico de movimento na feira
   @Get('fair/:fairId/checkins-by-hour')
+  @ApiOperation({
+    summary: 'Check-ins por hora do dia (Bar)',
+    description: 'Mostra o pico de movimento na feira hora a hora (00h–23h). Use com ApexCharts type: "bar".',
+  })
+  @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
+  @ApiResponse({ status: 200, description: 'Dados para gráfico de barras de check-ins por hora' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   checkinsByHour(@Param('fairId', ParseUUIDPipe) fairId: string) {
     return this.chartsService.checkinsByHour(fairId);
   }
 
-  // ─── Gráficos comparativos (múltiplas feiras) ─────────────────────────────
-  //
-  //  Todos aceitam: ?fairIds=uuid1,uuid2,uuid3
-  //  Se fairIds for omitido → retorna arrays vazios.
-
-  // Grouped Bar — Receita / Despesas / Lucro por feira
-  // ApexCharts: type: 'bar', colors: ['#00E396','#FF4560','#008FFB']
   @Get('compare')
+  @ApiOperation({
+    summary: 'Comparativo: Receita vs Despesas vs Lucro por feira (Grouped Bar)',
+    description: 'Aceita múltiplas feiras via ?fairIds=uuid1,uuid2,uuid3. Se fairIds for omitido, retorna arrays vazios. Use com ApexCharts type: "bar", colors: ["#00E396","#FF4560","#008FFB"].',
+  })
+  @ApiQuery({ name: 'fairIds', required: false, description: 'Lista de IDs de feiras separados por vírgula' })
+  @ApiResponse({ status: 200, description: 'Dados comparativos de receita, despesas e lucro por feira' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   compareRevenueVsExpenses(@Query('fairIds') fairIds?: string) {
     return this.chartsService.compareRevenueVsExpenses(parseFairIds(fairIds));
   }
 
-  // Horizontal Bar — Margem Líquida % por feira (ranking)
-  // ApexCharts: type: 'bar', horizontal: true
   @Get('compare/margins')
+  @ApiOperation({
+    summary: 'Comparativo: Margem Líquida % por feira (Horizontal Bar)',
+    description: 'Ranking de feiras por margem líquida. Use com ApexCharts type: "bar", horizontal: true.',
+  })
+  @ApiQuery({ name: 'fairIds', required: false, description: 'Lista de IDs de feiras separados por vírgula' })
+  @ApiResponse({ status: 200, description: 'Dados de margem líquida por feira' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   compareMargins(@Query('fairIds') fairIds?: string) {
     return this.chartsService.compareMargins(parseFairIds(fairIds));
   }
 
-  // Stacked Bar — Despesas diretas vs rateadas por feira
-  // ApexCharts: type: 'bar', stacked: true
   @Get('compare/expenses-breakdown')
+  @ApiOperation({
+    summary: 'Comparativo: Despesas diretas vs rateadas por feira (Stacked Bar)',
+    description: 'Detalha a composição das despesas de cada feira. Use com ApexCharts type: "bar", stacked: true.',
+  })
+  @ApiQuery({ name: 'fairIds', required: false, description: 'Lista de IDs de feiras separados por vírgula' })
+  @ApiResponse({ status: 200, description: 'Dados de breakdown de despesas por feira' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   compareExpensesBreakdown(@Query('fairIds') fairIds?: string) {
     return this.chartsService.compareExpensesBreakdown(parseFairIds(fairIds));
   }

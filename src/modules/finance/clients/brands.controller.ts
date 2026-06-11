@@ -17,6 +17,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiConsumes,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClientsService } from './clients.service';
@@ -25,6 +26,7 @@ import { IsPublicRoute } from 'src/auth/public.route';
 import { BrandResponseDto, UpdateBrandDto } from './clients.dto';
 
 @ApiTags('Marcas da Feira')
+@ApiBearerAuth('JWT-auth')
 @Controller('finance/brands')
 export class BrandsController {
   constructor(
