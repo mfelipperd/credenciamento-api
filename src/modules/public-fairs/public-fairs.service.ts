@@ -23,7 +23,6 @@ export class PublicFairsService {
     this.logger.log('Buscando lista pública de feiras');
 
     const fairs = await this.fairRepository.find({
-      where: { isActive: true },
       order: { startDate: 'ASC' },
     });
 
@@ -34,7 +33,7 @@ export class PublicFairsService {
     this.logger.log(`Buscando detalhes públicos da feira: ${id}`);
 
     const fair = await this.fairRepository.findOne({
-      where: { id, isActive: true },
+      where: { id },
       relations: ['standConfigurations', 'daySchedules'],
     });
 

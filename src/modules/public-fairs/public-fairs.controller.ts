@@ -14,7 +14,7 @@ export class PublicFairsController {
   @ApiOperation({
     summary: 'Listar feiras públicas',
     description:
-      'Retorna todas as feiras ativas ordenadas por data de início. Não requer autenticação.',
+      'Retorna todas as feiras (ativas, inativas, em breve, encerradas, canceladas) ordenadas por data de início. Não requer autenticação.',
   })
   @ApiResponse({ status: 200, type: [PublicFairSummaryDto] })
   async findAll(): Promise<PublicFairSummaryDto[]> {
