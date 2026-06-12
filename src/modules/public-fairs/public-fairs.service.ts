@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Fair } from '../fairs/entity/fair.entity';
 import { Brand } from '../finance/clients/entities/brand.entity';
 import { ClientsService } from '../finance/clients/clients.service';
+import { StandsService } from '../finance/stands/stands.service';
 import {
   PublicFairDetailDto,
   PublicFairSummaryDto,
@@ -17,6 +18,7 @@ export class PublicFairsService {
   constructor(
     @InjectRepository(Fair) private readonly fairRepository: Repository<Fair>,
     private readonly clientsService: ClientsService,
+    private readonly standsService: StandsService,
   ) {}
 
   async findAll(): Promise<PublicFairSummaryDto[]> {
@@ -26,7 +28,10 @@ export class PublicFairsService {
       order: { startDate: 'ASC' },
     });
 
-    return fairs.map((f) => this.toSummary(f));
+    const fairIds = fairs.map((f) => f.id);
+    const availableCounts = await this.standsService.countAvailableByFairIds(fairIds);
+
+    return fairs.map((f) => this.toSummary(f, availableCounts[f.id] ?? 0));
   }
 
   async findOne(id: string): Promise<PublicFairDetailDto> {
@@ -39,12 +44,15 @@ export class PublicFairsService {
 
     if (!fair) throw new NotFoundException('Feira não encontrada');
 
-    const brands = await this.clientsService.findBrandsByFair(id);
+    const [brands, standStats] = await Promise.all([
+      this.clientsService.findBrandsByFair(id),
+      this.standsService.getStandStats(id),
+    ]);
 
-    return this.toDetail(fair, brands);
+    return this.toDetail(fair, brands, standStats.available);
   }
 
-  private toSummary(fair: Fair): PublicFairSummaryDto {
+  private toSummary(fair: Fair, standsAvailable: number): PublicFairSummaryDto {
     return {
       id: fair.id,
       name: fair.name,
@@ -58,10 +66,11 @@ export class PublicFairsService {
       durationDays: this.calcDuration(fair),
       expectedVisitors: fair.expectedVisitors ?? null,
       expectedExhibitors: fair.expectedExhibitors ?? null,
+      standsAvailable,
     };
   }
 
-  private toDetail(fair: Fair, brands: Brand[]): PublicFairDetailDto {
+  private toDetail(fair: Fair, brands: Brand[], standsAvailable: number): PublicFairDetailDto {
     return {
       id: fair.id,
       name: fair.name,
@@ -99,6 +108,7 @@ export class PublicFairsService {
 
       expectedVisitors: fair.expectedVisitors ?? null,
       expectedExhibitors: fair.expectedExhibitors ?? null,
+      standsAvailable,
 
       exhibitorBrands: brands.map((b) => ({
         id: b.id,

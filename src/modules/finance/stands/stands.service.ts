@@ -270,6 +270,21 @@ export class StandsService {
     }));
   }
 
+  async countAvailableByFairIds(fairIds: string[]): Promise<Record<string, number>> {
+    if (!fairIds.length) return {};
+
+    const results = await this.standRepository
+      .createQueryBuilder('stand')
+      .select('stand.fairId', 'fairId')
+      .addSelect('COUNT(*)', 'count')
+      .where('stand.fairId IN (:...fairIds)', { fairIds })
+      .andWhere('stand.isAvailable = true')
+      .groupBy('stand.fairId')
+      .getRawMany<{ fairId: string; count: string }>();
+
+    return Object.fromEntries(results.map((r) => [r.fairId, parseInt(r.count)]));
+  }
+
   async getStandStats(fairId: string): Promise<{
     total: number;
     available: number;

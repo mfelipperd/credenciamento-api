@@ -45,6 +45,7 @@ export class PublicFairSummaryDto {
   @ApiProperty({ required: false, description: 'Duração em dias' }) durationDays?: number | null;
   @ApiProperty({ required: false }) expectedVisitors?: number | null;
   @ApiProperty({ required: false }) expectedExhibitors?: number | null;
+  @ApiProperty({ description: 'Quantidade de stands ainda disponíveis' }) standsAvailable: number;
 }
 
 export class PublicFairDetailDto {
@@ -81,6 +82,7 @@ export class PublicFairDetailDto {
   // Indicadores de audiência
   @ApiProperty({ required: false, description: 'Meta de visitantes da feira' }) expectedVisitors?: number | null;
   @ApiProperty({ required: false, description: 'Número de expositores/marcas participantes' }) expectedExhibitors?: number | null;
+  @ApiProperty({ description: 'Quantidade de stands ainda disponíveis' }) standsAvailable: number;
 
   // View de visitantes — marcas participantes
   @ApiProperty({ type: [PublicExhibitorBrandDto], description: 'Marcas expositoras com suas logos' })
