@@ -216,8 +216,8 @@ export class VisitorsController {
 
   @Post('sync-prospects')
   @ApiOperation({
-    summary: 'Sincronizar visitantes existentes → tabela de prospects',
-    description: `Cria ou atualiza registros na tabela de prospects para todos os visitantes já inscritos em uma feira.
+    summary: 'Sincronizar visitantes de uma feira → tabela de prospects',
+    description: `Cria ou atualiza registros na tabela de prospects para todos os visitantes já inscritos em uma feira específica.
 Útil para feiras que já tinham visitantes antes do módulo de prospecção ser ativado.
 O enriquecimento de CNAE **não** é feito aqui — use POST /fairs/:fairId/prospects/enrich-all em seguida.`,
   })
@@ -231,6 +231,34 @@ O enriquecimento de CNAE **não** é feito aqui — use POST /fairs/:fairId/pros
   async syncProspects(@Query('fairId') fairId: string) {
     if (!fairId) throw new Error('fairId é obrigatório');
     return this.visitorsService.syncToProspects(fairId);
+  }
+
+  @Post('sync-prospects/all')
+  @ApiOperation({
+    summary: 'Sincronizar TODOS os visitantes de TODAS as feiras → prospects',
+    description: `Percorre toda a base de visitantes em chunks de 200, criando/atualizando registros de prospect
+para cada combinação (visitante × feira). Ideal para o backfill inicial após ativar o módulo de prospecção.
+
+**Sem enriquecimento de CNAE** — após este endpoint, rode \`POST /prospects/enrich-all\` (em background) para classificar os setores.
+
+**Estimativa**: 4.000 visitantes ≈ 20–60s (apenas writes no banco). Acompanhe o progresso nos logs do servidor.`,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Backfill completo',
+    schema: {
+      example: {
+        total: 4120,
+        created: 4100,
+        updated: 15,
+        errors: 5,
+        fairsProcessed: 8,
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  async syncAllProspects() {
+    return this.visitorsService.syncAllToProspects();
   }
 
   @Patch(':registrationCode')

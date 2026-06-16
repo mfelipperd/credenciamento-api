@@ -646,7 +646,7 @@ export class VisitorsService {
             state: visitor.state ?? undefined,
           },
           fairId,
-          true, // skipEnrichment — enriquecimento é feito separado via /enrich-all
+          true,
         );
         if (result === 'created') created++;
         else updated++;
@@ -657,6 +657,71 @@ export class VisitorsService {
     }
 
     return { total: visitors.length, created, updated, errors };
+  }
+
+  /**
+   * Sincroniza TODOS os visitantes de TODAS as feiras.
+   * Processa em chunks de 200 para não explodir a memória com 4000+ registros.
+   * skipEnrichment=true — enriquecimento CNAE é feito separado via /prospects/enrich-all.
+   */
+  async syncAllToProspects(): Promise<{
+    total: number;
+    created: number;
+    updated: number;
+    errors: number;
+    fairsProcessed: number;
+  }> {
+    const CHUNK_SIZE = 200;
+    let offset = 0;
+    let total = 0;
+    let created = 0;
+    let updated = 0;
+    let errors = 0;
+    const fairsSeen = new Set<string>();
+
+    while (true) {
+      const visitors = await this.visitorRepository.find({
+        relations: ['fair_visitor'],
+        take: CHUNK_SIZE,
+        skip: offset,
+      });
+
+      if (visitors.length === 0) break;
+
+      for (const visitor of visitors) {
+        for (const fair of visitor.fair_visitor ?? []) {
+          fairsSeen.add(fair.id);
+          try {
+            const result = await this.prospectingService.createFromVisitor(
+              {
+                cnpj: visitor.cnpj,
+                company: visitor.company,
+                email: visitor.email,
+                phone: visitor.phone,
+                city: visitor.city ?? undefined,
+                state: visitor.state ?? undefined,
+              },
+              fair.id,
+              true,
+            );
+            if (result === 'created') created++;
+            else updated++;
+          } catch (err) {
+            this.logger.warn(
+              `Sync failed for visitor ${visitor.registrationCode} / fair ${fair.id}: ${err.message}`,
+            );
+            errors++;
+          }
+          total++;
+        }
+      }
+
+      this.logger.log(`[sync-all] chunk offset=${offset} processed=${total}`);
+      offset += CHUNK_SIZE;
+      if (visitors.length < CHUNK_SIZE) break;
+    }
+
+    return { total, created, updated, errors, fairsProcessed: fairsSeen.size };
   }
 
   async deleteVisitor(id: string) {

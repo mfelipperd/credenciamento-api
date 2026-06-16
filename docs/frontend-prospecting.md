@@ -393,3 +393,90 @@ Consulta o CNPJ do prospect na Receita Federal e preenche os campos faltantes (n
 | Atualizar status | `PATCH /fairs/:fairId/prospects/:id/status` |
 | Enriquecer | `POST /fairs/:fairId/prospects/:id/enrich` |
 | Remover | `DELETE /fairs/:fairId/prospects/:id` |
+
+---
+
+## 9. Backfill (uso único — apenas para dados históricos)
+
+Estes endpoints sincronizam visitantes que já existiam na base **antes** do módulo de prospecção ser ativado. Execute **uma única vez** após o deploy.
+
+### Passo 1 — Sincronizar toda a base de visitantes
+
+```
+POST /visitors/sync-prospects/all
+Authorization: Bearer <token>
+```
+
+Processa todos os visitantes de todas as feiras em blocos de 200. Cria registros em `prospects` sem fazer chamadas externas (rápido — ~30–60s para 4000 visitantes).
+
+**Resposta:**
+```json
+{
+  "total": 4120,
+  "created": 4100,
+  "updated": 15,
+  "errors": 5,
+  "fairsProcessed": 8
+}
+```
+
+### Passo 2 — Enriquecer CNAEs em background
+
+```
+POST /prospects/enrich-all
+Authorization: Bearer <token>
+```
+
+**Retorna 202 imediatamente.** O servidor processa em background, respeitando o rate limit da BrasilAPI (1 req/s).
+
+Deduplicação automática: se 10 feiras têm o mesmo CNPJ, a API pública é consultada 1 vez apenas.
+
+**Resposta imediata:**
+```json
+{
+  "message": "Enriquecimento global iniciado em background. Acompanhe os logs do servidor para o progresso..."
+}
+```
+
+**Acompanhar progresso** (polling periódico, ex: a cada 5 minutos):
+```
+GET /fairs/:fairId/prospects/analytics
+→ overview.enriched  (cresce conforme CNAEs são classificados)
+→ overview.total     (total de prospects)
+```
+
+### Passo alternativo: enriquecer só uma feira
+
+```
+POST /fairs/:fairId/prospects/enrich-all
+Authorization: Bearer <token>
+```
+
+Também retorna 202 imediatamente e processa em background.
+
+---
+
+## 10. Enums e tipos
+
+### ProspectStatus
+| Valor | Descrição | Cor sugerida |
+|---|---|---|
+| `NOVO` | Recém criado, não contatado | `#9CA3AF` (gray) |
+| `CONTATADO` | Primeiro contato feito | `#3B82F6` (blue) |
+| `RESPONDEU` | Lead respondeu | `#F59E0B` (amber) |
+| `INTERESSADO` | Lead demonstrou interesse | `#F97316` (orange) |
+| `CONVERTIDO` | Virou cliente / inscrito | `#10B981` (emerald) |
+| `DESCARTADO` | Descartado do funil | `#EF4444` (red) |
+
+### ProspectType
+| Valor | Descrição |
+|---|---|
+| `VISITANTE` | Lojista que visitou a feira |
+| `EXPOSITOR` | Empresa que comprou stand |
+
+### ProspectSource
+| Valor | Origem |
+|---|---|
+| `MANUAL` | Cadastrado pelo operador |
+| `VISITANTE` | Criado automaticamente via inscrição (POST /visitors) |
+| `BUSCA_CNPJ` | Importado via lista de CNPJs |

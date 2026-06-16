@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -34,6 +35,8 @@ import { ProspectStatus, ProspectType } from './entities/prospect.entity';
 @ApiBearerAuth('JWT-auth')
 @Controller()
 export class ProspectingController {
+  private readonly logger = new Logger(ProspectingController.name);
+
   constructor(private readonly service: ProspectingService) {}
 
   // ─── CNPJ lookup avulso ────────────────────────────────────────────────────
@@ -218,21 +221,54 @@ CNPJs já cadastrados para a feira são ignorados.`,
 
   @Post('fairs/:fairId/prospects/enrich-all')
   @ApiOperation({
-    summary: 'Enriquecer CNAE de todos os prospects pendentes',
-    description: `Percorre todos os prospects da feira que têm CNPJ mas ainda não têm CNAE classificado,
-consulta cada um na Receita Federal via BrasilAPI e preenche cnaeCode, cnaeDescription e cnaeSector.
-Processa sequencialmente com delay de 1,1s entre requisições (rate limit da BrasilAPI).
-**Atenção:** para 100 prospects demora ~2 minutos — execute uma vez após o sync-visitors.`,
+    summary: 'Enriquecer CNAE de todos os prospects pendentes da feira (background)',
+    description: `Inicia em **background** o enriquecimento de todos os prospects da feira que têm CNPJ mas não têm CNAE.
+Retorna **202 imediatamente** — não aguarda a conclusão.
+Acompanhe o progresso via \`GET /fairs/:fairId/prospects/analytics\` (campo \`overview.enriched\`).
+Para todas as feiras de uma vez use \`POST /prospects/enrich-all\`.`,
   })
   @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
   @ApiResponse({
-    status: 201,
-    description: 'Enriquecimento concluído',
-    schema: { example: { total: 290, enriched: 280, notFound: 10, alreadyDone: 30 } },
+    status: 202,
+    description: 'Enriquecimento iniciado em background',
+    schema: { example: { message: 'Enriquecimento iniciado em background...' } },
   })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
-  async enrichAll(@Param('fairId', ParseUUIDPipe) fairId: string) {
-    return this.service.enrichAllPending(fairId);
+  enrichAll(@Param('fairId', ParseUUIDPipe) fairId: string) {
+    const tag = `[enrich-fair-bg-${fairId.slice(0, 8)}]`;
+    this.logger.log(`${tag} Starting per-fair CNAE enrichment in background`);
+
+    this.service.enrichAllPending(fairId)
+      .then((r) => this.logger.log(`${tag} Finished: ${JSON.stringify(r)}`))
+      .catch((err) => this.logger.error(`${tag} Failed: ${err.message}`));
+
+    return {
+      message:
+        'Enriquecimento da feira iniciado em background. ' +
+        'Acompanhe via GET /fairs/' + fairId + '/prospects/analytics (campo overview.enriched).',
+    };
+  }
+
+  @Post('prospects/enrich-all')
+  @ApiOperation({
+    summary: 'Enriquecer CNAE de TODOS os prospects (todas as feiras) — background',
+    description: `Inicia em **background** o enriquecimento global de todos os prospects com CNPJ mas sem CNAE classificado.
+**Deduplicação automática de CNPJs**: se o mesmo CNPJ aparece em 10 feiras diferentes, a BrasilAPI é consultada só 1 vez.
+Ideal para rodar uma única vez após o backfill de visitantes com \`POST /visitors/sync-prospects/all\`.
+Retorna **202 imediatamente** — não aguarda conclusão (pode levar horas para base grande).`,
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Enriquecimento global iniciado',
+    schema: {
+      example: {
+        message: 'Enriquecimento global iniciado em background. Acompanhe os logs do servidor para o progresso.',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  enrichAllGlobal() {
+    return this.service.startGlobalEnrichBackground();
   }
 
   @Delete('fairs/:fairId/prospects/:id')

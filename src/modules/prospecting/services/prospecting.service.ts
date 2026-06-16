@@ -323,11 +323,99 @@ export class ProspectingService {
         enriched++;
       }
 
-      // Respeita o rate limit da BrasilAPI (~1 req/s)
       await new Promise((r) => setTimeout(r, 1100));
     }
 
     return { total: pending.length, enriched, notFound, alreadyDone };
+  }
+
+  /**
+   * Enriquece CNAEs de TODOS os prospects (todas as feiras) que têm CNPJ mas não têm CNAE.
+   * Deduplica por CNPJ: mesmo CNPJ em múltiplas feiras → 1 chamada BrasilAPI, n saves.
+   * Executa em background — retorna promise que os callers podem aguardar ou ignorar.
+   */
+  async enrichAllPendingGlobal(): Promise<{
+    total: number;
+    uniqueCnpjs: number;
+    enriched: number;
+    notFound: number;
+    alreadyDone: number;
+  }> {
+    const allPending = await this.repo
+      .createQueryBuilder('p')
+      .where('p.cnpj IS NOT NULL')
+      .andWhere('p.cnaeCode IS NULL')
+      .orderBy('p.cnpj')
+      .getMany();
+
+    const alreadyDone = await this.repo
+      .createQueryBuilder('p')
+      .where('p.cnaeCode IS NOT NULL')
+      .getCount();
+
+    const cnpjCache = new Map<
+      string,
+      { cnaeCode: string; cnaeDescription: string; cnaeSector: string; nomeFantasia?: string } | null
+    >();
+
+    let enriched = 0;
+    let notFound = 0;
+
+    for (const prospect of allPending) {
+      const cnpj = prospect.cnpj;
+
+      if (!cnpjCache.has(cnpj)) {
+        const data = await this.cnpjService.lookup(cnpj);
+        if (!data) {
+          cnpjCache.set(cnpj, null);
+        } else {
+          const cnaeCode = String(data.cnae_fiscal);
+          cnpjCache.set(cnpj, {
+            cnaeCode,
+            cnaeDescription: data.cnae_fiscal_descricao,
+            cnaeSector: this.cnaeService.classify(cnaeCode),
+            ...(data.nome_fantasia ? { nomeFantasia: data.nome_fantasia } : {}),
+          });
+          await new Promise((r) => setTimeout(r, 1100));
+        }
+      }
+
+      const cached = cnpjCache.get(cnpj);
+      if (!cached) {
+        notFound++;
+        continue;
+      }
+
+      prospect.cnaeCode = cached.cnaeCode;
+      prospect.cnaeDescription = cached.cnaeDescription;
+      prospect.cnaeSector = cached.cnaeSector;
+      if (!prospect.nomeFantasia && cached.nomeFantasia) prospect.nomeFantasia = cached.nomeFantasia;
+      await this.repo.save(prospect);
+      enriched++;
+    }
+
+    const uniqueCnpjs = cnpjCache.size;
+    this.logger.log(
+      `[enrich-all-global] done: ${enriched} enriched, ${notFound} not found, ${uniqueCnpjs} unique CNPJs consulted`,
+    );
+
+    return { total: allPending.length, uniqueCnpjs, enriched, notFound, alreadyDone };
+  }
+
+  /** Inicia enriquecimento global em background e retorna imediatamente. */
+  startGlobalEnrichBackground(): { message: string } {
+    const tag = `[enrich-all-bg-${Date.now()}]`;
+    this.logger.log(`${tag} Starting global CNAE enrichment in background`);
+
+    this.enrichAllPendingGlobal()
+      .then((r) => this.logger.log(`${tag} Finished: ${JSON.stringify(r)}`))
+      .catch((err) => this.logger.error(`${tag} Failed: ${err.message}`));
+
+    return {
+      message:
+        'Enriquecimento global iniciado em background. Acompanhe os logs do servidor para o progresso. ' +
+        'Cada CNPJ único leva ~1,1s — verifique GET /fairs/:fairId/prospects/analytics para acompanhar.',
+    };
   }
 
   // ─── Lookup avulso (não persiste) ─────────────────────────────────────────
