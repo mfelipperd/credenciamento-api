@@ -396,7 +396,236 @@ Consulta o CNPJ do prospect na Receita Federal e preenche os campos faltantes (n
 
 ---
 
-## 9. Backfill (uso único — apenas para dados históricos)
+## 9. Mapa geográfico — de onde vêm os lojistas
+
+### Endpoint
+
+```
+GET /fairs/:fairId/prospects/analytics/geo
+Authorization: Bearer <token>
+```
+
+### Resposta
+
+```json
+{
+  "summary": {
+    "totalProspects": 4120,
+    "withState": 4000,
+    "withCity": 3800,
+    "withNeighborhood": 2900,
+    "uniqueStates": 12,
+    "uniqueCities": 180,
+    "uniqueNeighborhoods": 420
+  },
+  "byState": [
+    { "state": "AM", "count": 1800, "percentage": 45.0 },
+    { "state": "SP", "count": 600,  "percentage": 14.6 },
+    { "state": "PA", "count": 300,  "percentage": 7.3  }
+  ],
+  "byCity": [
+    { "city": "Manaus",     "state": "AM", "count": 1200 },
+    { "city": "São Paulo",  "state": "SP", "count": 400  },
+    { "city": "Belém",      "state": "PA", "count": 200  }
+  ],
+  "byNeighborhood": [
+    { "neighborhood": "Adrianópolis", "city": "Manaus", "state": "AM", "count": 89 },
+    { "neighborhood": "Centro",       "city": "Manaus", "state": "AM", "count": 74 }
+  ],
+  "bySectorPerState": [
+    {
+      "state": "AM",
+      "sectors": [
+        { "sector": "Comércio Varejista", "count": 480 },
+        { "sector": "TI e Software",      "count": 210 }
+      ]
+    }
+  ],
+  "charts": {
+    "stateBar": {
+      "categories": ["AM", "SP", "PA"],
+      "series": [{ "name": "Prospects", "data": [1800, 600, 300] }]
+    },
+    "cityTreemap": [
+      { "x": "Manaus/AM",    "y": 1200 },
+      { "x": "São Paulo/SP", "y": 400  }
+    ],
+    "neighborhoodBar": {
+      "categories": ["Adrianópolis, Manaus", "Centro, Manaus"],
+      "series": [{ "name": "Lojas", "data": [89, 74] }]
+    }
+  }
+}
+```
+
+> **Nota:** `byNeighborhood` é preenchido com o bairro do endereço registrado da empresa no CNPJ (via BrasilAPI). Disponível após rodar `POST /prospects/enrich-all`.
+
+---
+
+### Implementação do mapa no frontend
+
+#### Opção A — Choropleth de estados (react-leaflet + GeoJSON)
+
+Melhor para visão macro: "o AM representa 45% dos prospects".
+
+```bash
+npm install react-leaflet leaflet
+npm install -D @types/leaflet
+```
+
+```tsx
+import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+import brazilGeoJson from './brazil-states.geojson.json'; // veja abaixo
+
+function ProspectMapBrazil({ geoData }) {
+  const countByState = Object.fromEntries(
+    geoData.byState.map(s => [s.state, s.count])
+  );
+  const max = Math.max(...geoData.byState.map(s => s.count));
+
+  function styleFeature(feature) {
+    const uf = feature.properties.sigla; // campo no GeoJSON do IBGE
+    const count = countByState[uf] ?? 0;
+    const intensity = max > 0 ? count / max : 0;
+    return {
+      fillColor: `rgba(59, 130, 246, ${0.1 + intensity * 0.85})`, // azul
+      weight: 1,
+      color: '#1e40af',
+      fillOpacity: 1,
+    };
+  }
+
+  function onEachFeature(feature, layer) {
+    const uf = feature.properties.sigla;
+    const entry = geoData.byState.find(s => s.state === uf);
+    layer.bindTooltip(
+      `<b>${feature.properties.nome}</b><br>${entry?.count ?? 0} lojas (${entry?.percentage ?? 0}%)`
+    );
+  }
+
+  return (
+    <MapContainer center={[-14, -51]} zoom={4} style={{ height: 450 }}>
+      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <GeoJSON data={brazilGeoJson} style={styleFeature} onEachFeature={onEachFeature} />
+    </MapContainer>
+  );
+}
+```
+
+**GeoJSON dos estados do Brasil (IBGE):**
+```
+https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson
+```
+Salve localmente em `src/assets/brazil-states.geojson.json` para evitar dependência de rede em build.
+
+---
+
+#### Opção B — Treemap de cidades (ApexCharts)
+
+Sem mapa real, mas mostra peso relativo de cada cidade — simples e eficaz.
+
+```tsx
+import ReactApexChart from 'react-apexcharts';
+
+function CityTreemap({ geoData }) {
+  const options = {
+    chart: { type: 'treemap' },
+    title: { text: 'Origem dos lojistas por cidade' },
+    dataLabels: { enabled: true },
+  };
+
+  const series = [{ data: geoData.charts.cityTreemap }];
+  // cityTreemap = [{ x: "Manaus/AM", y: 1200 }, ...]
+
+  return <ReactApexChart type="treemap" options={options} series={series} height={400} />;
+}
+```
+
+---
+
+#### Opção C — Ranking de bairros (bar horizontal)
+
+Para a visão de "quais bairros têm mais lojas" — dados diretos do CNPJ enriquecido.
+
+```tsx
+function NeighborhoodBar({ geoData }) {
+  const options = {
+    chart: { type: 'bar' },
+    plotOptions: { bar: { horizontal: true } },
+    xaxis: { categories: geoData.charts.neighborhoodBar.categories },
+    title: { text: 'Bairros com maior concentração de lojas' },
+  };
+
+  return (
+    <ReactApexChart
+      type="bar"
+      options={options}
+      series={geoData.charts.neighborhoodBar.series}
+      height={450}
+    />
+  );
+}
+```
+
+---
+
+#### Opção D — Marcadores no mapa por cidade (geocoding client-side)
+
+Se precisar de pontos no mapa por cidade, use Nominatim (OpenStreetMap, gratuito) no frontend para geocodificar os nomes de cidades retornados pela API. Faça isso **uma vez** e guarde em cache no localStorage:
+
+```ts
+async function geocodeCity(city: string, state: string): Promise<[number, number] | null> {
+  const cacheKey = `geo_${city}_${state}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return JSON.parse(cached);
+
+  const url = `https://nominatim.openstreetmap.org/search?` +
+    `city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}` +
+    `&country=brazil&format=json&limit=1`;
+
+  const res = await fetch(url, { headers: { 'User-Agent': 'expomultimix-dashboard/1.0' } });
+  const data = await res.json();
+  if (!data.length) return null;
+
+  const coords: [number, number] = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+  localStorage.setItem(cacheKey, JSON.stringify(coords));
+  return coords;
+}
+```
+
+> Nominatim tem rate limit de 1 req/s — geocodifique cidades de forma sequencial com 1s de delay entre cada uma.
+
+---
+
+### Layout sugerido para a tela de mapa
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  ORIGEM DOS LOJISTAS — Expo Multimix 2026                      │
+├────────────┬───────────────┬───────────────┬───────────────────┤
+│  Estados   │  Cidades      │  Com bairro   │  Cobertura        │
+│    12      │    180        │   2.900       │  geográfica 97%   │
+├────────────┴───────────────┴───────────────┴───────────────────┤
+│  [Mapa choropleth — Brasil por estado, intensidade azul]       │
+│                                                                │
+│   AM ████████████ 45%    PA ████ 7%                           │
+│   SP ███████ 14%         RJ ███ 5%  ...                       │
+├─────────────────────────┬──────────────────────────────────────┤
+│  [Treemap] Top cidades  │  [Bar H] Top bairros                │
+│  Manaus/AM      1200    │  Adrianópolis, Manaus     89        │
+│  São Paulo/SP    400    │  Centro, Manaus           74        │
+│  Belém/PA        200    │  Aleixo, Manaus           51        │
+└─────────────────────────┴──────────────────────────────────────┘
+```
+
+**Endpoint único que alimenta toda a tela:**
+```
+GET /fairs/:fairId/prospects/analytics/geo
+```
+
+---
+
+## 10. Backfill (uso único — apenas para dados históricos)
 
 Estes endpoints sincronizam visitantes que já existiam na base **antes** do módulo de prospecção ser ativado. Execute **uma única vez** após o deploy.
 

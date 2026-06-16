@@ -134,6 +134,42 @@ CNPJs já cadastrados para a feira são ignorados.`,
     return this.service.findAll(fairId, filters);
   }
 
+  @Get('fairs/:fairId/prospects/analytics/geo')
+  @ApiOperation({
+    summary: 'Analytics geográfico — mapa de calor de onde vêm os lojistas',
+    description: `Retorna distribuição geográfica dos prospects em múltiplos níveis:
+- **byState**: contagem por UF com percentual — dados para choropleth do mapa do Brasil
+- **byCity**: top 50 cidades com contagem — dados para treemap / mapa de marcadores
+- **byNeighborhood**: top 100 bairros (endereço registrado da empresa no CNPJ) — ranking de densidade
+- **bySectorPerState**: top 5 setores CNAE por estado — cruzamento para entender perfil por região
+- **charts**: dados prontos para ApexCharts (bar de estados, treemap de cidades, bar horizontal de bairros)
+
+> Os dados de bairro são preenchidos após o enriquecimento via BrasilAPI (\`POST /prospects/enrich-all\`).`,
+  })
+  @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dados geográficos para mapa',
+    schema: {
+      example: {
+        summary: { totalProspects: 4120, withState: 4000, withCity: 3800, withNeighborhood: 2900, uniqueStates: 12, uniqueCities: 180, uniqueNeighborhoods: 420 },
+        byState: [{ state: 'AM', count: 1800, percentage: 45.0 }, { state: 'SP', count: 600, percentage: 14.6 }],
+        byCity: [{ city: 'Manaus', state: 'AM', count: 1200 }, { city: 'São Paulo', state: 'SP', count: 400 }],
+        byNeighborhood: [{ neighborhood: 'Adrianópolis', city: 'Manaus', state: 'AM', count: 89 }],
+        bySectorPerState: [{ state: 'AM', sectors: [{ sector: 'Comércio Varejista', count: 480 }] }],
+        charts: {
+          stateBar: { categories: ['AM', 'SP'], series: [{ name: 'Prospects', data: [1800, 600] }] },
+          cityTreemap: [{ x: 'Manaus/AM', y: 1200 }],
+          neighborhoodBar: { categories: ['Adrianópolis, Manaus'], series: [{ name: 'Lojas', data: [89] }] },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  async getGeoAnalytics(@Param('fairId', ParseUUIDPipe) fairId: string) {
+    return this.service.getGeoAnalytics(fairId);
+  }
+
   @Get('fairs/:fairId/prospects/analytics')
   @ApiOperation({
     summary: 'Analytics completo de prospects da feira',

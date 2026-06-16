@@ -12,6 +12,7 @@ export interface CnpjApiData {
   uf?: string;
   cep?: string;
   logradouro?: string;
+  bairro?: string;
   cnae_fiscal: number;
   cnae_fiscal_descricao: string;
   cnaes_secundarios?: Array<{ codigo: number; descricao: string }>;

@@ -122,6 +122,7 @@ export class ProspectingService {
     }
     if (data.municipio) p.city = data.municipio;
     if (data.uf) p.state = data.uf;
+    if (data.bairro) p.neighborhood = data.bairro;
     p.cnaeCode = cnaeCode;
     p.cnaeDescription = data.cnae_fiscal_descricao;
     p.cnaeSector = this.cnaeService.classify(cnaeCode);
@@ -175,6 +176,7 @@ export class ProspectingService {
           ...(phone ? { phone } : {}),
           ...(data.municipio ? { city: data.municipio } : {}),
           ...(data.uf ? { state: data.uf } : {}),
+          ...(data.bairro ? { neighborhood: data.bairro } : {}),
           cnaeCode,
           cnaeDescription: data.cnae_fiscal_descricao,
           cnaeSector: this.cnaeService.classify(cnaeCode),
@@ -279,6 +281,9 @@ export class ProspectingService {
       prospect.cnaeDescription = data.cnae_fiscal_descricao;
       prospect.cnaeSector = this.cnaeService.classify(cnaeCode);
       if (!prospect.nomeFantasia && data.nome_fantasia) prospect.nomeFantasia = data.nome_fantasia;
+      if (!prospect.city && data.municipio) prospect.city = data.municipio;
+      if (!prospect.state && data.uf) prospect.state = data.uf;
+      if (!prospect.neighborhood && data.bairro) prospect.neighborhood = data.bairro;
 
       await this.repo.save(prospect);
       this.logger.log(`CNAE enriched for prospect ${prospectId}: ${prospect.cnaeSector}`);
@@ -353,10 +358,16 @@ export class ProspectingService {
       .where('p.cnaeCode IS NOT NULL')
       .getCount();
 
-    const cnpjCache = new Map<
-      string,
-      { cnaeCode: string; cnaeDescription: string; cnaeSector: string; nomeFantasia?: string } | null
-    >();
+    type CnpjCacheEntry = {
+      cnaeCode: string;
+      cnaeDescription: string;
+      cnaeSector: string;
+      nomeFantasia?: string;
+      city?: string;
+      state?: string;
+      neighborhood?: string;
+    };
+    const cnpjCache = new Map<string, CnpjCacheEntry | null>();
 
     let enriched = 0;
     let notFound = 0;
@@ -375,6 +386,9 @@ export class ProspectingService {
             cnaeDescription: data.cnae_fiscal_descricao,
             cnaeSector: this.cnaeService.classify(cnaeCode),
             ...(data.nome_fantasia ? { nomeFantasia: data.nome_fantasia } : {}),
+            ...(data.municipio ? { city: data.municipio } : {}),
+            ...(data.uf ? { state: data.uf } : {}),
+            ...(data.bairro ? { neighborhood: data.bairro } : {}),
           });
           await new Promise((r) => setTimeout(r, 1100));
         }
@@ -390,6 +404,9 @@ export class ProspectingService {
       prospect.cnaeDescription = cached.cnaeDescription;
       prospect.cnaeSector = cached.cnaeSector;
       if (!prospect.nomeFantasia && cached.nomeFantasia) prospect.nomeFantasia = cached.nomeFantasia;
+      if (!prospect.city && cached.city) prospect.city = cached.city;
+      if (!prospect.state && cached.state) prospect.state = cached.state;
+      if (!prospect.neighborhood && cached.neighborhood) prospect.neighborhood = cached.neighborhood;
       await this.repo.save(prospect);
       enriched++;
     }
@@ -431,6 +448,108 @@ export class ProspectingService {
       cnpjFormatado: this.cnpjService.formatCnpj(clean),
       cnaeSector: this.cnaeService.classify(cnaeCode),
       isB2bPriority: this.cnaeService.isB2bPriority(this.cnaeService.classify(cnaeCode)),
+    };
+  }
+
+  // ─── Geo analytics ─────────────────────────────────────────────────────────
+
+  async getGeoAnalytics(fairId: string) {
+    const all = await this.repo.find({ where: { fairId } });
+    const total = all.length;
+
+    // ── por estado ──────────────────────────────────────────────────────────
+    const stateMap = new Map<string, number>();
+    for (const p of all) {
+      if (!p.state) continue;
+      stateMap.set(p.state, (stateMap.get(p.state) ?? 0) + 1);
+    }
+    const byState = Array.from(stateMap.entries())
+      .map(([state, count]) => ({
+        state,
+        count,
+        percentage: total > 0 ? +((count / total) * 100).toFixed(1) : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // ── por cidade ──────────────────────────────────────────────────────────
+    const cityMap = new Map<string, { city: string; state: string; count: number }>();
+    for (const p of all) {
+      if (!p.city || !p.state) continue;
+      const key = `${p.city.toUpperCase()}__${p.state}`;
+      const entry = cityMap.get(key) ?? { city: p.city, state: p.state, count: 0 };
+      entry.count++;
+      cityMap.set(key, entry);
+    }
+    const byCity = Array.from(cityMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 50);
+
+    // ── por bairro ──────────────────────────────────────────────────────────
+    const neighborhoodMap = new Map<
+      string,
+      { neighborhood: string; city: string; state: string; count: number }
+    >();
+    for (const p of all) {
+      if (!p.neighborhood || !p.city || !p.state) continue;
+      const key = `${p.neighborhood.toUpperCase()}__${p.city.toUpperCase()}__${p.state}`;
+      const entry = neighborhoodMap.get(key) ?? {
+        neighborhood: p.neighborhood,
+        city: p.city,
+        state: p.state,
+        count: 0,
+      };
+      entry.count++;
+      neighborhoodMap.set(key, entry);
+    }
+    const byNeighborhood = Array.from(neighborhoodMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 100);
+
+    // ── por setor CNAE por estado (para heatmap cruzado) ────────────────────
+    const stateSectorMap = new Map<string, Map<string, number>>();
+    for (const p of all) {
+      if (!p.state || !p.cnaeSector) continue;
+      if (!stateSectorMap.has(p.state)) stateSectorMap.set(p.state, new Map());
+      const sectors = stateSectorMap.get(p.state)!;
+      sectors.set(p.cnaeSector, (sectors.get(p.cnaeSector) ?? 0) + 1);
+    }
+    const bySectorPerState = Array.from(stateSectorMap.entries()).map(([state, sectors]) => ({
+      state,
+      sectors: Array.from(sectors.entries())
+        .map(([sector, count]) => ({ sector, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5),
+    }));
+
+    return {
+      summary: {
+        totalProspects: total,
+        withState: all.filter((p) => p.state).length,
+        withCity: all.filter((p) => p.city).length,
+        withNeighborhood: all.filter((p) => p.neighborhood).length,
+        uniqueStates: byState.length,
+        uniqueCities: byCity.length,
+        uniqueNeighborhoods: byNeighborhood.length,
+      },
+      byState,
+      byCity,
+      byNeighborhood,
+      bySectorPerState,
+      // Dados prontos para ApexCharts treemap (cidades)
+      charts: {
+        stateBar: {
+          categories: byState.map((s) => s.state),
+          series: [{ name: 'Prospects', data: byState.map((s) => s.count) }],
+        },
+        cityTreemap: byCity.slice(0, 20).map((c) => ({
+          x: `${c.city}/${c.state}`,
+          y: c.count,
+        })),
+        neighborhoodBar: {
+          categories: byNeighborhood.slice(0, 15).map((n) => `${n.neighborhood}, ${n.city}`),
+          series: [{ name: 'Lojas', data: byNeighborhood.slice(0, 15).map((n) => n.count) }],
+        },
+      },
     };
   }
 

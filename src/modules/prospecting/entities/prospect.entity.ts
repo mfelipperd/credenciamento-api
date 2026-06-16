@@ -68,6 +68,9 @@ export class Prospect {
   @Column({ nullable: true, length: 2 })
   state: string;
 
+  @Column({ nullable: true, length: 150 })
+  neighborhood: string;
+
   @Column({ nullable: true, length: 10 })
   cnaeCode: string;
 
