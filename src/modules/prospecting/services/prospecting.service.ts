@@ -34,6 +34,19 @@ export class ProspectingService {
     private readonly cnaeService: CnaeService,
   ) {}
 
+  // ─── Normalização geográfica ───────────────────────────────────────────────
+
+  /** UF sempre maiúscula: "am" → "AM", "Am" → "AM" */
+  private normalizeState(s: string): string {
+    return s?.trim().toUpperCase() ?? s;
+  }
+
+  /** Título: "MANAUS" → "Manaus", "SÃO PAULO" → "São Paulo" */
+  private toTitleCase(s: string): string {
+    if (!s) return s;
+    return s.trim().toLowerCase().replace(/(^|\s)(\S)/g, (_, sp, ch) => sp + ch.toUpperCase());
+  }
+
   // ─── CRUD ──────────────────────────────────────────────────────────────────
 
   async create(fairId: string, dto: CreateProspectDto): Promise<Prospect> {
@@ -120,9 +133,9 @@ export class ProspectingService {
       const phone = this.cnpjService.extractPhone(data.ddd_telefone_1 ?? '');
       if (phone) p.phone = phone;
     }
-    if (data.municipio) p.city = data.municipio;
-    if (data.uf) p.state = data.uf;
-    if (data.bairro) p.neighborhood = data.bairro;
+    if (data.municipio) p.city = this.toTitleCase(data.municipio);
+    if (data.uf) p.state = this.normalizeState(data.uf);
+    if (data.bairro) p.neighborhood = this.toTitleCase(data.bairro);
     p.cnaeCode = cnaeCode;
     p.cnaeDescription = data.cnae_fiscal_descricao;
     p.cnaeSector = this.cnaeService.classify(cnaeCode);
@@ -174,9 +187,9 @@ export class ProspectingService {
           ...(data.nome_fantasia ? { nomeFantasia: data.nome_fantasia } : {}),
           ...(data.email ? { email: data.email } : {}),
           ...(phone ? { phone } : {}),
-          ...(data.municipio ? { city: data.municipio } : {}),
-          ...(data.uf ? { state: data.uf } : {}),
-          ...(data.bairro ? { neighborhood: data.bairro } : {}),
+          ...(data.municipio ? { city: this.toTitleCase(data.municipio) } : {}),
+          ...(data.uf ? { state: this.normalizeState(data.uf) } : {}),
+          ...(data.bairro ? { neighborhood: this.toTitleCase(data.bairro) } : {}),
           cnaeCode,
           cnaeDescription: data.cnae_fiscal_descricao,
           cnaeSector: this.cnaeService.classify(cnaeCode),
@@ -237,8 +250,8 @@ export class ProspectingService {
             razaoSocial: visitor.company,
             ...(visitor.email ? { email: visitor.email } : {}),
             ...(visitor.phone ? { phone: visitor.phone } : {}),
-            ...(visitor.city ? { city: visitor.city } : {}),
-            ...(visitor.state ? { state: visitor.state } : {}),
+            ...(visitor.city ? { city: this.toTitleCase(visitor.city) } : {}),
+            ...(visitor.state ? { state: this.normalizeState(visitor.state) } : {}),
             convertedAt: new Date(),
           } as Partial<Prospect>),
         );
@@ -253,8 +266,8 @@ export class ProspectingService {
           razaoSocial: visitor.company,
           ...(visitor.email ? { email: visitor.email } : {}),
           ...(visitor.phone ? { phone: visitor.phone } : {}),
-          ...(visitor.city ? { city: visitor.city } : {}),
-          ...(visitor.state ? { state: visitor.state } : {}),
+          ...(visitor.city ? { city: this.toTitleCase(visitor.city) } : {}),
+          ...(visitor.state ? { state: this.normalizeState(visitor.state) } : {}),
           convertedAt: new Date(),
         } as Partial<Prospect>),
       );
@@ -281,9 +294,9 @@ export class ProspectingService {
       prospect.cnaeDescription = data.cnae_fiscal_descricao;
       prospect.cnaeSector = this.cnaeService.classify(cnaeCode);
       if (!prospect.nomeFantasia && data.nome_fantasia) prospect.nomeFantasia = data.nome_fantasia;
-      if (!prospect.city && data.municipio) prospect.city = data.municipio;
-      if (!prospect.state && data.uf) prospect.state = data.uf;
-      if (!prospect.neighborhood && data.bairro) prospect.neighborhood = data.bairro;
+      if (!prospect.city && data.municipio) prospect.city = this.toTitleCase(data.municipio);
+      if (!prospect.state && data.uf) prospect.state = this.normalizeState(data.uf);
+      if (!prospect.neighborhood && data.bairro) prospect.neighborhood = this.toTitleCase(data.bairro);
 
       await this.repo.save(prospect);
       this.logger.log(`CNAE enriched for prospect ${prospectId}: ${prospect.cnaeSector}`);
@@ -386,9 +399,9 @@ export class ProspectingService {
             cnaeDescription: data.cnae_fiscal_descricao,
             cnaeSector: this.cnaeService.classify(cnaeCode),
             ...(data.nome_fantasia ? { nomeFantasia: data.nome_fantasia } : {}),
-            ...(data.municipio ? { city: data.municipio } : {}),
-            ...(data.uf ? { state: data.uf } : {}),
-            ...(data.bairro ? { neighborhood: data.bairro } : {}),
+            ...(data.municipio ? { city: this.toTitleCase(data.municipio) } : {}),
+            ...(data.uf ? { state: this.normalizeState(data.uf) } : {}),
+            ...(data.bairro ? { neighborhood: this.toTitleCase(data.bairro) } : {}),
           });
           await new Promise((r) => setTimeout(r, 1100));
         }
@@ -404,9 +417,9 @@ export class ProspectingService {
       prospect.cnaeDescription = cached.cnaeDescription;
       prospect.cnaeSector = cached.cnaeSector;
       if (!prospect.nomeFantasia && cached.nomeFantasia) prospect.nomeFantasia = cached.nomeFantasia;
-      if (!prospect.city && cached.city) prospect.city = cached.city;
-      if (!prospect.state && cached.state) prospect.state = cached.state;
-      if (!prospect.neighborhood && cached.neighborhood) prospect.neighborhood = cached.neighborhood;
+      if (!prospect.city && cached.city) prospect.city = this.toTitleCase(cached.city);
+      if (!prospect.state && cached.state) prospect.state = this.normalizeState(cached.state);
+      if (!prospect.neighborhood && cached.neighborhood) prospect.neighborhood = this.toTitleCase(cached.neighborhood);
       await this.repo.save(prospect);
       enriched++;
     }
@@ -453,30 +466,52 @@ export class ProspectingService {
 
   // ─── Geo analytics ─────────────────────────────────────────────────────────
 
+  /** Centroides aproximados de cada UF brasileira [longitude, latitude] — para Mapbox markers */
+  private static readonly STATE_CENTROIDS: Record<string, [number, number]> = {
+    AC: [-70.812, -9.975],  AL: [-36.782, -9.571],  AM: [-64.659, -4.077],
+    AP: [-51.777,  1.410],  BA: [-41.708,-12.971],  CE: [-39.310, -5.498],
+    DF: [-47.797,-15.780],  ES: [-40.308,-19.183],  GO: [-49.868,-16.642],
+    MA: [-45.270, -5.420],  MG: [-44.698,-18.512],  MS: [-54.758,-20.510],
+    MT: [-56.098,-12.642],  PA: [-52.291, -5.534],  PB: [-36.782, -7.239],
+    PE: [-37.343, -8.813],  PI: [-42.811, -7.718],  PR: [-51.615,-25.244],
+    RJ: [-43.172,-22.913],  RN: [-36.528, -5.793],  RO: [-63.034,-11.504],
+    RR: [-61.399,  2.820],  RS: [-53.186,-30.034],  SC: [-50.471,-27.596],
+    SE: [-37.447,-10.574],  SP: [-48.549,-22.974],  TO: [-48.333,-10.181],
+  };
+
   async getGeoAnalytics(fairId: string) {
     const all = await this.repo.find({ where: { fairId } });
     const total = all.length;
 
-    // ── por estado ──────────────────────────────────────────────────────────
+    // ── por estado — normaliza na leitura para dados sujos no banco ──────────
     const stateMap = new Map<string, number>();
     for (const p of all) {
       if (!p.state) continue;
-      stateMap.set(p.state, (stateMap.get(p.state) ?? 0) + 1);
+      const s = this.normalizeState(p.state);
+      stateMap.set(s, (stateMap.get(s) ?? 0) + 1);
     }
     const byState = Array.from(stateMap.entries())
       .map(([state, count]) => ({
         state,
         count,
         percentage: total > 0 ? +((count / total) * 100).toFixed(1) : 0,
+        coordinates: ProspectingService.STATE_CENTROIDS[state] ?? null,
       }))
       .sort((a, b) => b.count - a.count);
 
-    // ── por cidade ──────────────────────────────────────────────────────────
-    const cityMap = new Map<string, { city: string; state: string; count: number }>();
+    // ── por cidade — normaliza na leitura ───────────────────────────────────
+    const cityMap = new Map<string, { city: string; state: string; count: number; coordinates: [number, number] | null }>();
     for (const p of all) {
       if (!p.city || !p.state) continue;
-      const key = `${p.city.toUpperCase()}__${p.state}`;
-      const entry = cityMap.get(key) ?? { city: p.city, state: p.state, count: 0 };
+      const city  = this.toTitleCase(p.city);
+      const state = this.normalizeState(p.state);
+      const key   = `${city.toUpperCase()}__${state}`;
+      const entry = cityMap.get(key) ?? {
+        city,
+        state,
+        count: 0,
+        coordinates: ProspectingService.STATE_CENTROIDS[state] ?? null,
+      };
       entry.count++;
       cityMap.set(key, entry);
     }
@@ -484,20 +519,18 @@ export class ProspectingService {
       .sort((a, b) => b.count - a.count)
       .slice(0, 50);
 
-    // ── por bairro ──────────────────────────────────────────────────────────
+    // ── por bairro — normaliza na leitura ───────────────────────────────────
     const neighborhoodMap = new Map<
       string,
       { neighborhood: string; city: string; state: string; count: number }
     >();
     for (const p of all) {
       if (!p.neighborhood || !p.city || !p.state) continue;
-      const key = `${p.neighborhood.toUpperCase()}__${p.city.toUpperCase()}__${p.state}`;
-      const entry = neighborhoodMap.get(key) ?? {
-        neighborhood: p.neighborhood,
-        city: p.city,
-        state: p.state,
-        count: 0,
-      };
+      const neighborhood = this.toTitleCase(p.neighborhood);
+      const city         = this.toTitleCase(p.city);
+      const state        = this.normalizeState(p.state);
+      const key          = `${neighborhood.toUpperCase()}__${city.toUpperCase()}__${state}`;
+      const entry        = neighborhoodMap.get(key) ?? { neighborhood, city, state, count: 0 };
       entry.count++;
       neighborhoodMap.set(key, entry);
     }
@@ -505,12 +538,13 @@ export class ProspectingService {
       .sort((a, b) => b.count - a.count)
       .slice(0, 100);
 
-    // ── por setor CNAE por estado (para heatmap cruzado) ────────────────────
+    // ── top setores por estado ───────────────────────────────────────────────
     const stateSectorMap = new Map<string, Map<string, number>>();
     for (const p of all) {
       if (!p.state || !p.cnaeSector) continue;
-      if (!stateSectorMap.has(p.state)) stateSectorMap.set(p.state, new Map());
-      const sectors = stateSectorMap.get(p.state)!;
+      const s = this.normalizeState(p.state);
+      if (!stateSectorMap.has(s)) stateSectorMap.set(s, new Map());
+      const sectors = stateSectorMap.get(s)!;
       sectors.set(p.cnaeSector, (sectors.get(p.cnaeSector) ?? 0) + 1);
     }
     const bySectorPerState = Array.from(stateSectorMap.entries()).map(([state, sectors]) => ({
@@ -520,6 +554,32 @@ export class ProspectingService {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5),
     }));
+
+    // ── GeoJSON para Mapbox ─────────────────────────────────────────────────
+    const mapbox = {
+      // FeatureCollection de estados — use como source de um layer de círculos/heatmap
+      statesGeoJson: {
+        type: 'FeatureCollection' as const,
+        features: byState
+          .filter((s) => s.coordinates)
+          .map((s) => ({
+            type: 'Feature' as const,
+            geometry: { type: 'Point' as const, coordinates: s.coordinates! },
+            properties: { state: s.state, count: s.count, percentage: s.percentage },
+          })),
+      },
+      // FeatureCollection de cidades — usa centroide do estado como fallback de coordenada
+      citiesGeoJson: {
+        type: 'FeatureCollection' as const,
+        features: byCity
+          .filter((c) => c.coordinates)
+          .map((c) => ({
+            type: 'Feature' as const,
+            geometry: { type: 'Point' as const, coordinates: c.coordinates! },
+            properties: { city: c.city, state: c.state, count: c.count },
+          })),
+      },
+    };
 
     return {
       summary: {
@@ -535,7 +595,7 @@ export class ProspectingService {
       byCity,
       byNeighborhood,
       bySectorPerState,
-      // Dados prontos para ApexCharts treemap (cidades)
+      mapbox,
       charts: {
         stateBar: {
           categories: byState.map((s) => s.state),
@@ -595,7 +655,8 @@ export class ProspectingService {
     const stateMap = new Map<string, number>();
     for (const p of all) {
       if (!p.state) continue;
-      stateMap.set(p.state, (stateMap.get(p.state) ?? 0) + 1);
+      const s = this.normalizeState(p.state);
+      stateMap.set(s, (stateMap.get(s) ?? 0) + 1);
     }
     const geographicDistribution = Array.from(stateMap.entries())
       .map(([state, count]) => ({ state, count }))
