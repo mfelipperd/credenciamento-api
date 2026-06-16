@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,14 +20,18 @@ import {
   PaginatedResponse,
 } from './dto/paginated-visitors.dto';
 import * as puppeteer from 'puppeteer';
+import { ProspectingService } from '../prospecting/services/prospecting.service';
 
 @Injectable()
 export class VisitorsService {
+  private readonly logger = new Logger(VisitorsService.name);
+
   constructor(
     @InjectRepository(Visitor) private visitorRepository: Repository<Visitor>,
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Fair) private fairRepository: Repository<Fair>,
     private readonly emailsService: EmailsService,
+    private readonly prospectingService: ProspectingService,
   ) {}
 
   async getVisitors(user: User | null, fairId?: string): Promise<Visitor[]> {
@@ -503,6 +508,23 @@ export class VisitorsService {
       console.error('Erro enviando email de confirmação no enroll:', err);
     }
 
+    // Registra/atualiza prospect para a nova feira — fire-and-forget
+    this.prospectingService
+      .createFromVisitor(
+        {
+          cnpj: saved.cnpj,
+          company: saved.company,
+          email: saved.email,
+          phone: saved.phone,
+          city: saved.city ?? undefined,
+          state: saved.state ?? undefined,
+        },
+        fairId,
+      )
+      .catch((err) =>
+        this.logger.warn(`Prospect enroll failed for visitor ${saved.registrationCode}: ${err.message}`),
+      );
+
     return saved;
   }
 
@@ -541,6 +563,23 @@ export class VisitorsService {
     } catch (err) {
       console.error('Erro enviando email:', err);
     }
+
+    // Registra/atualiza prospect — fire-and-forget, não bloqueia o retorno
+    this.prospectingService
+      .createFromVisitor(
+        {
+          cnpj: savedVisitor.cnpj,
+          company: savedVisitor.company,
+          email: savedVisitor.email,
+          phone: savedVisitor.phone,
+          city: savedVisitor.city ?? undefined,
+          state: savedVisitor.state ?? undefined,
+        },
+        dto.fair_visitor,
+      )
+      .catch((err) =>
+        this.logger.warn(`Prospect creation failed for visitor ${savedVisitor.registrationCode}: ${err.message}`),
+      );
 
     return savedVisitor;
   }

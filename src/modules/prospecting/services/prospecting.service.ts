@@ -189,6 +189,99 @@ export class ProspectingService {
     return { imported, skipped, errors };
   }
 
+  // ─── Criação automática via registro de visitante ─────────────────────────
+
+  /**
+   * Chamado pelo VisitorsService após cada inscrição.
+   * Fire-and-forget — nunca bloqueia o fluxo de cadastro.
+   *
+   * Regras:
+   * - Se já existe prospect com mesmo fairId + cnpj → marca como CONVERTIDO.
+   * - Se não existe → cria como CONVERTIDO.
+   * - CNAE é enriquecido de forma assíncrona (sem esperar BrasilAPI).
+   */
+  async createFromVisitor(
+    visitor: {
+      cnpj?: string;
+      company: string;
+      email?: string;
+      phone?: string;
+      city?: string;
+      state?: string;
+    },
+    fairId: string,
+  ): Promise<void> {
+    const cnpj = visitor.cnpj ? this.cnpjService.cleanCnpj(visitor.cnpj) : undefined;
+
+    let prospect: Prospect;
+
+    if (cnpj) {
+      const existing = await this.repo.findOne({ where: { fairId, cnpj } });
+      if (existing) {
+        existing.status = ProspectStatus.CONVERTIDO;
+        existing.convertedAt = new Date();
+        prospect = await this.repo.save(existing);
+      } else {
+        prospect = await this.repo.save(
+          this.repo.create({
+            fairId,
+            type: ProspectType.VISITANTE,
+            status: ProspectStatus.CONVERTIDO,
+            source: ProspectSource.MANUAL,
+            cnpj,
+            razaoSocial: visitor.company,
+            ...(visitor.email ? { email: visitor.email } : {}),
+            ...(visitor.phone ? { phone: visitor.phone } : {}),
+            ...(visitor.city ? { city: visitor.city } : {}),
+            ...(visitor.state ? { state: visitor.state } : {}),
+            convertedAt: new Date(),
+          } as Partial<Prospect>),
+        );
+      }
+    } else {
+      prospect = await this.repo.save(
+        this.repo.create({
+          fairId,
+          type: ProspectType.VISITANTE,
+          status: ProspectStatus.CONVERTIDO,
+          source: ProspectSource.MANUAL,
+          razaoSocial: visitor.company,
+          ...(visitor.email ? { email: visitor.email } : {}),
+          ...(visitor.phone ? { phone: visitor.phone } : {}),
+          ...(visitor.city ? { city: visitor.city } : {}),
+          ...(visitor.state ? { state: visitor.state } : {}),
+          convertedAt: new Date(),
+        } as Partial<Prospect>),
+      );
+    }
+
+    // Enriquece CNAE em background — não bloqueia o retorno
+    if (cnpj && !prospect.cnaeCode) {
+      this.enrichCnaeAsync(prospect.id, cnpj);
+    }
+  }
+
+  private async enrichCnaeAsync(prospectId: string, cnpj: string): Promise<void> {
+    try {
+      const data = await this.cnpjService.lookup(cnpj);
+      if (!data) return;
+
+      const prospect = await this.repo.findOne({ where: { id: prospectId } });
+      if (!prospect) return;
+
+      const cnaeCode = String(data.cnae_fiscal);
+      prospect.cnaeCode = cnaeCode;
+      prospect.cnaeDescription = data.cnae_fiscal_descricao;
+      prospect.cnaeSector = this.cnaeService.classify(cnaeCode);
+      if (!prospect.nomeFantasia && data.nome_fantasia) prospect.nomeFantasia = data.nome_fantasia;
+
+      await this.repo.save(prospect);
+      this.logger.log(`CNAE enriched for prospect ${prospectId}: ${prospect.cnaeSector}`);
+    } catch (error) {
+      this.logger.warn(`CNAE async enrichment failed for ${prospectId}: ${error.message}`);
+    }
+  }
+
   // ─── Lookup avulso (não persiste) ─────────────────────────────────────────
 
   async lookupCnpj(cnpj: string) {
