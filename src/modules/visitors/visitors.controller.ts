@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   Param,
   Patch,
   Post,
@@ -42,6 +43,8 @@ class EnrollInFairDto {
 @ApiBearerAuth('JWT-auth')
 @Controller('visitors')
 export class VisitorsController {
+  private readonly logger = new Logger(VisitorsController.name);
+
   constructor(private readonly visitorsService: VisitorsService) {}
 
   @Get()
@@ -216,49 +219,60 @@ export class VisitorsController {
 
   @Post('sync-prospects')
   @ApiOperation({
-    summary: 'Sincronizar visitantes de uma feira → tabela de prospects',
-    description: `Cria ou atualiza registros na tabela de prospects para todos os visitantes já inscritos em uma feira específica.
-Útil para feiras que já tinham visitantes antes do módulo de prospecção ser ativado.
-O enriquecimento de CNAE **não** é feito aqui — use POST /fairs/:fairId/prospects/enrich-all em seguida.`,
+    summary: 'Sincronizar visitantes de uma feira → prospects (background)',
+    description: `Inicia em **background** a criação/atualização de prospects para todos os visitantes de uma feira.
+Retorna **202 imediatamente** — não aguarda a conclusão para evitar timeout do servidor.
+Acompanhe o resultado via \`GET /fairs/:fairId/prospects\` (contagem crescendo) ou nos logs do servidor.
+Após concluir, rode \`POST /fairs/:fairId/prospects/enrich-all\` para classificar os CNAEs.`,
   })
   @ApiQuery({ name: 'fairId', required: true, description: 'ID da feira (UUID)' })
   @ApiResponse({
     status: 201,
-    description: 'Sincronização concluída',
-    schema: { example: { total: 320, created: 310, updated: 8, errors: 2 } },
+    description: 'Sincronização iniciada em background',
+    schema: { example: { message: 'Sync da feira ... iniciado em background.' } },
   })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
-  async syncProspects(@Query('fairId') fairId: string) {
+  syncProspects(@Query('fairId') fairId: string) {
     if (!fairId) throw new Error('fairId é obrigatório');
-    return this.visitorsService.syncToProspects(fairId);
+
+    const tag = `[sync-fair-${fairId.slice(0, 8)}]`;
+    this.logger.log(`${tag} Starting visitor→prospect sync in background`);
+
+    this.visitorsService.syncToProspects(fairId)
+      .then((r) => this.logger.log(`${tag} Done: ${JSON.stringify(r)}`))
+      .catch((err) => this.logger.error(`${tag} Failed: ${err.message}`));
+
+    return {
+      message: `Sync da feira ${fairId} iniciado em background. Acompanhe via GET /fairs/${fairId}/prospects ou nos logs do servidor.`,
+    };
   }
 
   @Post('sync-prospects/all')
   @ApiOperation({
-    summary: 'Sincronizar TODOS os visitantes de TODAS as feiras → prospects',
-    description: `Percorre toda a base de visitantes em chunks de 200, criando/atualizando registros de prospect
-para cada combinação (visitante × feira). Ideal para o backfill inicial após ativar o módulo de prospecção.
-
-**Sem enriquecimento de CNAE** — após este endpoint, rode \`POST /prospects/enrich-all\` (em background) para classificar os setores.
-
-**Estimativa**: 4.000 visitantes ≈ 20–60s (apenas writes no banco). Acompanhe o progresso nos logs do servidor.`,
+    summary: 'Sincronizar TODOS os visitantes de TODAS as feiras → prospects (background)',
+    description: `Inicia em **background** o backfill de toda a base.
+Retorna **202 imediatamente** — não aguarda a conclusão.
+Processa em chunks de 200 visitantes para não pressionar a memória.
+Após concluir, rode \`POST /prospects/enrich-all\` para classificar os CNAEs de todos.`,
   })
   @ApiResponse({
     status: 201,
-    description: 'Backfill completo',
+    description: 'Backfill iniciado em background',
     schema: {
-      example: {
-        total: 4120,
-        created: 4100,
-        updated: 15,
-        errors: 5,
-        fairsProcessed: 8,
-      },
+      example: { message: 'Sync global iniciado em background. Acompanhe nos logs do servidor.' },
     },
   })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
-  async syncAllProspects() {
-    return this.visitorsService.syncAllToProspects();
+  syncAllProspects() {
+    this.logger.log('[sync-all] Starting global visitor→prospect sync in background');
+
+    this.visitorsService.syncAllToProspects()
+      .then((r) => this.logger.log(`[sync-all] Done: ${JSON.stringify(r)}`))
+      .catch((err) => this.logger.error(`[sync-all] Failed: ${err.message}`));
+
+    return {
+      message: 'Sync global iniciado em background. Acompanhe nos logs do servidor e via GET /fairs/:fairId/prospects.',
+    };
   }
 
   @Patch(':registrationCode')
