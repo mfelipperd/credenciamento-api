@@ -616,6 +616,49 @@ export class VisitorsService {
     return visitor;
   }
 
+  // ── Sincronizar visitantes existentes → tabela prospects ─────────────────
+
+  async syncToProspects(fairId: string): Promise<{
+    total: number;
+    created: number;
+    updated: number;
+    errors: number;
+  }> {
+    const visitors = await this.visitorRepository
+      .createQueryBuilder('visitor')
+      .innerJoin('fair_visitor', 'fv', 'fv.visitorsRegistrationCode = visitor.registrationCode')
+      .where('fv.fairsId = :fairId', { fairId })
+      .getMany();
+
+    let created = 0;
+    let updated = 0;
+    let errors = 0;
+
+    for (const visitor of visitors) {
+      try {
+        const result = await this.prospectingService.createFromVisitor(
+          {
+            cnpj: visitor.cnpj,
+            company: visitor.company,
+            email: visitor.email,
+            phone: visitor.phone,
+            city: visitor.city ?? undefined,
+            state: visitor.state ?? undefined,
+          },
+          fairId,
+          true, // skipEnrichment — enriquecimento é feito separado via /enrich-all
+        );
+        if (result === 'created') created++;
+        else updated++;
+      } catch (err) {
+        this.logger.warn(`Sync failed for visitor ${visitor.registrationCode}: ${err.message}`);
+        errors++;
+      }
+    }
+
+    return { total: visitors.length, created, updated, errors };
+  }
+
   async deleteVisitor(id: string) {
     const visitor = await this.visitorRepository.findOne({
       where: { registrationCode: id.toString() },

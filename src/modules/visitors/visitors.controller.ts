@@ -214,6 +214,25 @@ export class VisitorsController {
     return this.visitorsService.enrollInFair(registrationCode, dto.fairId);
   }
 
+  @Post('sync-prospects')
+  @ApiOperation({
+    summary: 'Sincronizar visitantes existentes → tabela de prospects',
+    description: `Cria ou atualiza registros na tabela de prospects para todos os visitantes já inscritos em uma feira.
+Útil para feiras que já tinham visitantes antes do módulo de prospecção ser ativado.
+O enriquecimento de CNAE **não** é feito aqui — use POST /fairs/:fairId/prospects/enrich-all em seguida.`,
+  })
+  @ApiQuery({ name: 'fairId', required: true, description: 'ID da feira (UUID)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Sincronização concluída',
+    schema: { example: { total: 320, created: 310, updated: 8, errors: 2 } },
+  })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  async syncProspects(@Query('fairId') fairId: string) {
+    if (!fairId) throw new Error('fairId é obrigatório');
+    return this.visitorsService.syncToProspects(fairId);
+  }
+
   @Patch(':registrationCode')
   @ApiOperation({ summary: 'Atualizar visitante' })
   @ApiParam({ name: 'registrationCode', description: 'Código de registro do visitante' })

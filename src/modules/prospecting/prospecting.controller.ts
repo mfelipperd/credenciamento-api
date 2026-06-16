@@ -216,6 +216,25 @@ CNPJs já cadastrados para a feira são ignorados.`,
     return this.service.enrichFromCnpj(id);
   }
 
+  @Post('fairs/:fairId/prospects/enrich-all')
+  @ApiOperation({
+    summary: 'Enriquecer CNAE de todos os prospects pendentes',
+    description: `Percorre todos os prospects da feira que têm CNPJ mas ainda não têm CNAE classificado,
+consulta cada um na Receita Federal via BrasilAPI e preenche cnaeCode, cnaeDescription e cnaeSector.
+Processa sequencialmente com delay de 1,1s entre requisições (rate limit da BrasilAPI).
+**Atenção:** para 100 prospects demora ~2 minutos — execute uma vez após o sync-visitors.`,
+  })
+  @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Enriquecimento concluído',
+    schema: { example: { total: 290, enriched: 280, notFound: 10, alreadyDone: 30 } },
+  })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  async enrichAll(@Param('fairId', ParseUUIDPipe) fairId: string) {
+    return this.service.enrichAllPending(fairId);
+  }
+
   @Delete('fairs/:fairId/prospects/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remover prospect' })

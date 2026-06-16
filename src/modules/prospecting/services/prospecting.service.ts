@@ -210,10 +210,12 @@ export class ProspectingService {
       state?: string;
     },
     fairId: string,
-  ): Promise<void> {
+    skipEnrichment = false,
+  ): Promise<'created' | 'updated'> {
     const cnpj = visitor.cnpj ? this.cnpjService.cleanCnpj(visitor.cnpj) : undefined;
 
     let prospect: Prospect;
+    let action: 'created' | 'updated' = 'created';
 
     if (cnpj) {
       const existing = await this.repo.findOne({ where: { fairId, cnpj } });
@@ -221,6 +223,7 @@ export class ProspectingService {
         existing.status = ProspectStatus.CONVERTIDO;
         existing.convertedAt = new Date();
         prospect = await this.repo.save(existing);
+        action = 'updated';
       } else {
         prospect = await this.repo.save(
           this.repo.create({
@@ -255,10 +258,12 @@ export class ProspectingService {
       );
     }
 
-    // Enriquece CNAE em background — não bloqueia o retorno
-    if (cnpj && !prospect.cnaeCode) {
+    // Enriquece CNAE em background (apenas em cadastros individuais)
+    if (!skipEnrichment && cnpj && !prospect.cnaeCode) {
       this.enrichCnaeAsync(prospect.id, cnpj);
     }
+
+    return action;
   }
 
   private async enrichCnaeAsync(prospectId: string, cnpj: string): Promise<void> {
@@ -280,6 +285,49 @@ export class ProspectingService {
     } catch (error) {
       this.logger.warn(`CNAE async enrichment failed for ${prospectId}: ${error.message}`);
     }
+  }
+
+  // ─── Enriquecimento em lote (sequencial, respeita rate limit) ─────────────
+
+  async enrichAllPending(fairId: string): Promise<{
+    total: number;
+    enriched: number;
+    notFound: number;
+    alreadyDone: number;
+  }> {
+    const prospects = await this.repo.find({
+      where: { fairId },
+      order: { createdAt: 'ASC' },
+    });
+
+    const pending = prospects.filter((p) => p.cnpj && !p.cnaeCode);
+    const alreadyDone = prospects.filter((p) => p.cnaeCode).length;
+
+    let enriched = 0;
+    let notFound = 0;
+
+    for (const prospect of pending) {
+      const data = await this.cnpjService.lookup(prospect.cnpj);
+
+      if (!data) {
+        notFound++;
+      } else {
+        const cnaeCode = String(data.cnae_fiscal);
+        prospect.cnaeCode = cnaeCode;
+        prospect.cnaeDescription = data.cnae_fiscal_descricao;
+        prospect.cnaeSector = this.cnaeService.classify(cnaeCode);
+        if (!prospect.nomeFantasia && data.nome_fantasia) {
+          prospect.nomeFantasia = data.nome_fantasia;
+        }
+        await this.repo.save(prospect);
+        enriched++;
+      }
+
+      // Respeita o rate limit da BrasilAPI (~1 req/s)
+      await new Promise((r) => setTimeout(r, 1100));
+    }
+
+    return { total: pending.length, enriched, notFound, alreadyDone };
   }
 
   // ─── Lookup avulso (não persiste) ─────────────────────────────────────────
