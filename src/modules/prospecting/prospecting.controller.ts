@@ -285,6 +285,31 @@ Para todas as feiras de uma vez use \`POST /prospects/enrich-all\`.`,
     };
   }
 
+  @Post('prospects/geocode-all')
+  @ApiOperation({
+    summary: 'Geocodificar todos os prospects com CEP mas sem coordenadas (background)',
+    description: `Para cada prospect que tem CEP mas não tem lat/lng, consulta a BrasilAPI (CEP v2) e salva as coordenadas.
+Retorna **202 imediatamente** — roda em background.
+Use após o bootstrap para habilitar o mapa de bairros com coordenadas reais.`,
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Geocodificação iniciada em background',
+    schema: { example: { message: 'Geocodificação iniciada em background. Acompanhe nos logs do servidor.' } },
+  })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  geocodeAll() {
+    this.logger.log('[geocode-all] Starting background geocoding of pending prospects');
+
+    this.service.geocodeAllPending()
+      .then((r) => this.logger.log(`[geocode-all] Done: ${JSON.stringify(r)}`))
+      .catch((err) => this.logger.error(`[geocode-all] Failed: ${err.message}`));
+
+    return {
+      message: 'Geocodificação iniciada em background. Acompanhe nos logs do servidor.',
+    };
+  }
+
   @Post('prospects/enrich-all')
   @ApiOperation({
     summary: 'Enriquecer CNAE de TODOS os prospects (todas as feiras) — background',

@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, Like, ILike } from 'typeorm';
+import { Repository, FindOptionsWhere } from 'typeorm';
 import {
   Prospect,
   ProspectStatus,
@@ -22,6 +22,8 @@ import {
 } from '../dto/prospect.dto';
 import { CnpjService } from './cnpj.service';
 import { CnaeService } from './cnae.service';
+import { GeoService } from './geo.service';
+import { Fair } from '../../fairs/entity/fair.entity';
 
 @Injectable()
 export class ProspectingService {
@@ -30,8 +32,11 @@ export class ProspectingService {
   constructor(
     @InjectRepository(Prospect)
     private readonly repo: Repository<Prospect>,
+    @InjectRepository(Fair)
+    private readonly fairRepo: Repository<Fair>,
     private readonly cnpjService: CnpjService,
     private readonly cnaeService: CnaeService,
+    private readonly geoService: GeoService,
   ) {}
 
   // ─── Normalização geográfica ───────────────────────────────────────────────
@@ -136,10 +141,16 @@ export class ProspectingService {
     if (data.municipio) p.city = this.toTitleCase(data.municipio);
     if (data.uf) p.state = this.normalizeState(data.uf);
     if (data.bairro) p.neighborhood = this.toTitleCase(data.bairro);
+    if (data.cep) p.cep = data.cep.replace(/\D/g, '');
     p.cnaeCode = cnaeCode;
     p.cnaeDescription = data.cnae_fiscal_descricao;
     p.cnaeSector = this.cnaeService.classify(cnaeCode);
     p.source = ProspectSource.BUSCA_CNPJ;
+
+    if (data.cep && !p.latitude) {
+      const geo = await this.geoService.geocodeCep(data.cep);
+      if (geo) { p.latitude = geo.lat; p.longitude = geo.lng; }
+    }
 
     return this.repo.save(p);
   }
@@ -177,6 +188,8 @@ export class ProspectingService {
       const cnaeCode = String(data.cnae_fiscal);
 
       const phone = this.cnpjService.extractPhone(data.ddd_telefone_1 ?? '');
+      const geo = data.cep ? await this.geoService.geocodeCep(data.cep) : null;
+
       await this.repo.save(
         this.repo.create({
           fairId,
@@ -190,6 +203,8 @@ export class ProspectingService {
           ...(data.municipio ? { city: this.toTitleCase(data.municipio) } : {}),
           ...(data.uf ? { state: this.normalizeState(data.uf) } : {}),
           ...(data.bairro ? { neighborhood: this.toTitleCase(data.bairro) } : {}),
+          ...(data.cep ? { cep: data.cep.replace(/\D/g, '') } : {}),
+          ...(geo ? { latitude: geo.lat, longitude: geo.lng } : {}),
           cnaeCode,
           cnaeDescription: data.cnae_fiscal_descricao,
           cnaeSector: this.cnaeService.classify(cnaeCode),
@@ -197,7 +212,6 @@ export class ProspectingService {
       );
 
       imported++;
-      // Respeita rate limit da BrasilAPI (~1 req/s)
       await new Promise((r) => setTimeout(r, 1100));
     }
 
@@ -297,11 +311,16 @@ export class ProspectingService {
       if (!prospect.city && data.municipio) prospect.city = this.toTitleCase(data.municipio);
       if (!prospect.state && data.uf) prospect.state = this.normalizeState(data.uf);
       if (!prospect.neighborhood && data.bairro) prospect.neighborhood = this.toTitleCase(data.bairro);
+      if (data.cep) prospect.cep = data.cep.replace(/\D/g, '');
+      if (data.cep && !prospect.latitude) {
+        const geo = await this.geoService.geocodeCep(data.cep);
+        if (geo) { prospect.latitude = geo.lat; prospect.longitude = geo.lng; }
+      }
 
       await this.repo.save(prospect);
       this.logger.log(`CNAE enriched for prospect ${prospectId}: ${prospect.cnaeSector}`);
-    } catch (error) {
-      this.logger.warn(`CNAE async enrichment failed for ${prospectId}: ${error.message}`);
+    } catch (err: unknown) {
+      this.logger.warn(`CNAE async enrichment failed for ${prospectId}: ${(err as Error).message}`);
     }
   }
 
@@ -379,6 +398,9 @@ export class ProspectingService {
       city?: string;
       state?: string;
       neighborhood?: string;
+      cep?: string;
+      lat?: number | null;
+      lng?: number | null;
     };
     const cnpjCache = new Map<string, CnpjCacheEntry | null>();
 
@@ -394,6 +416,7 @@ export class ProspectingService {
           cnpjCache.set(cnpj, null);
         } else {
           const cnaeCode = String(data.cnae_fiscal);
+          const geo = data.cep ? await this.geoService.geocodeCep(data.cep) : null;
           cnpjCache.set(cnpj, {
             cnaeCode,
             cnaeDescription: data.cnae_fiscal_descricao,
@@ -402,6 +425,8 @@ export class ProspectingService {
             ...(data.municipio ? { city: this.toTitleCase(data.municipio) } : {}),
             ...(data.uf ? { state: this.normalizeState(data.uf) } : {}),
             ...(data.bairro ? { neighborhood: this.toTitleCase(data.bairro) } : {}),
+            ...(data.cep ? { cep: data.cep.replace(/\D/g, '') } : {}),
+            ...(geo ? { lat: geo.lat, lng: geo.lng } : {}),
           });
           await new Promise((r) => setTimeout(r, 1100));
         }
@@ -420,6 +445,8 @@ export class ProspectingService {
       if (!prospect.city && cached.city) prospect.city = this.toTitleCase(cached.city);
       if (!prospect.state && cached.state) prospect.state = this.normalizeState(cached.state);
       if (!prospect.neighborhood && cached.neighborhood) prospect.neighborhood = this.toTitleCase(cached.neighborhood);
+      if (cached.cep) prospect.cep = cached.cep;
+      if (!prospect.latitude && cached.lat) { prospect.latitude = cached.lat; prospect.longitude = cached.lng ?? null; }
       await this.repo.save(prospect);
       enriched++;
     }
@@ -480,8 +507,22 @@ export class ProspectingService {
   };
 
   async getGeoAnalytics(fairId: string) {
-    const all = await this.repo.find({ where: { fairId } });
+    const [all, fair] = await Promise.all([
+      this.repo.find({ where: { fairId } }),
+      this.fairRepo.findOne({ where: { id: fairId } }),
+    ]);
     const total = all.length;
+
+    // ── centro da feira para zoom inicial do Mapbox ─────────────────────────
+    const fairCenter = fair
+      ? {
+          longitude: fair.longitude,
+          latitude: fair.latitude,
+          city: fair.city ?? null,
+          state: fair.state ?? null,
+          zoom: 12,
+        }
+      : null;
 
     // ── por estado — normaliza na leitura para dados sujos no banco ──────────
     const stateMap = new Map<string, number>();
@@ -499,42 +540,63 @@ export class ProspectingService {
       }))
       .sort((a, b) => b.count - a.count);
 
-    // ── por cidade — normaliza na leitura ───────────────────────────────────
-    const cityMap = new Map<string, { city: string; state: string; count: number; coordinates: [number, number] | null }>();
+    // ── por cidade — média das lat/lng dos prospects para coordenada real ────
+    type CityEntry = { city: string; state: string; count: number; latSum: number; lngSum: number; coordCount: number };
+    const cityMap = new Map<string, CityEntry>();
     for (const p of all) {
       if (!p.city || !p.state) continue;
       const city  = this.toTitleCase(p.city);
       const state = this.normalizeState(p.state);
       const key   = `${city.toUpperCase()}__${state}`;
-      const entry = cityMap.get(key) ?? {
-        city,
-        state,
-        count: 0,
-        coordinates: ProspectingService.STATE_CENTROIDS[state] ?? null,
-      };
+      const entry = cityMap.get(key) ?? { city, state, count: 0, latSum: 0, lngSum: 0, coordCount: 0 };
       entry.count++;
+      if (p.latitude != null && p.longitude != null) {
+        entry.latSum += Number(p.latitude);
+        entry.lngSum += Number(p.longitude);
+        entry.coordCount++;
+      }
       cityMap.set(key, entry);
     }
     const byCity = Array.from(cityMap.values())
+      .map(({ latSum, lngSum, coordCount, ...rest }) => ({
+        ...rest,
+        coordinates: coordCount > 0
+          ? ([+(lngSum / coordCount).toFixed(6), +(latSum / coordCount).toFixed(6)] as [number, number])
+          : (ProspectingService.STATE_CENTROIDS[rest.state] ?? null),
+      }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 50);
 
-    // ── por bairro — normaliza na leitura ───────────────────────────────────
-    const neighborhoodMap = new Map<
-      string,
-      { neighborhood: string; city: string; state: string; count: number }
-    >();
+    // ── por bairro — centroide calculado pela média das coordenadas reais ────
+    type NeighborhoodEntry = {
+      neighborhood: string; city: string; state: string; count: number;
+      latSum: number; lngSum: number; coordCount: number;
+    };
+    const neighborhoodMap = new Map<string, NeighborhoodEntry>();
     for (const p of all) {
       if (!p.neighborhood || !p.city || !p.state) continue;
       const neighborhood = this.toTitleCase(p.neighborhood);
       const city         = this.toTitleCase(p.city);
       const state        = this.normalizeState(p.state);
       const key          = `${neighborhood.toUpperCase()}__${city.toUpperCase()}__${state}`;
-      const entry        = neighborhoodMap.get(key) ?? { neighborhood, city, state, count: 0 };
+      const entry        = neighborhoodMap.get(key) ?? {
+        neighborhood, city, state, count: 0, latSum: 0, lngSum: 0, coordCount: 0,
+      };
       entry.count++;
+      if (p.latitude != null && p.longitude != null) {
+        entry.latSum += Number(p.latitude);
+        entry.lngSum += Number(p.longitude);
+        entry.coordCount++;
+      }
       neighborhoodMap.set(key, entry);
     }
     const byNeighborhood = Array.from(neighborhoodMap.values())
+      .map(({ latSum, lngSum, coordCount, ...rest }) => ({
+        ...rest,
+        coordinates: coordCount > 0
+          ? ([+(lngSum / coordCount).toFixed(6), +(latSum / coordCount).toFixed(6)] as [number, number])
+          : null,
+      }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 100);
 
@@ -557,7 +619,7 @@ export class ProspectingService {
 
     // ── GeoJSON para Mapbox ─────────────────────────────────────────────────
     const mapbox = {
-      // FeatureCollection de estados — use como source de um layer de círculos/heatmap
+      // FeatureCollection de estados — choropleth / bubble layer
       statesGeoJson: {
         type: 'FeatureCollection' as const,
         features: byState
@@ -568,7 +630,7 @@ export class ProspectingService {
             properties: { state: s.state, count: s.count, percentage: s.percentage },
           })),
       },
-      // FeatureCollection de cidades — usa centroide do estado como fallback de coordenada
+      // FeatureCollection de cidades — coordenadas reais (média dos prospects) com fallback no centroide do estado
       citiesGeoJson: {
         type: 'FeatureCollection' as const,
         features: byCity
@@ -579,14 +641,32 @@ export class ProspectingService {
             properties: { city: c.city, state: c.state, count: c.count },
           })),
       },
+      // FeatureCollection de bairros — centroide calculado pela média das lat/lng dos prospects
+      neighborhoodsGeoJson: {
+        type: 'FeatureCollection' as const,
+        features: byNeighborhood
+          .filter((n) => n.coordinates)
+          .map((n) => ({
+            type: 'Feature' as const,
+            geometry: { type: 'Point' as const, coordinates: n.coordinates! },
+            properties: {
+              neighborhood: n.neighborhood,
+              city: n.city,
+              state: n.state,
+              count: n.count,
+            },
+          })),
+      },
     };
 
     return {
+      fairCenter,
       summary: {
         totalProspects: total,
         withState: all.filter((p) => p.state).length,
         withCity: all.filter((p) => p.city).length,
         withNeighborhood: all.filter((p) => p.neighborhood).length,
+        withCoordinates: all.filter((p) => p.latitude != null).length,
         uniqueStates: byState.length,
         uniqueCities: byCity.length,
         uniqueNeighborhoods: byNeighborhood.length,
@@ -611,6 +691,45 @@ export class ProspectingService {
         },
       },
     };
+  }
+
+  async geocodeAllPending(): Promise<{ geocoded: number; failed: number; skipped: number }> {
+    const prospects = await this.repo
+      .createQueryBuilder('p')
+      .where('p.cep IS NOT NULL')
+      .andWhere('p.latitude IS NULL')
+      .getMany();
+
+    this.logger.log(`[geocode-all] Found ${prospects.length} prospects with CEP but no coordinates`);
+
+    const cepCache = new Map<string, { lat: number; lng: number } | null>();
+    let geocoded = 0;
+    let failed = 0;
+    let skipped = 0;
+
+    for (const prospect of prospects) {
+      const clean = prospect.cep?.replace(/\D/g, '');
+      if (!clean || clean.length !== 8) { skipped++; continue; }
+
+      if (!cepCache.has(clean)) {
+        const geo = await this.geoService.geocodeCep(clean);
+        cepCache.set(clean, geo ? { lat: geo.lat, lng: geo.lng } : null);
+        await new Promise((r) => setTimeout(r, 250));
+      }
+
+      const coords = cepCache.get(clean);
+      if (!coords) { failed++; continue; }
+
+      await this.repo.update(prospect.id, { latitude: coords.lat, longitude: coords.lng });
+      geocoded++;
+
+      if (geocoded % 50 === 0) {
+        this.logger.log(`[geocode-all] Progress: ${geocoded}/${prospects.length}`);
+      }
+    }
+
+    this.logger.log(`[geocode-all] Done — geocoded: ${geocoded}, failed: ${failed}, skipped: ${skipped}`);
+    return { geocoded, failed, skipped };
   }
 
   // ─── Analytics ─────────────────────────────────────────────────────────────

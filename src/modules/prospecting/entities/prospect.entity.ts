@@ -71,6 +71,15 @@ export class Prospect {
   @Column({ nullable: true, length: 150 })
   neighborhood: string;
 
+  @Column({ nullable: true, length: 8 })
+  cep: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  latitude: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  longitude: number | null;
+
   @Column({ nullable: true, length: 10 })
   cnaeCode: string;
 
