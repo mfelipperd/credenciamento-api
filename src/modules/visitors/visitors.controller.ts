@@ -247,6 +247,50 @@ Após concluir, rode \`POST /fairs/:fairId/prospects/enrich-all\` para classific
     };
   }
 
+  @Post('bootstrap-prospects')
+  @ApiOperation({
+    summary: 'Bootstrap completo: sync + enriquecimento CNAE de todas as feiras (background)',
+    description: `Pipeline completo em **background** — retorna 202 imediatamente.
+
+**O que faz (sequencial):**
+1. Sincroniza TODOS os visitantes de TODAS as feiras → tabela \`prospects\`
+2. Após o sync completar, enriquece todos os CNPJs via BrasilAPI (setor, bairro, cidade, CNAE)
+   — com deduplicação: mesmo CNPJ em N feiras = 1 chamada à API
+
+**Acompanhe o progresso:**
+- Logs do servidor: \`[bootstrap] Step 1/2...\`, \`[bootstrap] Step 2/2...\`, \`[bootstrap] Bootstrap completo\`
+- GET /fairs/:fairId/prospects — contagem crescendo durante Step 1
+- GET /fairs/:fairId/prospects/analytics → overview.enriched — crescendo durante Step 2
+
+**Estimativa para ~4000 visitantes:**
+- Step 1 (sync): 1–3 min
+- Step 2 (enrich): depende dos CNPJs únicos, ~1s por CNPJ único`,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Bootstrap iniciado em background',
+    schema: {
+      example: {
+        message: 'Bootstrap iniciado em background. Step 1: sync de visitantes → prospects. Step 2: enriquecimento CNAE. Acompanhe nos logs do servidor.',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  bootstrapProspects() {
+    this.logger.log('[bootstrap] Initiating full bootstrap pipeline in background');
+
+    this.visitorsService.bootstrapAllProspects()
+      .catch((err) => this.logger.error(`[bootstrap] Pipeline failed: ${err.message}`));
+
+    return {
+      message:
+        'Bootstrap iniciado em background. ' +
+        'Step 1: sync de visitantes → prospects. ' +
+        'Step 2: enriquecimento CNAE via BrasilAPI. ' +
+        'Acompanhe nos logs do servidor ou via GET /fairs/:fairId/prospects/analytics.',
+    };
+  }
+
   @Post('sync-prospects/all')
   @ApiOperation({
     summary: 'Sincronizar TODOS os visitantes de TODAS as feiras → prospects (background)',

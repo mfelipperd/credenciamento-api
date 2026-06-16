@@ -724,6 +724,32 @@ export class VisitorsService {
     return { total, created, updated, errors, fairsProcessed: fairsSeen.size };
   }
 
+  /**
+   * Pipeline completo: sync de todos os visitantes → enriquecimento de CNAE.
+   * Executado inteiramente em background — retorna imediatamente.
+   * Sequência: syncAllToProspects() completa primeiro, depois enrichAllPendingGlobal()
+   * para garantir que o enriquecimento processa todos os prospects já criados.
+   */
+  async bootstrapAllProspects(): Promise<void> {
+    const tag = '[bootstrap]';
+    this.logger.log(`${tag} Step 1/2 — starting visitor→prospect sync`);
+
+    const syncResult = await this.syncAllToProspects();
+    this.logger.log(
+      `${tag} Step 1/2 done — sync: total=${syncResult.total} created=${syncResult.created} ` +
+      `updated=${syncResult.updated} errors=${syncResult.errors} fairs=${syncResult.fairsProcessed}`,
+    );
+
+    this.logger.log(`${tag} Step 2/2 — starting CNAE enrichment (BrasilAPI, ~1s/CNPJ único)`);
+    const enrichResult = await this.prospectingService.enrichAllPendingGlobal();
+    this.logger.log(
+      `${tag} Step 2/2 done — enrichment: total=${enrichResult.total} enriched=${enrichResult.enriched} ` +
+      `uniqueCnpjs=${enrichResult.uniqueCnpjs} notFound=${enrichResult.notFound}`,
+    );
+
+    this.logger.log(`${tag} Bootstrap completo.`);
+  }
+
   async deleteVisitor(id: string) {
     const visitor = await this.visitorRepository.findOne({
       where: { registrationCode: id.toString() },
