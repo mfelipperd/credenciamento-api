@@ -21,6 +21,7 @@ import { FinanceModule } from './modules/finance/finance.module';
 import { PartnersModule } from './modules/partners/partners.module';
 import { PublicFairsModule } from './modules/public-fairs/public-fairs.module';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
+import { ProspectingModule } from './modules/prospecting/prospecting.module';
 
 @Module({
   providers: [
@@ -59,6 +60,7 @@ import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
     PartnersModule,
     PublicFairsModule,
     WhatsappModule,
+    ProspectingModule,
   ],
   controllers: [],
 })
