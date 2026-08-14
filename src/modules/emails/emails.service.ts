@@ -412,6 +412,7 @@ export class EmailsService {
     subject: string,
     htmlContent: string,
     title: string,
+    additionalFairIds: string[] = [],
   ) {
     const [targetFair, templateFair] = await Promise.all([
       this.fairsService.findOne(targetFairId),
@@ -423,6 +424,8 @@ export class EmailsService {
     if (!templateFair)
       throw new BadRequestException('Feira template não encontrada.');
 
+    const fairIds = [targetFairId, ...additionalFairIds];
+
     const qb = this.visitorsRepository
       .createQueryBuilder('visitor')
       .innerJoin(
@@ -430,8 +433,10 @@ export class EmailsService {
         'fv',
         'fv.visitorsRegistrationCode = visitor.registrationCode',
       )
-      .where('fv.fairsId = :targetFairId', { targetFairId })
-      .select(['visitor.name', 'visitor.email']);
+      .where('fv.fairsId IN (:...fairIds)', { fairIds })
+      .select('visitor.email', 'email')
+      .addSelect('MAX(visitor.name)', 'name')
+      .groupBy('visitor.email');
 
     if (sendTo === 'absent') {
       qb.leftJoin(
@@ -441,7 +446,7 @@ export class EmailsService {
       ).andWhere('c.id IS NULL');
     }
 
-    const recipients = await qb.getMany();
+    const recipients = await qb.getRawMany<{ email: string; name: string }>();
 
     if (recipients.length === 0) {
       return {

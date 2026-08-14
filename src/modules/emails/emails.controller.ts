@@ -97,6 +97,7 @@ export class EmailsController {
   async sendMarketing(@Body() dto: SendMarketingEmailV2Dto) {
     return this.emailsService.sendMarketingEmail(
       dto.targetFairId, dto.templateFairId, dto.sendTo, dto.subject, dto.htmlContent, dto.title,
+      dto.additionalFairIds ?? [],
     );
   }
 

@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsUUID, IsIn, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsIn,
+  MaxLength,
+  IsOptional,
+  IsArray,
+} from 'class-validator';
 
 export class SendMarketingEmailV2Dto {
   @IsString()
@@ -13,6 +21,11 @@ export class SendMarketingEmailV2Dto {
   @IsUUID()
   @IsNotEmpty()
   templateFairId: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  additionalFairIds?: string[];
 
   @IsIn(['all', 'absent'])
   sendTo: 'all' | 'absent';

@@ -21,6 +21,7 @@ export class EmailProcessor extends WorkerHost {
     const { to, name, subject, htmlContent, campaignTag } = job.data;
 
     const personalizedHtml = htmlContent.replace(/\{\{VISITOR_NAME\}\}/g, name);
+    const personalizedSubject = subject.replace(/\{\{VISITOR_NAME\}\}/g, name);
 
     await this.brevo.transactionalEmails.sendTransacEmail({
       sender: {
@@ -28,7 +29,7 @@ export class EmailProcessor extends WorkerHost {
         email: this.config.get<string>('BREVO_SENDER_EMAIL') ?? '',
       },
       to: [{ email: to, name }],
-      subject,
+      subject: personalizedSubject,
       htmlContent: personalizedHtml,
       tags: campaignTag ? [campaignTag] : undefined,
     });
