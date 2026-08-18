@@ -10,5 +10,6 @@ import { Fair } from '../fairs/entity/fair.entity';
   imports: [TypeOrmModule.forFeature([Visitor, CheckIn, Fair])],
   providers: [DashboardService],
   controllers: [DashboardController],
+  exports: [DashboardService],
 })
 export class DashboardModule {}

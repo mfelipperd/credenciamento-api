@@ -14,5 +14,6 @@ import { Visitor } from '../visitors/entities/visitor.entity';
   ],
   controllers: [WhatsappController],
   providers: [WhatsappService, WhatsappProcessor],
+  exports: [WhatsappService],
 })
 export class WhatsappModule {}

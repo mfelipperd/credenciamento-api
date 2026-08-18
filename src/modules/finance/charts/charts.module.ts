@@ -28,5 +28,6 @@ import { OverheadExpensesModule } from '../overhead/overhead-expenses.module';
   ],
   controllers: [ChartsController],
   providers: [ChartsService],
+  exports: [ChartsService],
 })
 export class ChartsModule {}

@@ -16,6 +16,9 @@ import { FairPartner } from 'src/modules/partners/entities/fair-partner.entity';
 import { User } from 'src/modules/users/entitie/users.entity';
 import { UserFair } from 'src/modules/users/entities/user-fair.entity';
 import { StandConfiguration } from 'src/modules/fairs/entity/stand-configuration.entity';
+import { OAuthClient } from 'src/modules/mcp/oauth/entities/oauth-client.entity';
+import { OAuthAuthorizationCode } from 'src/modules/mcp/oauth/entities/oauth-authorization-code.entity';
+import { OAuthRefreshToken } from 'src/modules/mcp/oauth/entities/oauth-refresh-token.entity';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'mysql',
@@ -37,5 +40,8 @@ export const databaseConfig: TypeOrmModuleOptions = {
     User,
     UserFair,
     StandConfiguration,
+    OAuthClient,
+    OAuthAuthorizationCode,
+    OAuthRefreshToken,
   ],
 };

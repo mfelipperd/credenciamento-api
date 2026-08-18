@@ -22,6 +22,7 @@ import { PartnersModule } from './modules/partners/partners.module';
 import { PublicFairsModule } from './modules/public-fairs/public-fairs.module';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { ProspectingModule } from './modules/prospecting/prospecting.module';
+import { McpModule } from './modules/mcp/mcp.module';
 
 @Module({
   providers: [
@@ -61,6 +62,7 @@ import { ProspectingModule } from './modules/prospecting/prospecting.module';
     PublicFairsModule,
     WhatsappModule,
     ProspectingModule,
+    McpModule,
   ],
   controllers: [],
 })

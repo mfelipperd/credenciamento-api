@@ -12,5 +12,6 @@ import { ProspectingModule } from '../prospecting/prospecting.module';
   imports: [TypeOrmModule.forFeature([Visitor, User, Fair]), EmailsModule, ProspectingModule],
   providers: [VisitorsService],
   controllers: [VisitorsController],
+  exports: [VisitorsService],
 })
 export class VisitorsModule {}

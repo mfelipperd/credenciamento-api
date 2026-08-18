@@ -10,5 +10,6 @@ import { CheckInsController } from './checkins.controller';
   imports: [TypeOrmModule.forFeature([CheckIn, Visitor])],
   providers: [CheckInsService],
   controllers: [CheckInsController],
+  exports: [CheckInsService],
 })
 export class CheckInsModule {}
