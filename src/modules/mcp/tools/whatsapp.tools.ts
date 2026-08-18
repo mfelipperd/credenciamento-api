@@ -11,7 +11,7 @@ export function registerWhatsappTools(
     'list_whatsapp_campaigns',
     {
       description:
-        'Lista as campanhas de WhatsApp, mais recentes primeiro, com id, título, status e totais de elegíveis/enfileirados/enviados/falhados.',
+        'Lista as campanhas de WhatsApp, mais recentes primeiro, com id, título e totais de enfileirados/enviados/falhados.',
     },
     async () => textResult(await whatsappService.getCampaigns()),
   );
@@ -19,23 +19,19 @@ export function registerWhatsappTools(
   registerToolWithInput(
     server,
     'get_whatsapp_campaign_stats',
-    'Retorna os destinatários de uma campanha de WhatsApp, agrupados por status (enfileirado, enviado, falhado, pulado).',
+    'Retorna os totais de enfileirados/enviados/falhados de uma campanha de WhatsApp específica.',
     {
       campaignId: z
         .string()
         .describe('id da campanha, obtido via list_whatsapp_campaigns'),
     },
     async ({ campaignId }) => {
-      const recipients = await whatsappService.getCampaignRecipients(campaignId);
-      const byStatus: Record<string, number> = {};
-      for (const r of recipients) {
-        byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
+      const campaigns = await whatsappService.getCampaigns();
+      const campaign = campaigns.find((c) => c.id === campaignId);
+      if (!campaign) {
+        return textResult({ error: `Campanha ${campaignId} não encontrada` });
       }
-      return textResult({
-        campaignId,
-        totalRecipients: recipients.length,
-        byStatus,
-      });
+      return textResult(campaign);
     },
   );
 }
