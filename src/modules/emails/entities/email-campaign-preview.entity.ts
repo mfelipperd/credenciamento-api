@@ -4,6 +4,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { AudienceQuery } from '../types/audience-query';
 
 @Entity('email_campaign_previews')
 export class EmailCampaignPreview {
@@ -19,8 +20,10 @@ export class EmailCampaignPreview {
   @Column({ type: 'longtext' })
   htmlContent: string;
 
-  @Column({ length: 36 })
-  targetFairId: string;
+  // Legacy targeting (targetFairId/templateFairId/additionalFairIds/sendTo) — set
+  // when the preview was NOT built with audienceQuery.
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  targetFairId: string | null;
 
   @Column({ type: 'varchar', length: 36, nullable: true })
   templateFairId: string | null;
@@ -28,8 +31,13 @@ export class EmailCampaignPreview {
   @Column('simple-json')
   additionalFairIds: string[];
 
-  @Column({ length: 10, default: 'all' })
-  sendTo: string;
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  sendTo: string | null;
+
+  // Advanced multi-fair segmentation — set instead of the legacy fields above
+  // when the preview was built with audienceQuery.
+  @Column({ type: 'simple-json', nullable: true })
+  audienceQuery: AudienceQuery | null;
 
   @Column({ default: 0 })
   totalRecipients: number;

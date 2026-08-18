@@ -17,6 +17,7 @@ import { Visitor } from '../visitors/entities/visitor.entity';
 import { EmailCampaign } from './entities/email-campaign.entity';
 import { EmailCampaignPreview } from './entities/email-campaign-preview.entity';
 import { generateConfirmationEmail } from 'src/utils/emailLayoutGenerator';
+import { AudienceCondition, AudienceQuery } from './types/audience-query';
 
 const PREVIEW_TTL_MINUTES = 15;
 
@@ -565,44 +566,237 @@ export class EmailsService {
     };
   }
 
+  // ── Marketing: multi-fair audience segmentation (audienceQuery) ──────────
+
+  // Resolves ONE condition (fairId + status) to a map of lowercased email -> name.
+  private async resolveAudienceCondition(
+    condition: AudienceCondition,
+  ): Promise<Map<string, string>> {
+    const qb = this.visitorsRepository
+      .createQueryBuilder('visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId: condition.fairId })
+      .select('visitor.email', 'email')
+      .addSelect('MAX(visitor.name)', 'name')
+      .groupBy('visitor.email');
+
+    if (condition.status === 'present') {
+      qb.innerJoin(
+        'checkins',
+        'c',
+        'c.visitorRegistrationCode = visitor.registrationCode',
+      );
+    } else if (condition.status === 'absent') {
+      qb.leftJoin(
+        'checkins',
+        'c',
+        'c.visitorRegistrationCode = visitor.registrationCode',
+      ).andWhere('c.id IS NULL');
+    }
+    // 'registered' needs no checkins join at all.
+
+    const rows = await qb.getRawMany<{ email: string; name: string }>();
+    return new Map(rows.map((r) => [r.email.toLowerCase(), r.name]));
+  }
+
+  // Combines each condition's matching set with AND (intersection) or OR (union).
+  // AND-of-absence is an intersection of two "didn't show up" sets, NOT a union —
+  // getting this backwards would silently target a much larger audience than intended.
+  private async resolveAudienceQuery(
+    query: AudienceQuery,
+  ): Promise<{ email: string; name: string }[]> {
+    const maps = await Promise.all(
+      query.conditions.map((c) => this.resolveAudienceCondition(c)),
+    );
+
+    let resultKeys: Set<string>;
+    if (query.operator === 'AND') {
+      resultKeys = new Set(maps[0]?.keys() ?? []);
+      for (const m of maps.slice(1)) {
+        resultKeys = new Set([...resultKeys].filter((k) => m.has(k)));
+      }
+    } else {
+      resultKeys = new Set(maps.flatMap((m) => [...m.keys()]));
+    }
+
+    const nameByEmail = new Map<string, string>();
+    for (const m of maps) {
+      for (const [email, name] of m) {
+        if (!nameByEmail.has(email)) nameByEmail.set(email, name);
+      }
+    }
+
+    return [...resultKeys].map((email) => ({
+      email,
+      name: nameByEmail.get(email) ?? '',
+    }));
+  }
+
+  private async filterBlocked(
+    recipients: { email: string; name: string }[],
+  ): Promise<{ filtered: { email: string; name: string }[]; suppressedCount: number }> {
+    if (recipients.length === 0) return { filtered: [], suppressedCount: 0 };
+    const blockedEmails = await this.getBrevoBlockedEmails();
+    const filtered = recipients.filter(
+      (v) => !blockedEmails.has(v.email.toLowerCase()),
+    );
+    return { filtered, suppressedCount: recipients.length - filtered.length };
+  }
+
+  // Shared by confirmMarketingEmail's audienceQuery path. sendMarketingEmail (the
+  // legacy direct-send path used by the existing frontend endpoint) is untouched
+  // and does its own persist+enqueue — kept separate deliberately to avoid any
+  // behavior change to that already-proven, already-in-use code path.
+  private async persistCampaignAndEnqueue(params: {
+    title: string;
+    subject: string;
+    htmlContent: string;
+    targetFairId: string | null;
+    audienceQuery: AudienceQuery | null;
+    recipients: { email: string; name: string }[];
+    filtered: { email: string; name: string }[];
+    suppressedCount: number;
+  }) {
+    const brevoTag = `emm-${randomUUID().replace(/-/g, '').substring(0, 12)}`;
+    const campaign = this.campaignRepository.create({
+      title: params.title,
+      subject: params.subject,
+      htmlContent: params.htmlContent,
+      targetFairId: params.targetFairId,
+      audienceQuery: params.audienceQuery,
+      sendTo: 'custom',
+      totalQueued: params.filtered.length,
+      suppressedCount: params.suppressedCount,
+      brevoTag,
+    });
+    const savedCampaign = await this.campaignRepository.save(campaign);
+
+    const jobs = params.filtered.map((visitor) => ({
+      name: 'send-marketing-email',
+      data: {
+        to: visitor.email,
+        name: visitor.name,
+        subject: params.subject,
+        htmlContent: params.htmlContent,
+        campaignTag: brevoTag,
+      } satisfies MarketingEmailJob,
+      opts: {
+        attempts: 3,
+        backoff: { type: 'exponential' as const, delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 50,
+      },
+    }));
+    await this.emailQueue.addBulk(jobs);
+
+    this.logger.log(
+      `[CAMPAIGN ${savedCampaign.id}] ${params.filtered.length} emails enfileirados (audienceQuery)`,
+    );
+
+    return {
+      success: true,
+      message: `${params.filtered.length} email(s) enfileirados para envio`,
+      campaignId: savedCampaign.id,
+      brevoTag,
+      audienceQuery: params.audienceQuery,
+      totalRecipients: params.recipients.length,
+      suppressedByBrevo: params.suppressedCount,
+      totalQueued: params.filtered.length,
+      status: 'QUEUED',
+    };
+  }
+
   // ── Marketing: preview + confirm (used by the MCP connector) ─────────────
 
   async previewMarketingEmail(params: {
     title: string;
     subject: string;
     htmlContent: string;
-    targetFairId: string;
-    templateFairId: string;
-    sendTo: 'all' | 'absent';
+    targetFairId?: string;
+    templateFairId?: string;
+    sendTo?: 'all' | 'absent';
     additionalFairIds?: string[];
+    audienceQuery?: AudienceQuery;
   }) {
-    const additionalFairIds = params.additionalFairIds ?? [];
-    const [targetFair, templateFair] = await Promise.all([
-      this.fairsService.findOne(params.targetFairId),
-      this.fairsService.findOne(params.templateFairId),
-    ]);
+    let recipients: { email: string; name: string }[];
+    let filtered: { email: string; name: string }[];
+    let suppressedCount: number;
+    let audienceSummary: unknown;
 
-    if (!targetFair)
-      throw new BadRequestException('Feira destino não encontrada.');
-    if (!templateFair)
-      throw new BadRequestException('Feira template não encontrada.');
+    if (params.audienceQuery) {
+      if (!params.audienceQuery.conditions?.length) {
+        throw new BadRequestException(
+          'audienceQuery precisa de pelo menos uma condição',
+        );
+      }
 
-    const { recipients, filtered, suppressedCount } =
-      await this.resolveMarketingRecipients(
+      const uniqueFairIds = [
+        ...new Set(params.audienceQuery.conditions.map((c) => c.fairId)),
+      ];
+      const fairs = await Promise.all(
+        uniqueFairIds.map((id) => this.fairsService.findOne(id)),
+      );
+      const missing = uniqueFairIds.filter((_, i) => !fairs[i]);
+      if (missing.length) {
+        throw new BadRequestException(
+          `Feira(s) não encontrada(s): ${missing.join(', ')}`,
+        );
+      }
+
+      recipients = await this.resolveAudienceQuery(params.audienceQuery);
+      ({ filtered, suppressedCount } = await this.filterBlocked(recipients));
+      audienceSummary = {
+        operator: params.audienceQuery.operator,
+        conditions: params.audienceQuery.conditions.map((c) => ({
+          ...c,
+          fairName: fairs[uniqueFairIds.indexOf(c.fairId)]?.name,
+        })),
+      };
+    } else {
+      if (!params.targetFairId || !params.templateFairId || !params.sendTo) {
+        throw new BadRequestException(
+          'Informe targetFairId + templateFairId + sendTo, ou audienceQuery.',
+        );
+      }
+      const [targetFair, templateFair] = await Promise.all([
+        this.fairsService.findOne(params.targetFairId),
+        this.fairsService.findOne(params.templateFairId),
+      ]);
+      if (!targetFair)
+        throw new BadRequestException('Feira destino não encontrada.');
+      if (!templateFair)
+        throw new BadRequestException('Feira template não encontrada.');
+
+      const result = await this.resolveMarketingRecipients(
         params.targetFairId,
-        additionalFairIds,
+        params.additionalFairIds ?? [],
         params.sendTo,
       );
+      recipients = result.recipients;
+      filtered = result.filtered;
+      suppressedCount = result.suppressedCount;
+      audienceSummary = {
+        targetFair: targetFair.name,
+        templateFair: templateFair.name,
+        sendTo: params.sendTo,
+        additionalFairIds: params.additionalFairIds ?? [],
+      };
+    }
 
     const expiresAt = new Date(Date.now() + PREVIEW_TTL_MINUTES * 60 * 1000);
     const preview = this.campaignPreviewRepository.create({
       title: params.title,
       subject: params.subject,
       htmlContent: params.htmlContent,
-      targetFairId: params.targetFairId,
-      templateFairId: params.templateFairId,
-      additionalFairIds,
-      sendTo: params.sendTo,
+      targetFairId: params.targetFairId ?? null,
+      templateFairId: params.templateFairId ?? null,
+      additionalFairIds: params.additionalFairIds ?? [],
+      sendTo: params.audienceQuery ? null : (params.sendTo ?? null),
+      audienceQuery: params.audienceQuery ?? null,
       totalRecipients: recipients.length,
       suppressedByBrevo: suppressedCount,
       used: false,
@@ -614,9 +808,7 @@ export class EmailsService {
       previewId: saved.id,
       title: params.title,
       subject: params.subject,
-      targetFair: targetFair.name,
-      templateFair: templateFair.name,
-      sendTo: params.sendTo,
+      audience: audienceSummary,
       totalRecipients: recipients.length,
       suppressedByBrevo: suppressedCount,
       totalWouldBeQueued: filtered.length,
@@ -644,9 +836,46 @@ export class EmailsService {
     preview.used = true;
     await this.campaignPreviewRepository.save(preview);
 
+    if (preview.audienceQuery) {
+      const recipients = await this.resolveAudienceQuery(preview.audienceQuery);
+      const { filtered, suppressedCount } = await this.filterBlocked(recipients);
+
+      if (recipients.length === 0) {
+        return {
+          success: true,
+          message: 'Nenhum destinatário encontrado para os critérios informados',
+          totalRecipients: 0,
+          suppressedByBrevo: 0,
+          totalQueued: 0,
+          status: 'QUEUED',
+        };
+      }
+      if (filtered.length === 0) {
+        return {
+          success: true,
+          message: 'Todos os destinatários estão na lista de supressão da Brevo',
+          totalRecipients: recipients.length,
+          suppressedByBrevo: suppressedCount,
+          totalQueued: 0,
+          status: 'SUPPRESSED',
+        };
+      }
+
+      return this.persistCampaignAndEnqueue({
+        title: preview.title,
+        subject: preview.subject,
+        htmlContent: preview.htmlContent,
+        targetFairId: null,
+        audienceQuery: preview.audienceQuery,
+        recipients,
+        filtered,
+        suppressedCount,
+      });
+    }
+
     return this.sendMarketingEmail(
-      preview.targetFairId,
-      preview.templateFairId ?? preview.targetFairId,
+      preview.targetFairId!,
+      preview.templateFairId ?? preview.targetFairId!,
       preview.sendTo as 'all' | 'absent',
       preview.subject,
       preview.htmlContent,

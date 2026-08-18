@@ -43,10 +43,19 @@ export function registerEmailTools(
     { readOnlyHint: true, title: 'Referência de HTML de campanha' },
   );
 
+  const audienceConditionSchema = z.object({
+    fairId: z.string().describe('id da feira, obtido via list_fairs'),
+    status: z
+      .enum(['registered', 'present', 'absent'])
+      .describe(
+        '"registered" = cadastrado na feira (foi ou não); "present" = fez checkin (compareceu); "absent" = cadastrado mas NÃO fez checkin',
+      ),
+  });
+
   registerToolWithInput(
     server,
     'preview_marketing_email',
-    'Prepara uma campanha de email marketing e mostra quantos destinatários ela vai atingir, SEM enviar nada. Use antes de send_marketing_email. O htmlContent deve seguir a identidade visual da ExpoMultiMix — use get_campaign_html_reference numa campanha anterior antes de escrever o HTML.',
+    'Prepara uma campanha de email marketing e mostra quantos destinatários ela vai atingir, SEM enviar nada. Use antes de send_marketing_email. O htmlContent deve seguir a identidade visual da ExpoMultiMix — use get_campaign_html_reference numa campanha anterior antes de escrever o HTML. Para o público-alvo, use OU (targetFairId + templateFairId + sendTo) para o caso simples, OU audienceQuery para segmentação combinando múltiplas feiras — não os dois.',
     {
       title: z.string().describe('título interno da campanha (para o painel de campanhas)'),
       subject: z
@@ -61,17 +70,38 @@ export function registerEmailTools(
         ),
       targetFairId: z
         .string()
-        .describe('id da feira principal do público-alvo, obtido via list_fairs'),
+        .optional()
+        .describe(
+          'Caso simples: id da feira principal do público-alvo, obtido via list_fairs. Use com templateFairId + sendTo, OU use audienceQuery em vez disso.',
+        ),
       templateFairId: z
         .string()
-        .describe('id da feira usada como referência de template (geralmente igual a targetFairId)'),
+        .optional()
+        .describe('Caso simples: id da feira usada como referência de template (geralmente igual a targetFairId). Só faz sentido junto de targetFairId.'),
       additionalFairIds: z
         .array(z.string())
         .optional()
-        .describe('ids de feiras adicionais para combinar público (dedup por email)'),
+        .describe('Caso simples: ids de feiras adicionais para combinar público (dedup por email, sempre OR). Só faz sentido junto de targetFairId.'),
       sendTo: z
         .enum(['all', 'absent'])
-        .describe('"all" = todos os cadastrados; "absent" = só quem não fez checkin'),
+        .optional()
+        .describe('Caso simples: "all" = todos os cadastrados; "absent" = só quem não fez checkin. Só faz sentido junto de targetFairId.'),
+      audienceQuery: z
+        .object({
+          operator: z
+            .enum(['AND', 'OR'])
+            .describe(
+              'AND = interseção (precisa satisfazer todas as condições). OR = união (satisfaz qualquer uma, com dedup por email). ATENÇÃO: "cadastrado mas não foi em nenhuma das duas feiras" é AND de absent+absent (interseção de quem faltou nas duas), NÃO OR — usar OR aqui pegaria quase todo mundo, já que basta faltar em uma das duas.',
+            ),
+          conditions: z
+            .array(audienceConditionSchema)
+            .min(1)
+            .describe('Lista de condições de presença/cadastro por feira, combinadas pelo operator.'),
+        })
+        .optional()
+        .describe(
+          'Segmentação avançada combinando condições entre múltiplas feiras. Exemplos: {operator:"AND",conditions:[{fairId:X,status:"absent"},{fairId:Y,status:"absent"}]} = cadastrado em X e Y mas não foi em nenhuma das duas. {operator:"AND",conditions:[{fairId:X,status:"registered"},{fairId:Y,status:"present"}]} = cadastrado em X e foi em Y. Use isso OU targetFairId+templateFairId+sendTo, não os dois.',
+        ),
     },
     async (params) => textResult(await emailsService.previewMarketingEmail(params)),
     { readOnlyHint: true, title: 'Pré-visualizar campanha (não envia)' },

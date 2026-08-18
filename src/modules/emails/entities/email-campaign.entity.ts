@@ -4,6 +4,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { AudienceQuery } from '../types/audience-query';
 
 @Entity('email_campaigns')
 export class EmailCampaign {
@@ -19,8 +20,14 @@ export class EmailCampaign {
   @Column({ type: 'longtext' })
   htmlContent: string;
 
-  @Column({ length: 36 })
-  targetFairId: string;
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  targetFairId: string | null;
+
+  // Set when the campaign was built with the advanced multi-fair segmentation
+  // (preview_marketing_email's audienceQuery) instead of targetFairId/sendTo —
+  // null for campaigns sent the classic way.
+  @Column({ type: 'simple-json', nullable: true })
+  audienceQuery: AudienceQuery | null;
 
   @Column({ type: 'varchar', length: 36, nullable: true })
   templateFairId: string | null;
