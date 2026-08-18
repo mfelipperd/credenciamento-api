@@ -153,8 +153,8 @@ export class EmailsService {
         opens: opens30,
         uniqueOpens: report.uniqueOpens ?? 0,
         openRate: delivered30 ? +((opens30 / delivered30) * 100).toFixed(1) : 0,
-        clicks: report.clickers ?? 0,
-        uniqueClicks: report.uniqueClickers ?? 0,
+        clicks: report.clicks ?? 0,
+        uniqueClicks: report.uniqueClicks ?? 0,
         bounced: (report.hardBounces ?? 0) + (report.softBounces ?? 0),
         spam: report.spamReports ?? 0,
         unsubscribed: report.unsubscribed ?? 0,
@@ -203,7 +203,7 @@ export class EmailsService {
     const queued = campaign.totalQueued;
     const delivered = report.delivered ?? 0;
     const opens = report.opens ?? 0;
-    const clicked = report.clickers ?? 0;
+    const clicked = report.clicks ?? 0;
 
     return {
       campaign: {
@@ -233,8 +233,9 @@ export class EmailsService {
         opens,
         uniqueOpens: report.uniqueOpens ?? 0,
         openRate: delivered ? +((opens / delivered) * 100).toFixed(1) : 0,
+        loadedByProxy: report.loadedByProxy ?? 0,
         clicks: clicked,
-        uniqueClicks: report.uniqueClickers ?? 0,
+        uniqueClicks: report.uniqueClicks ?? 0,
         clickRate: delivered ? +((clicked / delivered) * 100).toFixed(1) : 0,
         unsubscribed: report.unsubscribed ?? 0,
       },
