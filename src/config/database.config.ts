@@ -19,6 +19,7 @@ import { StandConfiguration } from 'src/modules/fairs/entity/stand-configuration
 import { OAuthClient } from 'src/modules/mcp/oauth/entities/oauth-client.entity';
 import { OAuthAuthorizationCode } from 'src/modules/mcp/oauth/entities/oauth-authorization-code.entity';
 import { OAuthRefreshToken } from 'src/modules/mcp/oauth/entities/oauth-refresh-token.entity';
+import { EmailCampaignPreview } from 'src/modules/emails/entities/email-campaign-preview.entity';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'mysql',
@@ -43,5 +44,6 @@ export const databaseConfig: TypeOrmModuleOptions = {
     OAuthClient,
     OAuthAuthorizationCode,
     OAuthRefreshToken,
+    EmailCampaignPreview,
   ],
 };

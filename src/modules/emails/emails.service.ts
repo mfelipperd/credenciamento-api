@@ -15,7 +15,10 @@ import { randomUUID } from 'crypto';
 import { FairsService } from '../fairs/fairs.service';
 import { Visitor } from '../visitors/entities/visitor.entity';
 import { EmailCampaign } from './entities/email-campaign.entity';
+import { EmailCampaignPreview } from './entities/email-campaign-preview.entity';
 import { generateConfirmationEmail } from 'src/utils/emailLayoutGenerator';
+
+const PREVIEW_TTL_MINUTES = 15;
 
 export const EMAIL_QUEUE = 'email-queue';
 
@@ -39,6 +42,8 @@ export class EmailsService {
     private readonly visitorsRepository: Repository<Visitor>,
     @InjectRepository(EmailCampaign)
     private readonly campaignRepository: Repository<EmailCampaign>,
+    @InjectRepository(EmailCampaignPreview)
+    private readonly campaignPreviewRepository: Repository<EmailCampaignPreview>,
     @InjectQueue(EMAIL_QUEUE)
     private readonly emailQueue: Queue<MarketingEmailJob>,
   ) {
@@ -405,25 +410,11 @@ export class EmailsService {
 
   // ── Marketing: send campaign ──────────────────────────────────────────────
 
-  async sendMarketingEmail(
+  private async resolveMarketingRecipients(
     targetFairId: string,
-    templateFairId: string,
+    additionalFairIds: string[],
     sendTo: 'all' | 'absent',
-    subject: string,
-    htmlContent: string,
-    title: string,
-    additionalFairIds: string[] = [],
   ) {
-    const [targetFair, templateFair] = await Promise.all([
-      this.fairsService.findOne(targetFairId),
-      this.fairsService.findOne(templateFairId),
-    ]);
-
-    if (!targetFair)
-      throw new BadRequestException('Feira destino não encontrada.');
-    if (!templateFair)
-      throw new BadRequestException('Feira template não encontrada.');
-
     const fairIds = [targetFairId, ...additionalFairIds];
 
     const qb = this.visitorsRepository
@@ -447,6 +438,50 @@ export class EmailsService {
     }
 
     const recipients = await qb.getRawMany<{ email: string; name: string }>();
+    if (recipients.length === 0) {
+      return { recipients, filtered: [], suppressedCount: 0 };
+    }
+
+    const blockedEmails = await this.getBrevoBlockedEmails();
+    const filtered = recipients.filter(
+      (v) => !blockedEmails.has(v.email.toLowerCase()),
+    );
+    const suppressedCount = recipients.length - filtered.length;
+
+    if (suppressedCount > 0) {
+      this.logger.log(
+        `[CAMPAIGN] ${suppressedCount} destinatário(s) suprimidos (bounce/spam/descadastro)`,
+      );
+    }
+
+    return { recipients, filtered, suppressedCount };
+  }
+
+  async sendMarketingEmail(
+    targetFairId: string,
+    templateFairId: string,
+    sendTo: 'all' | 'absent',
+    subject: string,
+    htmlContent: string,
+    title: string,
+    additionalFairIds: string[] = [],
+  ) {
+    const [targetFair, templateFair] = await Promise.all([
+      this.fairsService.findOne(targetFairId),
+      this.fairsService.findOne(templateFairId),
+    ]);
+
+    if (!targetFair)
+      throw new BadRequestException('Feira destino não encontrada.');
+    if (!templateFair)
+      throw new BadRequestException('Feira template não encontrada.');
+
+    const { recipients, filtered, suppressedCount } =
+      await this.resolveMarketingRecipients(
+        targetFairId,
+        additionalFairIds,
+        sendTo,
+      );
 
     if (recipients.length === 0) {
       return {
@@ -460,18 +495,6 @@ export class EmailsService {
         totalQueued: 0,
         status: 'QUEUED',
       };
-    }
-
-    const blockedEmails = await this.getBrevoBlockedEmails();
-    const filtered = recipients.filter(
-      (v) => !blockedEmails.has(v.email.toLowerCase()),
-    );
-    const suppressedCount = recipients.length - filtered.length;
-
-    if (suppressedCount > 0) {
-      this.logger.log(
-        `[CAMPAIGN] ${suppressedCount} destinatário(s) suprimidos (bounce/spam/descadastro)`,
-      );
     }
 
     if (filtered.length === 0) {
@@ -539,6 +562,105 @@ export class EmailsService {
       totalQueued: filtered.length,
       status: 'QUEUED',
     };
+  }
+
+  // ── Marketing: preview + confirm (used by the MCP connector) ─────────────
+
+  async previewMarketingEmail(params: {
+    title: string;
+    subject: string;
+    htmlContent: string;
+    targetFairId: string;
+    templateFairId: string;
+    sendTo: 'all' | 'absent';
+    additionalFairIds?: string[];
+  }) {
+    const additionalFairIds = params.additionalFairIds ?? [];
+    const [targetFair, templateFair] = await Promise.all([
+      this.fairsService.findOne(params.targetFairId),
+      this.fairsService.findOne(params.templateFairId),
+    ]);
+
+    if (!targetFair)
+      throw new BadRequestException('Feira destino não encontrada.');
+    if (!templateFair)
+      throw new BadRequestException('Feira template não encontrada.');
+
+    const { recipients, filtered, suppressedCount } =
+      await this.resolveMarketingRecipients(
+        params.targetFairId,
+        additionalFairIds,
+        params.sendTo,
+      );
+
+    const expiresAt = new Date(Date.now() + PREVIEW_TTL_MINUTES * 60 * 1000);
+    const preview = this.campaignPreviewRepository.create({
+      title: params.title,
+      subject: params.subject,
+      htmlContent: params.htmlContent,
+      targetFairId: params.targetFairId,
+      templateFairId: params.templateFairId,
+      additionalFairIds,
+      sendTo: params.sendTo,
+      totalRecipients: recipients.length,
+      suppressedByBrevo: suppressedCount,
+      used: false,
+      expiresAt,
+    });
+    const saved = await this.campaignPreviewRepository.save(preview);
+
+    return {
+      previewId: saved.id,
+      title: params.title,
+      subject: params.subject,
+      targetFair: targetFair.name,
+      templateFair: templateFair.name,
+      sendTo: params.sendTo,
+      totalRecipients: recipients.length,
+      suppressedByBrevo: suppressedCount,
+      totalWouldBeQueued: filtered.length,
+      expiresAt,
+      note: 'Nenhum email foi enviado. Chame send_marketing_email com este previewId para enviar de verdade.',
+    };
+  }
+
+  async confirmMarketingEmail(previewId: string) {
+    const preview = await this.campaignPreviewRepository.findOne({
+      where: { id: previewId },
+    });
+    if (!preview) {
+      throw new NotFoundException('Preview não encontrado');
+    }
+    if (preview.used) {
+      throw new BadRequestException('Este preview já foi enviado');
+    }
+    if (preview.expiresAt < new Date()) {
+      throw new BadRequestException(
+        'Preview expirado — gere um novo com preview_marketing_email',
+      );
+    }
+
+    preview.used = true;
+    await this.campaignPreviewRepository.save(preview);
+
+    return this.sendMarketingEmail(
+      preview.targetFairId,
+      preview.templateFairId ?? preview.targetFairId,
+      preview.sendTo as 'all' | 'absent',
+      preview.subject,
+      preview.htmlContent,
+      preview.title,
+      preview.additionalFairIds,
+    );
+  }
+
+  async getCampaignHtmlContent(id: string) {
+    const campaign = await this.campaignRepository.findOne({
+      where: { id },
+      select: ['id', 'title', 'subject', 'htmlContent', 'sentAt'],
+    });
+    if (!campaign) throw new NotFoundException('Campanha não encontrada');
+    return campaign;
   }
 
   // ── Generic transactional ─────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 
 export function textResult(data: unknown) {
   return {
@@ -26,6 +27,11 @@ export function registerToolWithInput<Shape extends Record<string, z.ZodTypeAny>
   description: string,
   inputSchema: Shape,
   handler: (args: { [K in keyof Shape]: z.infer<Shape[K]> }) => Promise<ToolResult>,
+  annotations?: ToolAnnotations,
 ) {
-  (server.registerTool as any)(name, { description, inputSchema }, handler);
+  (server.registerTool as any)(
+    name,
+    { description, inputSchema, annotations },
+    handler,
+  );
 }

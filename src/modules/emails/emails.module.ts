@@ -8,10 +8,11 @@ import { Visitor } from '../visitors/entities/visitor.entity';
 import { FairsModule } from '../fairs/fairs.module';
 import { Fair } from '../fairs/entity/fair.entity';
 import { EmailCampaign } from './entities/email-campaign.entity';
+import { EmailCampaignPreview } from './entities/email-campaign-preview.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Visitor, Fair, EmailCampaign]),
+    TypeOrmModule.forFeature([Visitor, Fair, EmailCampaign, EmailCampaignPreview]),
     FairsModule,
     BullModule.registerQueue({ name: EMAIL_QUEUE }),
   ],
