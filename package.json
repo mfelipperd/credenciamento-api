@@ -22,7 +22,10 @@
     "migration:generate": "npx typeorm migration:generate -d src/database/migrations",
     "migration:run": "npx typeorm migration:run -d src/database/migrations",
     "migration:revert": "npx typeorm migration:revert -d src/database/migrations",
-    "normalize-csv": "node scripts/normalize-csv.mjs"
+    "normalize-csv": "node scripts/normalize-csv.mjs",
+    "setup:exhibitor-portal": "node scripts/setup-exhibitor-portal.mjs",
+    "import:exhibitor-teams": "node scripts/import-exhibitor-teams.mjs",
+    "consolidate:exhibitors": "node scripts/consolidate-exhibitors.mjs"
   },
   "dependencies": {
     "@getbrevo/brevo": "^5.0.4",
