@@ -25,6 +25,11 @@ export class CashFlowService {
     return Math.round((Number(cents) / 100) * 100) / 100;
   }
 
+  private static getYear(date: Date | string | null): number {
+    if (!date) return new Date().getFullYear();
+    return new Date(date).getFullYear();
+  }
+
   constructor(
     @InjectRepository(CashFlow)
     private cashFlowRepository: Repository<CashFlow>,
@@ -248,17 +253,13 @@ export class CashFlowService {
         revenue.status !== RevenueStatus.CANCELADO &&
         !CashFlowService.isPermuta(revenue.notes),
     );
-    const fairYear = (
-      fair.startDate ??
-      fair.endDate ??
-      new Date()
-    ).getFullYear();
+    const fairYear = CashFlowService.getYear(fair.startDate ?? fair.endDate);
     const fairsOfYear = await this.fairRepository.find();
     const fairIdsOfYear = new Set(
       fairsOfYear
         .filter(
           (item) =>
-            (item.startDate ?? item.endDate)?.getFullYear() === fairYear,
+            CashFlowService.getYear(item.startDate ?? item.endDate) === fairYear,
         )
         .map((item) => item.id),
     );

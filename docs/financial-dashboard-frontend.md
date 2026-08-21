@@ -65,31 +65,31 @@ Todos os valores monetarios sao retornados em reais, com duas casas decimais. Pe
 
 ## Campos para os cards
 
-| Campo | Exibicao sugerida |
-|---|---|
-| `receita.totalContrato` | Receita total da feira |
-| `receita.contratosValidos` | Contratos validos |
-| `receita.ticketMedio` | Ticket medio |
-| `receita.totalRecebido` | Recebido |
-| `receita.totalAReceber` | A receber |
-| `receita.totalVencido` | Em atraso |
-| `receita.inadimplencia` | Inadimplencia (%) |
-| `receita.taxaRecebimento` | Taxa de recebimento (%) |
-| `despesas.total` | Total de despesas |
-| `resultado.lucroProjetado` | Lucro projetado |
-| `resultado.lucroRealizado` | Lucro realizado |
-| `resultado.margemProjetada` | Margem projetada (%) |
-| `resultado.margemRealizada` | Margem realizada (%) |
-| `resultado.despesasSobreReceita` | Despesas sobre receita (%) |
-| `impostos.annualRevenue` | Faturamento anual da empresa |
-| `impostos.annualAmount` | Imposto anual estimado |
-| `impostos.amount` | Imposto estimado da feira |
-| `impostos.effectiveRate` | Aliquota efetiva (%) |
-| `visitantes.total` | Inscritos |
-| `visitantes.checkins` | Check-ins |
-| `visitantes.taxaComparecimento` | Taxa de comparecimento (%) |
-| `visitantes.custoPorVisitante` | Custo por visitante |
-| `visitantes.custoPorStand` | Custo por stand |
+| Campo                            | Exibicao sugerida            |
+| -------------------------------- | ---------------------------- |
+| `receita.totalContrato`          | Receita total da feira       |
+| `receita.contratosValidos`       | Contratos validos            |
+| `receita.ticketMedio`            | Ticket medio                 |
+| `receita.totalRecebido`          | Recebido                     |
+| `receita.totalAReceber`          | A receber                    |
+| `receita.totalVencido`           | Em atraso                    |
+| `receita.inadimplencia`          | Inadimplencia (%)            |
+| `receita.taxaRecebimento`        | Taxa de recebimento (%)      |
+| `despesas.total`                 | Total de despesas            |
+| `resultado.lucroProjetado`       | Lucro projetado              |
+| `resultado.lucroRealizado`       | Lucro realizado              |
+| `resultado.margemProjetada`      | Margem projetada (%)         |
+| `resultado.margemRealizada`      | Margem realizada (%)         |
+| `resultado.despesasSobreReceita` | Despesas sobre receita (%)   |
+| `impostos.annualRevenue`         | Faturamento anual da empresa |
+| `impostos.annualAmount`          | Imposto anual estimado       |
+| `impostos.amount`                | Imposto estimado da feira    |
+| `impostos.effectiveRate`         | Aliquota efetiva (%)         |
+| `visitantes.total`               | Inscritos                    |
+| `visitantes.checkins`            | Check-ins                    |
+| `visitantes.taxaComparecimento`  | Taxa de comparecimento (%)   |
+| `visitantes.custoPorVisitante`   | Custo por visitante          |
+| `visitantes.custoPorStand`       | Custo por stand              |
 
 ## Regra do imposto
 
