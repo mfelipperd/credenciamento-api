@@ -35,21 +35,12 @@ export class RevenuesService {
 
       const { standNumber, fairId, ...revenueData } = createRevenueDto;
 
-      // Criar a receita
-      console.log('[REVENUES] Criando receita com dados:', revenueData);
-      const revenue = this.revenueRepository.create({
-        ...revenueData,
-        fairId, // Adicionar fairId explicitamente
-      });
-      console.log('[REVENUES] Receita criada (antes de salvar):', revenue);
-
-      const savedRevenue = await this.revenueRepository.save(revenue);
-      console.log('[REVENUES] Receita salva com sucesso:', savedRevenue);
-
-      // Se foi fornecido um número de stand válido (maior que 0), vincular o stand à receita
+      // Validar o stand ANTES de criar a receita, para não deixar registro
+      // órfão no banco se a validação falhar.
+      let stand: Stand | null = null;
       if (standNumber && standNumber > 0) {
         console.log('[REVENUES] Buscando stand:', { standNumber, fairId });
-        const stand = await this.standRepository.findOne({
+        stand = await this.standRepository.findOne({
           where: {
             standNumber,
             fairId: fairId,
@@ -71,17 +62,30 @@ export class RevenuesService {
         }
 
         console.log('[REVENUES] Stand encontrado e disponível:', stand);
+      } else {
+        console.log(
+          '[REVENUES] Nenhum stand fornecido - receita sem vínculo com stand',
+        );
+      }
 
-        // Vincular o stand à receita
+      // Criar a receita
+      console.log('[REVENUES] Criando receita com dados:', revenueData);
+      const revenue = this.revenueRepository.create({
+        ...revenueData,
+        fairId, // Adicionar fairId explicitamente
+      });
+      console.log('[REVENUES] Receita criada (antes de salvar):', revenue);
+
+      const savedRevenue = await this.revenueRepository.save(revenue);
+      console.log('[REVENUES] Receita salva com sucesso:', savedRevenue);
+
+      // Vincular o stand (já validado acima) à receita
+      if (stand) {
         console.log('[REVENUES] Vinculando stand à receita');
         stand.revenueId = savedRevenue.id;
         stand.isAvailable = false;
         await this.standRepository.save(stand);
         console.log('[REVENUES] Stand atualizado com sucesso');
-      } else {
-        console.log(
-          '[REVENUES] Nenhum stand fornecido - receita sem vínculo com stand',
-        );
       }
 
       // Criar as parcelas automaticamente

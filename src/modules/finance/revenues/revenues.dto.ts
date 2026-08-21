@@ -89,30 +89,19 @@ export class CreateRevenueDto {
 export class UpdateRevenueDto {
   @ApiPropertyOptional({ description: 'ID do cliente' })
   @IsOptional()
-  @IsNumber()
-  clientId?: number;
+  @IsString()
+  clientId?: string;
 
   @ApiPropertyOptional({ description: 'ID do modelo de lançamento' })
   @IsOptional()
-  @IsNumber()
-  entryModelId?: number;
-
-  @ApiPropertyOptional({ description: 'Descrição da receita', maxLength: 500 })
-  @IsOptional()
   @IsString()
-  @MaxLength(500)
-  description?: string;
+  entryModelId?: string;
 
-  @ApiPropertyOptional({ description: 'Valor total da receita', minimum: 0 })
+  @ApiPropertyOptional({ description: 'Valor do contrato em centavos', minimum: 0 })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsNumber()
   @Min(0)
-  totalValue?: number;
-
-  @ApiPropertyOptional({ description: 'Data de vencimento' })
-  @IsOptional()
-  @IsDateString()
-  dueDate?: string;
+  contractValue?: number;
 
   @ApiPropertyOptional({
     description: 'Status da receita',

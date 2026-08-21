@@ -164,7 +164,9 @@ export class StandsService {
       throw new NotFoundException(`Stand com ID ${standId} não encontrado`);
     }
 
-    if (!stand.isAvailable) {
+    // Se o stand já está ocupado por essa mesma receita, não há nada a
+    // fazer além de garantir a consistência (idempotente).
+    if (!stand.isAvailable && stand.revenueId !== revenueId) {
       throw new BadRequestException('Stand já está ocupado');
     }
 
@@ -177,12 +179,14 @@ export class StandsService {
       throw new NotFoundException(`Receita com ID ${revenueId} não encontrada`);
     }
 
-    // Verificar se a receita já está vinculada a outro stand
+    // Verificar se a receita já está vinculada a outro stand (ignorando o
+    // próprio stand que está sendo vinculado, para permitir corrigir um
+    // estado inconsistente sem bloquear a operação nele mesmo).
     const existingStand = await this.standRepository.findOne({
       where: { revenueId },
     });
 
-    if (existingStand) {
+    if (existingStand && existingStand.id !== stand.id) {
       throw new BadRequestException(
         `Receita já está vinculada ao stand ${existingStand.standNumber}`,
       );
@@ -205,8 +209,11 @@ export class StandsService {
       throw new NotFoundException(`Stand com ID ${standId} não encontrado`);
     }
 
-    if (stand.isAvailable) {
-      throw new BadRequestException('Stand já está disponível');
+    // Idempotente: se o stand já está disponível e sem receita vinculada,
+    // não há nada a fazer. Isso também permite corrigir um stand que ficou
+    // num estado inconsistente (isAvailable=true com revenueId ainda setado).
+    if (stand.isAvailable && !stand.revenueId) {
+      return this.getStandById(standId);
     }
 
     // Desvincular o stand

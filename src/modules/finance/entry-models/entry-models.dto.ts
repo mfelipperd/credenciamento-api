@@ -3,14 +3,18 @@ import {
   IsOptional,
   IsEnum,
   IsNumber,
+  IsBoolean,
   MaxLength,
   Min,
-  Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EntryModelType } from '../common/enums/finance.enums';
 
 export class CreateEntryModelDto {
+  @ApiProperty({ description: 'ID da feira' })
+  @IsString()
+  fairId: string;
+
   @ApiProperty({ description: 'Nome do modelo de lançamento', maxLength: 255 })
   @IsString()
   @MaxLength(255)
@@ -24,31 +28,21 @@ export class CreateEntryModelDto {
   @IsEnum(EntryModelType)
   type: EntryModelType;
 
-  @ApiPropertyOptional({
-    description: 'Valor fixo (para tipo FIXED_VALUE)',
-    minimum: 0,
-  })
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 })
+  @ApiProperty({ description: 'Valor base em centavos', minimum: 0 })
+  @IsNumber()
   @Min(0)
-  fixedValue?: number;
+  baseValue: number;
 
-  @ApiPropertyOptional({
-    description: 'Número de parcelas (para tipo INSTALLMENT)',
-    minimum: 1,
-    maximum: 240,
-  })
+  @ApiPropertyOptional({ description: 'Custo em centavos', minimum: 0 })
   @IsOptional()
   @IsNumber()
-  @Min(1)
-  @Max(240)
-  installments?: number;
+  @Min(0)
+  costCents?: number;
 
-  @ApiPropertyOptional({ description: 'Descrição do modelo', maxLength: 1000 })
+  @ApiPropertyOptional({ description: 'Se o modelo está ativo', default: true })
   @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  description?: string;
+  @IsBoolean()
+  active?: boolean;
 }
 
 export class UpdateEntryModelDto {
@@ -69,36 +63,30 @@ export class UpdateEntryModelDto {
   @IsEnum(EntryModelType)
   type?: EntryModelType;
 
-  @ApiPropertyOptional({
-    description: 'Valor fixo (para tipo FIXED_VALUE)',
-    minimum: 0,
-  })
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  fixedValue?: number;
-
-  @ApiPropertyOptional({
-    description: 'Número de parcelas (para tipo INSTALLMENT)',
-    minimum: 1,
-    maximum: 240,
-  })
+  @ApiPropertyOptional({ description: 'Valor base em centavos', minimum: 0 })
   @IsOptional()
   @IsNumber()
-  @Min(1)
-  @Max(240)
-  installments?: number;
+  @Min(0)
+  baseValue?: number;
 
-  @ApiPropertyOptional({ description: 'Descrição do modelo', maxLength: 1000 })
+  @ApiPropertyOptional({ description: 'Custo em centavos', minimum: 0 })
   @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  description?: string;
+  @IsNumber()
+  @Min(0)
+  costCents?: number;
+
+  @ApiPropertyOptional({ description: 'Se o modelo está ativo' })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 }
 
 export class EntryModelResponseDto {
   @ApiProperty({ description: 'ID do modelo' })
   id: string;
+
+  @ApiProperty({ description: 'ID da feira' })
+  fairId: string;
 
   @ApiProperty({ description: 'Nome do modelo de lançamento' })
   name: string;
@@ -106,20 +94,14 @@ export class EntryModelResponseDto {
   @ApiProperty({ description: 'Tipo do modelo', enum: EntryModelType })
   type: EntryModelType;
 
-  @ApiProperty({
-    description: 'Valor fixo (para tipo FIXED_VALUE)',
-    required: false,
-  })
-  fixedValue?: number;
+  @ApiProperty({ description: 'Valor base em centavos' })
+  baseValue: number;
 
-  @ApiProperty({
-    description: 'Número de parcelas (para tipo INSTALLMENT)',
-    required: false,
-  })
-  installments?: number;
+  @ApiProperty({ description: 'Custo em centavos', required: false })
+  costCents?: number;
 
-  @ApiProperty({ description: 'Descrição do modelo', required: false })
-  description?: string;
+  @ApiProperty({ description: 'Se o modelo está ativo' })
+  active: boolean;
 
   @ApiProperty({ description: 'Data de criação' })
   createdAt: Date;
