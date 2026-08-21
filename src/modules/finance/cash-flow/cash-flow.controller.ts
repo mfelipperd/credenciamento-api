@@ -9,6 +9,7 @@ import {
   Query,
   ParseUUIDPipe,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -248,12 +249,26 @@ export class CashFlowController {
   @ApiOperation({
     summary: 'Relatório consolidado por feira',
     description:
-      'Gera um relatório consolidado de receitas, despesas e lucratividade para uma feira',
+      'Gera o relatório tributário-financeiro da feira selecionada pelo fairId. O RBT12 pode ser informado manualmente e o anexo deve ser validado contabilmente.',
   })
   @ApiParam({
     name: 'fairId',
     description: 'ID da feira',
     example: 'uuid-da-feira',
+  })
+  @ApiQuery({
+    name: 'rbt12',
+    required: false,
+    type: Number,
+    description: 'RBT12 real da Oficina d\'Ideias, em reais. Se omitido, usa receitas anteriores cadastradas.',
+    example: 250000,
+  })
+  @ApiQuery({
+    name: 'annex',
+    required: false,
+    enum: ['III', 'V'],
+    description: 'Anexo do Simples validado contabilmente. Padrão: III.',
+    example: 'III',
   })
   @ApiResponse({
     status: 200,
@@ -261,17 +276,49 @@ export class CashFlowController {
     schema: {
       example: {
         fairId: 'uuid-da-feira',
+        fairName: 'Feira selecionada',
         totalRevenue: 15000.0,
+        receivedRevenue: 5000.0,
+        receivableRevenue: 10000.0,
+        permutaRevenue: 1000.0,
         totalExpenses: 8000.0,
-        netBalance: 7000.0,
-        profitMargin: 46.67,
+        taxes: {
+          cnae: '8230-0/01',
+          annex: 'III',
+          rbt12: 250000.0,
+          rbt12Complete: true,
+          bracket: 2,
+          nominalRate: 11.2,
+          deduction: 9360.0,
+          effectiveRate: 7.456,
+          amount: 1118.4,
+        },
+        netBalanceAfterTaxes: 6100.0,
+        netBalance: 6100.0,
+        profitMargin: 40.67,
         isProfitable: true,
-        summary: 'Feira lucrativa com margem de 46.67%',
+        summary: 'Feira lucrativa com margem de 40.67%',
       },
     },
   })
-  generateConsolidatedReport(@Param('fairId', ParseUUIDPipe) fairId: string) {
-    return this.cashFlowService.generateConsolidatedReport(fairId);
+  generateConsolidatedReport(
+    @Param('fairId', ParseUUIDPipe) fairId: string,
+    @Query('rbt12') rbt12?: string,
+    @Query('annex') annex?: string,
+  ) {
+    const parsedRbt12 = rbt12 === undefined ? undefined : Number(rbt12);
+    if (parsedRbt12 !== undefined && (!Number.isFinite(parsedRbt12) || parsedRbt12 <= 0)) {
+      throw new BadRequestException('rbt12 deve ser um numero positivo em reais');
+    }
+    if (annex !== undefined && annex !== 'III' && annex !== 'V') {
+      throw new BadRequestException('annex deve ser III ou V');
+    }
+    const validatedAnnex = annex === 'III' || annex === 'V' ? annex : undefined;
+
+    return this.cashFlowService.generateConsolidatedReport(fairId, {
+      rbt12: parsedRbt12,
+      annex: validatedAnnex,
+    });
   }
 
   @Get('report/trends/:fairId')

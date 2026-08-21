@@ -8,9 +8,51 @@ import { ExpensesService } from '../expenses/expenses.service';
 import { OverheadExpensesService } from '../overhead/overhead-expenses.service';
 import { RevenuesService } from '../revenues/revenues.service';
 import { ProfitDistributionService } from '../../partners/profit-distribution.service';
+import { Fair } from '../../fairs/entity/fair.entity';
+import { RevenueStatus, InstallmentStatus } from '../common/enums/finance.enums';
+
+type TaxAnnex = 'III' | 'V';
+
+interface TaxBracket {
+  limit: number;
+  rate: number;
+  deduction: number;
+}
 
 @Injectable()
 export class CashFlowService {
+  private static readonly TAX_BRACKETS: Record<TaxAnnex, TaxBracket[]> = {
+    III: [
+      { limit: 180_000, rate: 6, deduction: 0 },
+      { limit: 360_000, rate: 11.2, deduction: 9_360 },
+      { limit: 720_000, rate: 13.5, deduction: 17_640 },
+      { limit: 1_800_000, rate: 16, deduction: 35_640 },
+      { limit: 3_600_000, rate: 21, deduction: 125_640 },
+      { limit: 4_800_000, rate: 33, deduction: 648_000 },
+    ],
+    V: [
+      { limit: 180_000, rate: 15.5, deduction: 0 },
+      { limit: 360_000, rate: 18, deduction: 4_500 },
+      { limit: 720_000, rate: 19.5, deduction: 9_900 },
+      { limit: 1_800_000, rate: 20.5, deduction: 17_100 },
+      { limit: 3_600_000, rate: 23, deduction: 62_100 },
+      { limit: 4_800_000, rate: 30.5, deduction: 540_000 },
+    ],
+  };
+
+  private static calculateTaxBracket(rbt12: number, annex: TaxAnnex): TaxBracket {
+    return CashFlowService.TAX_BRACKETS[annex].find(({ limit }) => rbt12 <= limit)
+      ?? CashFlowService.TAX_BRACKETS[annex].at(-1)!;
+  }
+
+  private static isPermuta(notes: string | null): boolean {
+    return /permuta/i.test(notes ?? '');
+  }
+
+  private static toReais(cents: number): number {
+    return Math.round((Number(cents) / 100) * 100) / 100;
+  }
+
   constructor(
     @InjectRepository(CashFlow)
     private cashFlowRepository: Repository<CashFlow>,
@@ -18,6 +60,8 @@ export class CashFlowService {
     private overheadExpensesService: OverheadExpensesService,
     private revenuesService: RevenuesService,
     private profitDistributionService: ProfitDistributionService,
+    @InjectRepository(Fair)
+    private fairRepository: Repository<Fair>,
   ) {}
 
   /**
@@ -157,38 +201,137 @@ export class CashFlowService {
     };
   }
 
-  // Método para gerar relatório consolidado
-  async generateConsolidatedReport(fairId: string): Promise<{
+  async generateConsolidatedReport(
+    fairId: string,
+    options: { rbt12?: number; annex?: TaxAnnex } = {},
+  ): Promise<{
     fairId: string;
+    fairName: string;
     totalRevenue: number;
+    receivedRevenue: number;
+    receivableRevenue: number;
+    permutaRevenue: number;
     totalExpenses: number;
+    taxes: {
+      cnae: '8230-0/01';
+      annex: TaxAnnex;
+      rbt12: number | null;
+      rbt12Complete: boolean;
+      bracket: number | null;
+      nominalRate: number | null;
+      deduction: number | null;
+      effectiveRate: number | null;
+      amount: number | null;
+      message: string;
+    };
+    netBalanceAfterTaxes: number | null;
     netBalance: number;
     profitMargin: number;
     isProfitable: boolean;
     summary: string;
   }> {
-    const revenues = await this.revenuesService.findByFair(fairId);
-    const totalRevenue = revenues.reduce(
-      (sum, revenue) => sum + revenue.contractValue,
+    const fair = await this.fairRepository.findOne({ where: { id: fairId } });
+    if (!fair) {
+      throw new NotFoundException(
+        `Feira com ID ${fairId} nao encontrada`,
+      );
+    }
+
+    const revenues = (await this.revenuesService.findByFair(fairId)).filter(
+      (revenue) => revenue.status !== RevenueStatus.CANCELADO,
+    );
+    const taxableRevenues = revenues.filter(
+      (revenue) => !CashFlowService.isPermuta(revenue.notes),
+    );
+    const totalRevenue = taxableRevenues.reduce(
+      (sum, revenue) => sum + CashFlowService.toReais(revenue.contractValue),
       0,
     );
+    const permutaRevenue = revenues
+      .filter((revenue) => CashFlowService.isPermuta(revenue.notes))
+      .reduce(
+        (sum, revenue) => sum + CashFlowService.toReais(revenue.contractValue),
+        0,
+      );
+    const receivedRevenue = taxableRevenues.reduce(
+      (sum, revenue) =>
+        sum +
+        (revenue.installments ?? [])
+          .filter((installment) => installment.status === InstallmentStatus.PAGA)
+          .reduce((installmentSum, installment) => installmentSum + installment.valueCents, 0) /
+          100,
+      0,
+    );
+    const receivableRevenue = Math.max(totalRevenue - receivedRevenue, 0);
     const totalExpenses = await this.getTotalExpenses(fairId);
-    const netBalance = totalRevenue - totalExpenses;
-    const profitMargin =
-      totalRevenue > 0 ? (netBalance / totalRevenue) * 100 : 0;
-    const isProfitable = netBalance > 0;
 
-    let summary = '';
-    if (isProfitable) {
-      summary = `Feira lucrativa com margem de ${profitMargin.toFixed(2)}%`;
-    } else {
-      summary = `Feira com prejuízo de R$ ${Math.abs(netBalance).toFixed(2)}`;
-    }
+    const allRevenues = (await this.revenuesService.findAll()).filter(
+      (revenue) =>
+        revenue.status !== RevenueStatus.CANCELADO &&
+        !CashFlowService.isPermuta(revenue.notes),
+    );
+    const referenceDate = taxableRevenues.reduce(
+      (latest, revenue) =>
+        revenue.createdAt > latest ? revenue.createdAt : latest,
+      new Date(0),
+    );
+    const startDate = new Date(referenceDate);
+    startDate.setFullYear(startDate.getFullYear() - 1);
+    const calculatedRbt12 = allRevenues
+      .filter(
+        (revenue) =>
+          revenue.fairId !== fairId &&
+          revenue.createdAt >= startDate &&
+          revenue.createdAt <= referenceDate,
+      )
+      .reduce(
+        (sum, revenue) => sum + CashFlowService.toReais(revenue.contractValue),
+        0,
+      );
+    const rbt12 = options.rbt12 ?? (calculatedRbt12 > 0 ? calculatedRbt12 : null);
+    const annex = options.annex ?? 'III';
+    const bracket = rbt12
+      ? CashFlowService.calculateTaxBracket(rbt12, annex)
+      : null;
+    const effectiveRate = bracket && rbt12
+      ? Math.round((((rbt12 * bracket.rate - bracket.deduction) / rbt12) * 100) * 100) / 100
+      : null;
+    const taxAmount = effectiveRate === null
+      ? null
+      : Math.round((totalRevenue * effectiveRate) * 100) / 10000;
+    const netBalanceAfterTaxes = taxAmount === null
+      ? null
+      : totalRevenue - totalExpenses - taxAmount;
+    const netBalance = netBalanceAfterTaxes ?? totalRevenue - totalExpenses;
+    const profitMargin = totalRevenue > 0 ? (netBalance / totalRevenue) * 100 : 0;
+    const isProfitable = netBalance > 0;
+    const summary = isProfitable
+      ? `Feira lucrativa com margem de ${profitMargin.toFixed(2)}%`
+      : `Feira com prejuizo de R$ ${Math.abs(netBalance).toFixed(2)}`;
 
     return {
       fairId,
-      totalRevenue,
+      fairName: fair.name,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      receivedRevenue: Math.round(receivedRevenue * 100) / 100,
+      receivableRevenue: Math.round(receivableRevenue * 100) / 100,
+      permutaRevenue: Math.round(permutaRevenue * 100) / 100,
       totalExpenses,
+      taxes: {
+        cnae: '8230-0/01',
+        annex,
+        rbt12,
+        rbt12Complete: options.rbt12 !== undefined || calculatedRbt12 > 0,
+        bracket: bracket ? CashFlowService.TAX_BRACKETS[annex].indexOf(bracket) + 1 : null,
+        nominalRate: bracket?.rate ?? null,
+        deduction: bracket?.deduction ?? null,
+        effectiveRate,
+        amount: taxAmount,
+        message: rbt12
+          ? ''
+          : 'Estimativa tributaria - RBT12 incompleto. O valor definitivo depende do faturamento total da Oficina d\'Ideias nos 12 meses anteriores.',
+      },
+      netBalanceAfterTaxes,
       netBalance,
       profitMargin,
       isProfitable,
