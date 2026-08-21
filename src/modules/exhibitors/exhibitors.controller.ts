@@ -6,6 +6,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Request,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -50,6 +51,24 @@ export class ExhibitorsController {
   @ApiOperation({ summary: 'Aceitar convite de acesso a um expositor' })
   accept(@Body() dto: AcceptExhibitorInvitationDto, @Request() req) {
     return this.service.acceptInvitation(dto.token, req.user.id);
+  }
+
+  @Get('statistics')
+  @ApiOperation({ summary: 'Estatísticas comerciais de todos os expositores' })
+  listStatistics(@Query('fairId') fairId: string | undefined, @Request() req) {
+    this.assertAdmin(req);
+    return this.service.listStatistics(fairId);
+  }
+
+  @Get(':exhibitorId/statistics')
+  @ApiOperation({ summary: 'Histórico comercial e de stands do expositor' })
+  statistics(
+    @Param('exhibitorId', ParseUUIDPipe) exhibitorId: string,
+    @Query('fairId') fairId: string | undefined,
+    @Request() req,
+  ) {
+    this.assertAdmin(req);
+    return this.service.getStatistics(exhibitorId, fairId);
   }
 
   @Post(':exhibitorId/finance-clients')

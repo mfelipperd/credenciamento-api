@@ -25,7 +25,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
   type: 'mysql',
   url: process.env.DATABASE_URL?.trim(),
   autoLoadEntities: true,
-  synchronize: process.env.RAILWAY_ENVIRONMENT_NAME !== 'production',
+  synchronize: process.env.DB_SYNCHRONIZE === 'true',
   entities: [
     Visitor,
     Fair,

@@ -95,6 +95,177 @@ export class ExhibitorsService {
     );
   }
 
+  async listStatistics(fairId?: string) {
+    if (fairId) await this.assertFair(fairId);
+    const rows = await this.getStatisticsRows(undefined, fairId);
+    const exhibitors = rows.map((row) => this.mapStatisticsRow(row));
+    return {
+      fairId: fairId ?? null,
+      summary: {
+        totalExhibitors: exhibitors.length,
+        exhibitorsWithStandPurchases: exhibitors.filter(
+          (item) => item.totalStandsPurchased > 0,
+        ).length,
+        totalStandsPurchased: exhibitors.reduce(
+          (sum, item) => sum + item.totalStandsPurchased,
+          0,
+        ),
+        totalStandRevenueCents: exhibitors.reduce(
+          (sum, item) => sum + item.totalStandRevenueCents,
+          0,
+        ),
+        totalSponsorships: exhibitors.reduce(
+          (sum, item) => sum + item.totalSponsorships,
+          0,
+        ),
+        totalSponsorshipRevenueCents: exhibitors.reduce(
+          (sum, item) => sum + item.totalSponsorshipRevenueCents,
+          0,
+        ),
+      },
+      exhibitors,
+    };
+  }
+
+  async getStatistics(exhibitorId: string, fairId?: string) {
+    const exhibitor = await this.assertExhibitor(exhibitorId);
+    if (fairId) await this.assertFair(fairId);
+    const rows = await this.getStatisticsRows(exhibitorId, fairId);
+    const totals = this.mapStatisticsRow(rows[0]);
+    const fairFilter = fairId ? ' AND r.fairId = ?' : '';
+    const params = fairId ? [exhibitorId, fairId] : [exhibitorId];
+    const fairs = await this.exhibitors.manager.query(
+      `SELECT r.fairId,
+              f.name AS fairName,
+              COUNT(DISTINCT CASE WHEN r.type = 'STAND' AND r.status <> 'CANCELADO' THEN r.id END) AS standsPurchased,
+              COUNT(DISTINCT CASE WHEN r.type = 'STAND' AND r.status <> 'CANCELADO' AND s.id IS NOT NULL THEN s.id END) AS mappedStands,
+              COALESCE(SUM(CASE WHEN r.type = 'STAND' AND r.status <> 'CANCELADO' THEN r.contractValue ELSE 0 END), 0) AS standRevenueCents,
+              COALESCE(SUM(CASE WHEN r.type = 'PATROCINIO' AND r.status <> 'CANCELADO' THEN r.contractValue ELSE 0 END), 0) AS sponsorshipRevenueCents,
+              MAX(CASE WHEN r.type = 'STAND' AND r.status <> 'CANCELADO' THEN r.createdAt END) AS lastStandPurchaseAt
+         FROM exhibitor_finance_clients efc
+         JOIN finance_revenues r ON r.clientId = efc.clientId${fairFilter}
+         JOIN fairs f ON f.id = r.fairId
+         LEFT JOIN stands s ON s.revenue_id = r.id
+        WHERE efc.exhibitorId = ?
+        GROUP BY r.fairId, f.name
+        ORDER BY MAX(r.createdAt) DESC`,
+      fairId ? [fairId, exhibitorId] : [exhibitorId],
+    );
+    const purchases = await this.exhibitors.manager.query(
+      `SELECT r.id AS revenueId,
+              r.fairId,
+              f.name AS fairName,
+              r.clientId,
+              c.name AS clientName,
+              r.status,
+              r.contractValue AS contractValueCents,
+              r.paymentMethod,
+              r.numberOfInstallments,
+              r.createdAt,
+              s.id AS standId,
+              s.stand_number AS standNumber
+         FROM exhibitor_finance_clients efc
+         JOIN finance_revenues r ON r.clientId = efc.clientId
+         JOIN finance_clients c ON c.id = r.clientId
+         JOIN fairs f ON f.id = r.fairId
+         LEFT JOIN stands s ON s.revenue_id = r.id
+        WHERE efc.exhibitorId = ?
+          AND r.type = 'STAND'${fairFilter}
+        ORDER BY r.createdAt DESC`,
+      params,
+    );
+    return {
+      exhibitor: {
+        id: exhibitor.id,
+        name: exhibitor.name,
+        type: exhibitor.type,
+        cnpj: exhibitor.cnpj ?? null,
+      },
+      fairId: fairId ?? null,
+      totals,
+      fairs: fairs.map((row: any) => ({
+        fairId: row.fairId,
+        fairName: row.fairName,
+        standsPurchased: Number(row.standsPurchased),
+        mappedStands: Number(row.mappedStands),
+        standRevenueCents: Number(row.standRevenueCents),
+        sponsorshipRevenueCents: Number(row.sponsorshipRevenueCents),
+        lastStandPurchaseAt: row.lastStandPurchaseAt ?? null,
+      })),
+      purchases: purchases.map((row: any) => ({
+        ...row,
+        contractValueCents: Number(row.contractValueCents),
+        numberOfInstallments: Number(row.numberOfInstallments),
+        standId: row.standId == null ? null : Number(row.standId),
+        standNumber: row.standNumber == null ? null : Number(row.standNumber),
+      })),
+    };
+  }
+
+  private async assertFair(fairId: string): Promise<void> {
+    const fair = await this.fairs.findOne({ where: { id: fairId } });
+    if (!fair) throw new NotFoundException('Feira não encontrada');
+  }
+
+  private getStatisticsRows(exhibitorId?: string, fairId?: string) {
+    const revenueFilter = fairId ? ' AND r.fairId = ?' : '';
+    const exhibitorFilter = exhibitorId ? ' WHERE e.id = ?' : '';
+    const params = [
+      ...(fairId ? [fairId] : []),
+      ...(exhibitorId ? [exhibitorId] : []),
+    ];
+    return this.exhibitors.manager.query(
+      `SELECT e.id AS exhibitorId,
+              e.name AS exhibitorName,
+              e.type AS exhibitorType,
+              e.cnpj,
+              COUNT(DISTINCT efc.clientId) AS financeClientCount,
+              COUNT(DISTINCT CASE WHEN r.type = 'STAND' AND r.status <> 'CANCELADO' THEN r.id END) AS totalStandsPurchased,
+              COUNT(DISTINCT CASE WHEN r.type = 'STAND' AND r.status <> 'CANCELADO' AND s.id IS NOT NULL THEN s.id END) AS mappedStands,
+              COALESCE(SUM(CASE WHEN r.type = 'STAND' AND r.status <> 'CANCELADO' THEN r.contractValue ELSE 0 END), 0) AS totalStandRevenueCents,
+              COUNT(DISTINCT CASE WHEN r.type = 'PATROCINIO' AND r.status <> 'CANCELADO' THEN r.id END) AS totalSponsorships,
+              COALESCE(SUM(CASE WHEN r.type = 'PATROCINIO' AND r.status <> 'CANCELADO' THEN r.contractValue ELSE 0 END), 0) AS totalSponsorshipRevenueCents,
+              COUNT(DISTINCT CASE WHEN r.type = 'STAND' AND r.status = 'PAGO' THEN r.id END) AS paidStandPurchases,
+              COUNT(DISTINCT CASE WHEN r.type = 'STAND' AND r.status = 'PENDENTE' THEN r.id END) AS pendingStandPurchases,
+              COUNT(DISTINCT CASE WHEN r.type = 'STAND' AND r.status = 'EM_ANDAMENTO' THEN r.id END) AS inProgressStandPurchases,
+              COUNT(DISTINCT CASE WHEN r.type = 'STAND' AND r.status = 'EM_ATRASO' THEN r.id END) AS overdueStandPurchases,
+              COUNT(DISTINCT CASE WHEN r.type = 'STAND' AND r.status = 'CANCELADO' THEN r.id END) AS cancelledStandPurchases,
+              COUNT(DISTINCT CASE WHEN r.type = 'STAND' AND r.status <> 'CANCELADO' THEN r.fairId END) AS fairsWithStandPurchases,
+              MAX(CASE WHEN r.type = 'STAND' AND r.status <> 'CANCELADO' THEN r.createdAt END) AS lastStandPurchaseAt
+         FROM exhibitors e
+         LEFT JOIN exhibitor_finance_clients efc ON efc.exhibitorId = e.id
+         LEFT JOIN finance_revenues r ON r.clientId = efc.clientId${revenueFilter}
+         LEFT JOIN stands s ON s.revenue_id = r.id${exhibitorFilter}
+        GROUP BY e.id, e.name, e.type, e.cnpj
+        ORDER BY totalStandsPurchased DESC, e.name ASC`,
+      params,
+    );
+  }
+
+  private mapStatisticsRow(row: any) {
+    return {
+      exhibitorId: row.exhibitorId,
+      exhibitorName: row.exhibitorName,
+      exhibitorType: row.exhibitorType,
+      cnpj: row.cnpj ?? null,
+      financeClientCount: Number(row.financeClientCount),
+      totalStandsPurchased: Number(row.totalStandsPurchased),
+      mappedStands: Number(row.mappedStands),
+      totalStandRevenueCents: Number(row.totalStandRevenueCents),
+      totalSponsorships: Number(row.totalSponsorships),
+      totalSponsorshipRevenueCents: Number(row.totalSponsorshipRevenueCents),
+      fairsWithStandPurchases: Number(row.fairsWithStandPurchases),
+      status: {
+        paid: Number(row.paidStandPurchases),
+        pending: Number(row.pendingStandPurchases),
+        inProgress: Number(row.inProgressStandPurchases),
+        overdue: Number(row.overdueStandPurchases),
+        cancelled: Number(row.cancelledStandPurchases),
+      },
+      lastStandPurchaseAt: row.lastStandPurchaseAt ?? null,
+    };
+  }
+
   async linkFinanceClient(exhibitorId: string, clientId: string) {
     await this.assertExhibitor(exhibitorId);
     const client = await this.clients.findOne({ where: { id: clientId } });
