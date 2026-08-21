@@ -276,29 +276,36 @@ export class CashFlowService {
       new Date(0),
     );
     const startDate = new Date(referenceDate);
-    startDate.setFullYear(startDate.getFullYear() - 1);
+    startDate.setDate(1);
+    startDate.setMonth(startDate.getMonth() - 12);
+    const apurationStartDate = new Date(referenceDate);
+    apurationStartDate.setDate(1);
     const calculatedRbt12 = allRevenues
       .filter(
         (revenue) =>
-          revenue.fairId !== fairId &&
           revenue.createdAt >= startDate &&
-          revenue.createdAt <= referenceDate,
+          revenue.createdAt < apurationStartDate,
       )
       .reduce(
         (sum, revenue) => sum + CashFlowService.toReais(revenue.contractValue),
         0,
       );
-    const rbt12 = options.rbt12 ?? (calculatedRbt12 > 0 ? calculatedRbt12 : null);
+    const hasCalculatedRbt12 = calculatedRbt12 > 0;
+    const rbt12 = options.rbt12 ?? (hasCalculatedRbt12 ? calculatedRbt12 : null);
     const annex = options.annex ?? 'III';
     const bracket = rbt12
       ? CashFlowService.calculateTaxBracket(rbt12, annex)
       : null;
     const effectiveRate = bracket && rbt12
-      ? Math.round((((rbt12 * bracket.rate - bracket.deduction) / rbt12) * 100) * 100) / 100
+      ? Math.round(
+          (((rbt12 * (bracket.rate / 100) - bracket.deduction) / rbt12) *
+            100) *
+            100,
+        ) / 100
       : null;
     const taxAmount = effectiveRate === null
       ? null
-      : Math.round((totalRevenue * effectiveRate) * 100) / 10000;
+      : Math.round((totalRevenue * (effectiveRate / 100)) * 100) / 100;
     const netBalanceAfterTaxes = taxAmount === null
       ? null
       : totalRevenue - totalExpenses - taxAmount;
@@ -321,13 +328,13 @@ export class CashFlowService {
         cnae: '8230-0/01',
         annex,
         rbt12,
-        rbt12Complete: options.rbt12 !== undefined || calculatedRbt12 > 0,
+        rbt12Complete: options.rbt12 !== undefined,
         bracket: bracket ? CashFlowService.TAX_BRACKETS[annex].indexOf(bracket) + 1 : null,
         nominalRate: bracket?.rate ?? null,
         deduction: bracket?.deduction ?? null,
         effectiveRate,
         amount: taxAmount,
-        message: rbt12
+        message: options.rbt12 !== undefined
           ? ''
           : 'Estimativa tributaria - RBT12 incompleto. O valor definitivo depende do faturamento total da Oficina d\'Ideias nos 12 meses anteriores.',
       },
