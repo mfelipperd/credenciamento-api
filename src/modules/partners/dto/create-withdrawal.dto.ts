@@ -12,9 +12,11 @@ export class CreateWithdrawalDto {
   @ApiProperty({
     description: 'ID da feira',
     example: '0299a14d-10f1-4799-bf18-a0ecfec99d62',
+    required: false,
   })
+  @IsOptional()
   @IsUUID()
-  fairId: string;
+  fairId?: string;
 
   @ApiProperty({
     description: 'Valor do saque',

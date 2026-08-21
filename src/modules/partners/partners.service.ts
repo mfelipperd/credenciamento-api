@@ -169,6 +169,7 @@ export class PartnersService {
   async createWithdrawal(
     partnerId: string,
     createWithdrawalDto: CreateWithdrawalDto,
+    fairIdFromQuery?: string,
   ): Promise<PartnerWithdrawal> {
     const partner = await this.partnerRepository.findOne({
       where: { id: partnerId },
@@ -182,9 +183,16 @@ export class PartnersService {
       throw new BadRequestException('Sócio inativo');
     }
 
+    const fairId = createWithdrawalDto.fairId ?? fairIdFromQuery;
+    if (!fairId) {
+      throw new BadRequestException(
+        'fairId é obrigatório no corpo ou na query string',
+      );
+    }
+
     // Validar se o sócio tem participação na feira
     const fairPartner = await this.fairPartnerRepository.findOne({
-      where: { partnerId, fairId: createWithdrawalDto.fairId, isActive: true },
+      where: { partnerId, fairId, isActive: true },
     });
 
     if (!fairPartner) {
@@ -196,9 +204,12 @@ export class PartnersService {
     // Obter saldo disponível específico da feira
     const financialSummary = await this.getFinancialSummaryByFair(
       partnerId,
-      createWithdrawalDto.fairId,
+      fairId,
     );
-    const availableBalance = financialSummary.availableBalance;
+    // Reservar também os saques pendentes para impedir solicitações duplicadas
+    // que, somadas, ultrapassem o direito do sócio na feira.
+    const availableBalance =
+      financialSummary.availableBalance - financialSummary.pendingWithdrawals;
 
     if (createWithdrawalDto.amount <= 0) {
       throw new BadRequestException('Valor deve ser maior que zero');
@@ -212,6 +223,7 @@ export class PartnersService {
 
     const withdrawal = this.withdrawalRepository.create({
       ...createWithdrawalDto,
+      fairId,
       partnerId,
       status: WithdrawalStatus.PENDING,
     });
@@ -227,6 +239,35 @@ export class PartnersService {
   async getWithdrawals(partnerId: string): Promise<PartnerWithdrawal[]> {
     return await this.withdrawalRepository.find({
       where: { partnerId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getPartnerWithdrawals(
+    partnerId: string,
+    fairId?: string,
+    status?: string,
+  ): Promise<PartnerWithdrawal[]> {
+    const partner = await this.partnerRepository.findOne({
+      where: { id: partnerId },
+    });
+    if (!partner) {
+      throw new NotFoundException('Sócio não encontrado');
+    }
+
+    if (
+      status &&
+      !Object.values(WithdrawalStatus).includes(status as WithdrawalStatus)
+    ) {
+      throw new BadRequestException('Status de saque inválido');
+    }
+
+    return await this.withdrawalRepository.find({
+      where: {
+        partnerId,
+        ...(fairId ? { fairId } : {}),
+        ...(status ? { status: status as WithdrawalStatus } : {}),
+      },
       order: { createdAt: 'DESC' },
     });
   }
@@ -326,8 +367,12 @@ export class PartnersService {
       where: { partnerId: withdrawal.partnerId, fairId: withdrawal.fairId },
     });
     if (fairPartner) {
-      fairPartner.totalWithdrawn = this.r2(Number(fairPartner.totalWithdrawn) + Number(withdrawal.amount));
-      fairPartner.availableBalance = this.r2(Number(fairPartner.availableBalance) - Number(withdrawal.amount));
+      fairPartner.totalWithdrawn = this.r2(
+        Number(fairPartner.totalWithdrawn) + Number(withdrawal.amount),
+      );
+      fairPartner.availableBalance = this.r2(
+        Number(fairPartner.availableBalance) - Number(withdrawal.amount),
+      );
       await this.fairPartnerRepository.save(fairPartner);
     }
 
@@ -447,7 +492,11 @@ export class PartnersService {
     });
 
     const approvedWithdrawals = withdrawals
-      .filter((w) => w.status === WithdrawalStatus.APPROVED)
+      .filter(
+        (w) =>
+          w.status === WithdrawalStatus.APPROVED ||
+          w.status === WithdrawalStatus.COMPLETED,
+      )
       .reduce((sum, w) => sum + Number(w.amount), 0);
 
     const pendingWithdrawals = withdrawals
@@ -492,6 +541,13 @@ export class PartnersService {
     percentage: number;
     fairName: string;
     isProfitable: boolean;
+    fairEarnings: Array<{
+      fairId: string;
+      fairName: string;
+      percentage: string;
+      earnings: number;
+      isProfitable: boolean;
+    }>;
   }> {
     const partner = await this.partnerRepository.findOne({
       where: { id: partnerId },
@@ -531,7 +587,11 @@ export class PartnersService {
     });
 
     const approvedWithdrawals = withdrawals
-      .filter((w) => w.status === WithdrawalStatus.APPROVED)
+      .filter(
+        (w) =>
+          w.status === WithdrawalStatus.APPROVED ||
+          w.status === WithdrawalStatus.COMPLETED,
+      )
       .reduce((sum, w) => sum + Number(w.amount), 0);
 
     const pendingWithdrawals = withdrawals
@@ -556,6 +616,15 @@ export class PartnersService {
       percentage: fairPartner.percentage,
       fairName,
       isProfitable: fairAnalysis.isProfitable,
+      fairEarnings: [
+        {
+          fairId,
+          fairName,
+          percentage: String(fairPartner.percentage),
+          earnings: this.r2(totalEarnings),
+          isProfitable: fairAnalysis.isProfitable,
+        },
+      ],
     };
   }
 
@@ -716,8 +785,12 @@ export class PartnersService {
     });
 
     const approvedWithdrawals = withdrawals
-      .filter((w) => w.status === WithdrawalStatus.APPROVED)
-      .reduce((sum, w) => sum + w.amount, 0);
+      .filter(
+        (w) =>
+          w.status === WithdrawalStatus.APPROVED ||
+          w.status === WithdrawalStatus.COMPLETED,
+      )
+      .reduce((sum, w) => sum + Number(w.amount), 0);
 
     totalWithdrawn = approvedWithdrawals;
     availableBalance = totalEarnings - totalWithdrawn;
@@ -764,11 +837,14 @@ export class PartnersService {
     let fairProfit = 0;
     let isProfitable = false;
     try {
-      const analysis = await this.cashFlowService.getFairCashFlowAnalysis(fairId);
+      const analysis =
+        await this.cashFlowService.getFairCashFlowAnalysis(fairId);
       isProfitable = analysis.isProfitable;
       fairProfit = isProfitable ? analysis.netProfit : 0;
     } catch (e) {
-      this.logger.warn(`Erro ao analisar cash flow da feira ${fairId}: ${e.message}`);
+      this.logger.warn(
+        `Erro ao analisar cash flow da feira ${fairId}: ${e.message}`,
+      );
     }
 
     const totalActivePercentage = fairPartners
@@ -784,9 +860,10 @@ export class PartnersService {
 
         const sacadoAprovado = this.r2(
           withdrawals
-            .filter((w) =>
-              w.status === WithdrawalStatus.APPROVED ||
-              w.status === WithdrawalStatus.COMPLETED,
+            .filter(
+              (w) =>
+                w.status === WithdrawalStatus.APPROVED ||
+                w.status === WithdrawalStatus.COMPLETED,
             )
             .reduce((s, w) => s + Number(w.amount), 0),
         );
@@ -807,8 +884,12 @@ export class PartnersService {
 
         const sacadoTotal = this.r2(sacadoAprovado + sacadoPendente);
         const saldoDisponivel = this.r2(projectedEarnings - sacadoAprovado);
-        const saldoConsiderandoPendentes = this.r2(projectedEarnings - sacadoTotal);
-        const valorExcedente = this.r2(Math.max(0, sacadoTotal - projectedEarnings));
+        const saldoConsiderandoPendentes = this.r2(
+          projectedEarnings - sacadoTotal,
+        );
+        const valorExcedente = this.r2(
+          Math.max(0, sacadoTotal - projectedEarnings),
+        );
         const isOverdrawn = sacadoTotal > projectedEarnings;
         const taxaSaque =
           projectedEarnings > 0
@@ -860,9 +941,15 @@ export class PartnersService {
       }),
     );
 
-    const totalSacado = this.r2(partners.reduce((s, p) => s + p.sacadoAprovado, 0));
-    const totalPendente = this.r2(partners.reduce((s, p) => s + p.sacadoPendente, 0));
-    const totalProjetadoSocios = this.r2(partners.reduce((s, p) => s + p.projectedEarnings, 0));
+    const totalSacado = this.r2(
+      partners.reduce((s, p) => s + p.sacadoAprovado, 0),
+    );
+    const totalPendente = this.r2(
+      partners.reduce((s, p) => s + p.sacadoPendente, 0),
+    );
+    const totalProjetadoSocios = this.r2(
+      partners.reduce((s, p) => s + p.projectedEarnings, 0),
+    );
 
     return {
       fairId,
@@ -906,19 +993,25 @@ export class PartnersService {
 
     const feiras = await Promise.all(
       fairPartners.map(async (fp) => {
-        const fair = await this.fairRepository.findOne({ where: { id: fp.fairId } });
+        const fair = await this.fairRepository.findOne({
+          where: { id: fp.fairId },
+        });
 
         let fairProfit = 0;
         let isProfitable = false;
         try {
-          const analysis = await this.cashFlowService.getFairCashFlowAnalysis(fp.fairId);
+          const analysis = await this.cashFlowService.getFairCashFlowAnalysis(
+            fp.fairId,
+          );
           isProfitable = analysis.isProfitable;
           fairProfit = isProfitable ? analysis.netProfit : 0;
         } catch (e) {
           this.logger.warn(`Erro ao analisar feira ${fp.fairId}: ${e.message}`);
         }
 
-        const fairWithdrawals = allWithdrawals.filter((w) => w.fairId === fp.fairId);
+        const fairWithdrawals = allWithdrawals.filter(
+          (w) => w.fairId === fp.fairId,
+        );
 
         const sacadoAprovado = this.r2(
           fairWithdrawals
@@ -942,7 +1035,9 @@ export class PartnersService {
         const sacadoTotal = this.r2(sacadoAprovado + sacadoPendente);
         const saldoDisponivel = this.r2(projectedEarnings - sacadoAprovado);
         const isOverdrawn = sacadoTotal > projectedEarnings;
-        const valorExcedente = this.r2(Math.max(0, sacadoTotal - projectedEarnings));
+        const valorExcedente = this.r2(
+          Math.max(0, sacadoTotal - projectedEarnings),
+        );
 
         globalProjected += projectedEarnings;
         globalApproved += sacadoAprovado;
@@ -977,6 +1072,8 @@ export class PartnersService {
     const isGloballyOverdrawn = totalSacadoTotal > globalProjected;
 
     return {
+      partnerId: partner.id,
+      partnerName: partner.name,
       partner: {
         id: partner.id,
         name: partner.name,
@@ -988,6 +1085,10 @@ export class PartnersService {
         createdAt: partner.createdAt,
       },
       totais: {
+        projecaoGlobal: this.r2(globalProjected),
+        sacado: this.r2(globalApproved),
+        pendente: this.r2(globalPending),
+        saldo: this.r2(globalProjected - globalApproved),
         totalFeiras: fairPartners.length,
         totalFeirasAtivas: fairPartners.filter((fp) => fp.isActive).length,
         totalProjected: this.r2(globalProjected),
@@ -997,7 +1098,9 @@ export class PartnersService {
         saldoDisponivel: this.r2(globalProjected - globalApproved),
         saldoConsiderandoPendentes: this.r2(globalProjected - totalSacadoTotal),
         isOverdrawn: isGloballyOverdrawn,
-        valorExcedente: this.r2(Math.max(0, totalSacadoTotal - globalProjected)),
+        valorExcedente: this.r2(
+          Math.max(0, totalSacadoTotal - globalProjected),
+        ),
         taxaSaqueGlobal:
           globalProjected > 0
             ? this.r2((globalApproved / globalProjected) * 100)
@@ -1007,6 +1110,7 @@ export class PartnersService {
       ultimosSaques: allWithdrawals.slice(0, 20).map((w) => ({
         id: w.id,
         fairId: w.fairId,
+        fairName: feiras.find((fair) => fair.fairId === w.fairId)?.fairName,
         amount: Number(w.amount),
         status: w.status,
         reason: w.reason,

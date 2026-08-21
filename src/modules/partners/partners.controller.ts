@@ -215,6 +215,7 @@ export class PartnersController {
   async createWithdrawal(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() createWithdrawalDto: CreateWithdrawalDto,
+    @Query('fairId') fairId: string | undefined,
     @Request() req,
   ) {
     // Verificar se é admin ou o próprio sócio
@@ -225,10 +226,14 @@ export class PartnersController {
       }
     }
 
-    return await this.partnersService.createWithdrawal(id, createWithdrawalDto);
+    return await this.partnersService.createWithdrawal(
+      id,
+      createWithdrawalDto,
+      fairId,
+    );
   }
 
-  @Get(':fairId/withdrawals')
+  @Get('withdrawals/fair/:fairId')
   @ApiOperation({
     summary: 'Listar saques por feira',
     description:
@@ -252,6 +257,39 @@ export class PartnersController {
     }
 
     return await this.partnersService.getWithdrawalsByFair(fairId);
+  }
+
+  @Get(':partnerId/withdrawals')
+  @ApiOperation({
+    summary: 'Listar saques do sócio',
+    description:
+      'Lista saques do sócio, com filtros opcionais por feira e status',
+  })
+  @ApiParam({ name: 'partnerId', description: 'ID do sócio' })
+  @ApiQuery({ name: 'fairId', required: false, description: 'ID da feira' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED'],
+  })
+  async getPartnerWithdrawals(
+    @Param('partnerId', ParseUUIDPipe) partnerId: string,
+    @Query('fairId') fairId: string | undefined,
+    @Query('status') status: string | undefined,
+    @Request() req,
+  ) {
+    if (req.user.role !== EUserRole.ADMIN) {
+      const partner = await this.partnersService.findByUserId(req.user.id);
+      if (!partner || partner.id !== partnerId) {
+        throw new Error('Acesso negado');
+      }
+    }
+
+    return await this.partnersService.getPartnerWithdrawals(
+      partnerId,
+      fairId,
+      status,
+    );
   }
 
   @Get(':partnerId/withdrawals/fair/:fairId')
