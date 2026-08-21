@@ -259,7 +259,8 @@ export class CashFlowService {
       fairsOfYear
         .filter(
           (item) =>
-            CashFlowService.getYear(item.startDate ?? item.endDate) === fairYear,
+            CashFlowService.getYear(item.startDate ?? item.endDate) ===
+            fairYear,
         )
         .map((item) => item.id),
     );
