@@ -334,6 +334,29 @@ export class ExpensesService {
       .getRawMany();
   }
 
+  /**
+   * Como getTotalByCategory, mas inclui o nome da categoria — usado para
+   * cruzar despesas com canais de aquisição (howDidYouKnow) no MCP.
+   */
+  async getTotalByCategoryWithNames(
+    fairId: string,
+  ): Promise<
+    Array<{ categoryId: string; categoryName: string; total: number }>
+  > {
+    return this.expensesRepository
+      .createQueryBuilder('expense')
+      .leftJoin('expense.category', 'category')
+      .select('expense.categoryId', 'categoryId')
+      .addSelect('category.name', 'categoryName')
+      .addSelect('SUM(expense.valor)', 'total')
+      .where('expense.fairId = :fairId AND expense.isOverhead = false', {
+        fairId,
+      })
+      .groupBy('expense.categoryId')
+      .addGroupBy('category.name')
+      .getRawMany();
+  }
+
   async getTotalByAccount(
     fairId: string,
   ): Promise<Array<{ accountId: string; total: number }>> {

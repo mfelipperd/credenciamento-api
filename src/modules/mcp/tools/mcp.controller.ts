@@ -13,12 +13,14 @@ import { EmailsService } from 'src/modules/emails/emails.service';
 import { WhatsappService } from 'src/modules/whatsapp/whatsapp.service';
 import { ChartsService } from 'src/modules/finance/charts/charts.service';
 import { RevenueChartsService } from 'src/modules/finance/revenues/revenue-charts.service';
+import { ExpensesService } from 'src/modules/finance/expenses/expenses.service';
 import { registerFairTools } from './fair.tools';
 import { registerVisitorTools } from './visitor.tools';
 import { registerCheckinTools } from './checkin.tools';
 import { registerFinanceTools } from './finance.tools';
 import { registerEmailTools } from './email.tools';
 import { registerWhatsappTools } from './whatsapp.tools';
+import { registerChannelTools } from './channel.tools';
 
 @ApiExcludeController()
 @Controller('mcp')
@@ -32,6 +34,7 @@ export class McpController {
     private readonly whatsappService: WhatsappService,
     private readonly chartsService: ChartsService,
     private readonly revenueChartsService: RevenueChartsService,
+    private readonly expensesService: ExpensesService,
   ) {}
 
   @IsPublicRoute()
@@ -52,6 +55,7 @@ export class McpController {
     registerFinanceTools(server, this.chartsService, this.revenueChartsService);
     registerEmailTools(server, this.emailsService);
     registerWhatsappTools(server, this.whatsappService);
+    registerChannelTools(server, this.dashboardService, this.expensesService);
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
