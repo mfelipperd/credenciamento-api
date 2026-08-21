@@ -178,12 +178,12 @@ export class ChartsService {
     // 1. Despesas diretas
     const qb = this.expenseRepo
       .createQueryBuilder('e')
-      .innerJoin('categories', 'c', 'c.id = e.categoryId')
+      .innerJoin('finance_categories', 'c', 'c.id = e.categoryId')
       .select('SUM(e.valor)', 'total')
       .where('e.fairId = :fairId AND e.isOverhead = false', { fairId });
 
     if (patterns.length > 0) {
-      const conditions = patterns.map((_, i) => `LOWER(c.name) LIKE :p${i}`);
+      const conditions = patterns.map((_, i) => `LOWER(c.nome) LIKE :p${i}`);
       qb.andWhere(`(${conditions.join(' OR ')})`);
       const params: Record<string, string> = {};
       patterns.forEach((p, i) => {
@@ -346,8 +346,8 @@ export class ChartsService {
     const [directRows, allocDirect, allocLegacy] = await Promise.all([
       this.expenseRepo
         .createQueryBuilder('e')
-        .innerJoin('categories', 'c', 'c.id = e.categoryId')
-        .select('c.name', 'name')
+        .innerJoin('finance_categories', 'c', 'c.id = e.categoryId')
+        .select('c.nome', 'name')
         .addSelect('SUM(e.valor)', 'total')
         .where('e.fairId = :fairId AND e.isOverhead = false', { fairId })
         .groupBy('e.categoryId')

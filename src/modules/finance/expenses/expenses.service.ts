@@ -11,7 +11,7 @@ import { ExpenseFairAllocation } from './entities/expense-fair-allocation.entity
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { SetOverheadDto } from './dto/set-overhead.dto';
-import { Category } from '../../categories/entity/categories.entity';
+import { FinanceCategory } from '../common/entities/finance-category.entity';
 import { Account } from '../common/entities/account.entity';
 
 export interface DirectOverheadItem {
@@ -40,8 +40,8 @@ export class ExpensesService {
     private expensesRepository: Repository<Expense>,
     @InjectRepository(ExpenseFairAllocation)
     private allocationRepository: Repository<ExpenseFairAllocation>,
-    @InjectRepository(Category)
-    private categoryRepository: Repository<Category>,
+    @InjectRepository(FinanceCategory)
+    private categoryRepository: Repository<FinanceCategory>,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
     private readonly dataSource: DataSource,
@@ -101,15 +101,15 @@ export class ExpensesService {
       }
 
       const category = await this.categoryRepository.findOne({
-        where: {
-          id: createExpenseDto.categoryId,
-          fairId: createExpenseDto.fairId,
-        },
+        where: [
+          { id: createExpenseDto.categoryId, fairId: createExpenseDto.fairId },
+          { id: createExpenseDto.categoryId, global: true },
+        ],
       });
 
       if (!category) {
         throw new BadRequestException(
-          `Categoria com ID ${createExpenseDto.categoryId} não encontrada na feira ${createExpenseDto.fairId}`,
+          `Categoria com ID ${createExpenseDto.categoryId} não encontrada (nem específica da feira ${createExpenseDto.fairId}, nem global)`,
         );
       }
 
@@ -155,8 +155,8 @@ export class ExpensesService {
     });
 
     return expenses.sort((a, b) => {
-      const catA = a.category?.name ?? '';
-      const catB = b.category?.name ?? '';
+      const catA = a.category?.nome ?? '';
+      const catB = b.category?.nome ?? '';
       if (catA !== catB) return catA.localeCompare(catB);
       return new Date(b.data).getTime() - new Date(a.data).getTime();
     });
@@ -190,7 +190,7 @@ export class ExpensesService {
       return {
         id: exp.id,
         category: exp.category
-          ? { id: exp.category.id, name: exp.category.name }
+          ? { id: exp.category.id, name: exp.category.nome }
           : null,
         descricao: exp.descricao ?? null,
         data: exp.data,
@@ -243,9 +243,18 @@ export class ExpensesService {
     id: string,
     updateExpenseDto: UpdateExpenseDto,
   ): Promise<Expense> {
-    const expense = await this.findOne(id);
-    Object.assign(expense, updateExpenseDto);
-    return await this.expensesRepository.save(expense);
+    // Garante que a despesa existe (lança 404 caso contrário).
+    await this.findOne(id);
+
+    // Usa update() em vez de carregar a entidade com relações + save():
+    // quando a entidade é carregada com `category`/`account` populados e
+    // depois recebe um novo categoryId/accountId via Object.assign, o
+    // TypeORM prioriza o objeto de relação já carregado (com o id antigo)
+    // na hora de resolver a FK no save(), sobrescrevendo silenciosamente
+    // o novo valor — o update parece funcionar (200) mas não persiste.
+    await this.expensesRepository.update(id, updateExpenseDto);
+
+    return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
@@ -347,13 +356,13 @@ export class ExpensesService {
       .createQueryBuilder('expense')
       .leftJoin('expense.category', 'category')
       .select('expense.categoryId', 'categoryId')
-      .addSelect('category.name', 'categoryName')
+      .addSelect('category.nome', 'categoryName')
       .addSelect('SUM(expense.valor)', 'total')
       .where('expense.fairId = :fairId AND expense.isOverhead = false', {
         fairId,
       })
       .groupBy('expense.categoryId')
-      .addGroupBy('category.name')
+      .addGroupBy('category.nome')
       .getRawMany();
   }
 

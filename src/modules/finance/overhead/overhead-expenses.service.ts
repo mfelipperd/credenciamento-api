@@ -286,7 +286,7 @@ export class OverheadExpensesService {
       financeCategory = await this.validateCategory(dto.financeCategoryId);
     } else {
       const categoryName =
-        directExpense.category?.name ?? directExpense.descricao ?? 'Overhead';
+        directExpense.category?.nome ?? directExpense.descricao ?? 'Overhead';
 
       // Tenta encontrar uma categoria global com o mesmo nome (case-insensitive)
       const existing = await this.financeCategoryRepo.findOne({

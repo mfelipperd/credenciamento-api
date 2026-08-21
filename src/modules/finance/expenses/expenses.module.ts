@@ -5,7 +5,7 @@ import { ExpensesController } from './expenses.controller';
 import { Expense } from './entities/expense.entity';
 import { ExpenseFairAllocation } from './entities/expense-fair-allocation.entity';
 import { Fair } from 'src/modules/fairs/entity/fair.entity';
-import { Category } from '../../categories/entity/categories.entity';
+import { FinanceCategory } from '../common/entities/finance-category.entity';
 import { Account } from '../common/entities/account.entity';
 import { OverheadExpensesModule } from '../overhead/overhead-expenses.module';
 
@@ -15,7 +15,7 @@ import { OverheadExpensesModule } from '../overhead/overhead-expenses.module';
       Expense,
       ExpenseFairAllocation,
       Fair,
-      Category,
+      FinanceCategory,
       Account,
     ]),
     OverheadExpensesModule,
