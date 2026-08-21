@@ -73,10 +73,349 @@ export class ExhibitorsService {
   }
 
   async listExhibitors() {
-    return this.exhibitors.find({
+    const rows = await this.exhibitors.manager.query(
+      `SELECT e.id,
+              e.name,
+              e.normalizedName,
+              e.type,
+              e.cnpj,
+              e.isActive,
+              e.createdAt,
+              e.updatedAt,
+              ((SELECT COUNT(DISTINCT ef.fairId)
+                  FROM exhibitor_fairs ef
+                 WHERE ef.exhibitorId = e.id
+                   AND ef.status <> 'CANCELLED')
+               + (SELECT COUNT(DISTINCT r.fairId)
+                    FROM exhibitor_finance_clients efc
+                    JOIN finance_revenues r ON r.clientId = efc.clientId
+                   WHERE efc.exhibitorId = e.id
+                     AND r.type = 'STAND'
+                     AND r.status <> 'CANCELADO')
+               - (SELECT COUNT(DISTINCT ef.fairId)
+                    FROM exhibitor_fairs ef
+                    JOIN exhibitor_finance_clients efc
+                      ON efc.exhibitorId = ef.exhibitorId
+                    JOIN finance_revenues r
+                      ON r.clientId = efc.clientId AND r.fairId = ef.fairId
+                   WHERE ef.exhibitorId = e.id
+                     AND ef.status <> 'CANCELLED'
+                     AND r.type = 'STAND'
+                     AND r.status <> 'CANCELADO')) AS fairCount,
+              (SELECT COUNT(*)
+                 FROM exhibitor_members em
+                WHERE em.exhibitorId = e.id
+                  AND em.isActive = 1) AS peopleCount,
+              (SELECT COUNT(*)
+                 FROM exhibitor_finance_clients efc
+                WHERE efc.exhibitorId = e.id) AS financeClientCount,
+              (SELECT COUNT(DISTINCT r.id)
+                 FROM exhibitor_finance_clients efc
+                 JOIN finance_revenues r ON r.clientId = efc.clientId
+                WHERE efc.exhibitorId = e.id
+                  AND r.type = 'STAND'
+                  AND r.status <> 'CANCELADO') AS standCount,
+              (SELECT COALESCE(SUM(r.contractValue), 0)
+                 FROM exhibitor_finance_clients efc
+                 JOIN finance_revenues r ON r.clientId = efc.clientId
+                WHERE efc.exhibitorId = e.id
+                  AND r.type = 'STAND'
+                  AND r.status <> 'CANCELADO') AS totalStandRevenueCents,
+              (SELECT MAX(r.createdAt)
+                 FROM exhibitor_finance_clients efc
+                 JOIN finance_revenues r ON r.clientId = efc.clientId
+                WHERE efc.exhibitorId = e.id
+                  AND r.type = 'STAND'
+                  AND r.status <> 'CANCELADO') AS lastStandPurchaseAt
+         FROM exhibitors e
+        ORDER BY e.name ASC`,
+    );
+    return rows.map((row: any) => ({
+      ...row,
+      isActive: Boolean(row.isActive),
+      fairCount: Number(row.fairCount),
+      standCount: Number(row.standCount),
+      peopleCount: Number(row.peopleCount),
+      financeClientCount: Number(row.financeClientCount),
+      totalStandRevenueCents: Number(row.totalStandRevenueCents),
+      lastStandPurchaseAt: row.lastStandPurchaseAt ?? null,
+    }));
+  }
+
+  async getCompleteDetails(exhibitorId: string) {
+    const exhibitor = await this.exhibitors.findOne({
+      where: { id: exhibitorId },
       relations: ['financeClients', 'financeClients.client'],
-      order: { name: 'ASC' },
     });
+    if (!exhibitor) throw new NotFoundException('Expositor não encontrado');
+
+    const [
+      team,
+      participations,
+      statistics,
+      invitations,
+      financialIndicatorsRows,
+      yearlyEvolutionRows,
+      totalActiveFairs,
+    ] = await Promise.all([
+      this.members.find({
+        where: { exhibitorId },
+        order: { name: 'ASC' },
+      }),
+      this.exhibitorFairs.find({
+        where: { exhibitorId },
+        relations: ['fair', 'members', 'members.member'],
+        order: { createdAt: 'DESC' },
+      }),
+      this.getStatistics(exhibitorId),
+      this.invitations.find({
+        where: { exhibitorId },
+        order: { createdAt: 'DESC' },
+      }),
+      this.getFinancialIndicators(exhibitorId),
+      this.getYearlyEvolution(exhibitorId),
+      this.fairs.count(),
+    ]);
+
+    const activeParticipations = participations.filter(
+      (participation) => participation.status !== ExhibitorFairStatus.CANCELLED,
+    );
+    const activeTeam = team.filter((member) => member.isActive);
+    const fairIds = new Set([
+      ...activeParticipations.map((participation) => participation.fairId),
+      ...statistics.fairs.map((fair) => fair.fairId),
+    ]);
+    const financialIndicators = this.mapFinancialIndicators(
+      financialIndicatorsRows[0],
+    );
+    const primaryTeamContact =
+      activeTeam
+        .slice()
+        .sort(
+          (a, b) =>
+            this.contactRolePriority(a.role) -
+            this.contactRolePriority(b.role),
+        )
+        .find((member) => member.email || member.phone) ?? null;
+    const financeContact = exhibitor.financeClients
+      .map((link) => link.client)
+      .find((client) => client?.email || client?.phone || client?.responsavel);
+    const primaryContact = primaryTeamContact
+      ? {
+          source: 'TEAM',
+          id: primaryTeamContact.id,
+          name: primaryTeamContact.name,
+          role: primaryTeamContact.role,
+          jobTitle: primaryTeamContact.jobTitle ?? null,
+          email: primaryTeamContact.email ?? null,
+          phone: primaryTeamContact.phone ?? null,
+        }
+      : financeContact
+        ? {
+            source: 'FINANCE_CLIENT',
+            id: financeContact.id,
+            name: financeContact.responsavel || financeContact.name,
+            role: null,
+            jobTitle: null,
+            email: financeContact.email ?? null,
+            phone: financeContact.phone ?? null,
+          }
+        : null;
+    const firstActivityAt = this.oldestDate([
+      financialIndicators.firstPurchaseAt,
+      ...activeParticipations.map((participation) => participation.createdAt),
+    ]);
+    const lastActivityAt = this.newestDate([
+      financialIndicators.lastPurchaseAt,
+      ...activeParticipations.map((participation) => participation.updatedAt),
+    ]);
+    const yearsAsCustomer = firstActivityAt
+      ? Number(
+          (
+            (Date.now() - firstActivityAt.getTime()) /
+            (365.25 * 24 * 60 * 60 * 1000)
+          ).toFixed(1),
+        )
+      : 0;
+    const activeCredentials = participations.reduce(
+      (sum, participation) =>
+        sum +
+        participation.members.filter(
+          (credential) =>
+            credential.status === ExhibitorCredentialStatus.ACTIVE,
+        ).length,
+      0,
+    );
+    return {
+      exhibitor: {
+        id: exhibitor.id,
+        name: exhibitor.name,
+        normalizedName: exhibitor.normalizedName,
+        type: exhibitor.type,
+        cnpj: exhibitor.cnpj ?? null,
+        isActive: exhibitor.isActive,
+        createdAt: exhibitor.createdAt,
+        updatedAt: exhibitor.updatedAt,
+      },
+      counts: {
+        fairs: fairIds.size,
+        stands: statistics.totals.totalStandsPurchased,
+        people: activeTeam.length,
+        financeClients: exhibitor.financeClients.length,
+        credentials: participations.reduce(
+          (sum, participation) => sum + participation.members.length,
+          0,
+        ),
+        activeCredentials,
+      },
+      commercial: {
+        primaryContact,
+        firstParticipationAt: firstActivityAt?.toISOString() ?? null,
+        lastParticipationAt: lastActivityAt?.toISOString() ?? null,
+        yearsAsCustomer,
+        isRecurring: fairIds.size > 1,
+        participationRate:
+          totalActiveFairs > 0
+            ? Number(((fairIds.size / totalActiveFairs) * 100).toFixed(2))
+            : 0,
+        totalFairsAvailable: totalActiveFairs,
+      },
+      financial: {
+        ...statistics.totals,
+        ...financialIndicators,
+      },
+      fairFinancials: statistics.fairs,
+      yearlyEvolution: yearlyEvolutionRows.map((row: any) => ({
+        year: Number(row.year),
+        fairs: Number(row.fairs),
+        stands: Number(row.stands),
+        contractedCents: Number(row.contractedCents),
+        paidCents: Number(row.paidCents),
+      })),
+      purchases: statistics.purchases,
+      participations,
+      team,
+      financeClients: exhibitor.financeClients,
+      invitations: invitations.map(({ tokenHash: _tokenHash, ...invitation }) =>
+        invitation,
+      ),
+    };
+  }
+
+  private getFinancialIndicators(exhibitorId: string) {
+    return this.exhibitors.manager.query(
+      `SELECT COALESCE(SUM(revenue.contractValue), 0) AS totalContractedCents,
+              COALESCE(SUM(revenue.paidCents), 0) AS totalPaidCents,
+              COALESCE(SUM(revenue.pendingCents), 0) AS totalPendingCents,
+              COALESCE(SUM(revenue.overdueCents), 0) AS totalOverdueCents,
+              COALESCE(AVG(CASE WHEN revenue.type = 'STAND' THEN revenue.contractValue END), 0) AS averageStandTicketCents,
+              MIN(revenue.createdAt) AS firstPurchaseAt,
+              MAX(revenue.createdAt) AS lastPurchaseAt
+         FROM (
+           SELECT r.id,
+                  r.type,
+                  r.contractValue,
+                  r.createdAt,
+                  CASE
+                    WHEN r.status = 'PAGO' THEN r.contractValue
+                    ELSE COALESCE(SUM(CASE WHEN i.status = 'PAGA' THEN i.valueCents ELSE 0 END), 0)
+                  END AS paidCents,
+                  CASE
+                    WHEN COUNT(i.id) = 0 AND r.status IN ('PENDENTE', 'EM_ANDAMENTO') THEN r.contractValue
+                    ELSE COALESCE(SUM(CASE WHEN i.status = 'A_VENCER' THEN i.valueCents ELSE 0 END), 0)
+                  END AS pendingCents,
+                  CASE
+                    WHEN COUNT(i.id) = 0 AND r.status = 'EM_ATRASO' THEN r.contractValue
+                    ELSE COALESCE(SUM(CASE WHEN i.status = 'VENCIDA' THEN i.valueCents ELSE 0 END), 0)
+                  END AS overdueCents
+             FROM exhibitor_finance_clients efc
+             JOIN finance_revenues r ON r.clientId = efc.clientId
+             LEFT JOIN finance_revenue_installments i ON i.revenueId = r.id
+            WHERE efc.exhibitorId = ?
+              AND r.status <> 'CANCELADO'
+            GROUP BY r.id, r.type, r.contractValue, r.createdAt
+         ) revenue`,
+      [exhibitorId],
+    );
+  }
+
+  private getYearlyEvolution(exhibitorId: string) {
+    return this.exhibitors.manager.query(
+      `SELECT YEAR(revenue.createdAt) AS year,
+              COUNT(DISTINCT revenue.fairId) AS fairs,
+              COUNT(DISTINCT CASE WHEN revenue.type = 'STAND' THEN revenue.id END) AS stands,
+              COALESCE(SUM(revenue.contractValue), 0) AS contractedCents,
+              COALESCE(SUM(revenue.paidCents), 0) AS paidCents
+         FROM (
+           SELECT r.id,
+                  r.fairId,
+                  r.type,
+                  r.contractValue,
+                  r.createdAt,
+                  CASE
+                    WHEN r.status = 'PAGO' THEN r.contractValue
+                    ELSE COALESCE(SUM(CASE WHEN i.status = 'PAGA' THEN i.valueCents ELSE 0 END), 0)
+                  END AS paidCents
+             FROM exhibitor_finance_clients efc
+             JOIN finance_revenues r ON r.clientId = efc.clientId
+             LEFT JOIN finance_revenue_installments i ON i.revenueId = r.id
+            WHERE efc.exhibitorId = ?
+              AND r.status <> 'CANCELADO'
+            GROUP BY r.id, r.fairId, r.type, r.contractValue, r.createdAt
+         ) revenue
+        GROUP BY YEAR(revenue.createdAt)
+        ORDER BY year DESC`,
+      [exhibitorId],
+    );
+  }
+
+  private mapFinancialIndicators(row: any) {
+    const totalPaidCents = Number(row?.totalPaidCents ?? 0);
+    const totalPendingCents = Number(row?.totalPendingCents ?? 0);
+    const totalOverdueCents = Number(row?.totalOverdueCents ?? 0);
+    return {
+      totalContractedCents: Number(row?.totalContractedCents ?? 0),
+      totalPaidCents,
+      totalPendingCents,
+      totalOverdueCents,
+      availableToPayCents: totalPendingCents + totalOverdueCents,
+      averageStandTicketCents: Math.round(
+        Number(row?.averageStandTicketCents ?? 0),
+      ),
+      financialStatus:
+        totalOverdueCents > 0
+          ? 'INADIMPLENTE'
+          : totalPendingCents > 0
+            ? 'PENDENTE'
+            : 'ADIMPLENTE',
+      firstPurchaseAt: row?.firstPurchaseAt ?? null,
+      lastPurchaseAt: row?.lastPurchaseAt ?? null,
+    };
+  }
+
+  private contactRolePriority(role: ExhibitorMemberRole): number {
+    const priorities: Record<ExhibitorMemberRole, number> = {
+      [ExhibitorMemberRole.OWNER]: 0,
+      [ExhibitorMemberRole.ADMIN]: 1,
+      [ExhibitorMemberRole.MANAGER]: 2,
+      [ExhibitorMemberRole.FINANCE]: 3,
+      [ExhibitorMemberRole.STAFF]: 4,
+    };
+    return priorities[role];
+  }
+
+  private oldestDate(values: Array<Date | string | null | undefined>) {
+    const dates = values.filter(Boolean).map((value) => new Date(value!));
+    return dates.length
+      ? new Date(Math.min(...dates.map((date) => date.getTime())))
+      : null;
+  }
+
+  private newestDate(values: Array<Date | string | null | undefined>) {
+    const dates = values.filter(Boolean).map((value) => new Date(value!));
+    return dates.length
+      ? new Date(Math.max(...dates.map((date) => date.getTime())))
+      : null;
   }
 
   async createExhibitor(dto: CreateExhibitorDto) {

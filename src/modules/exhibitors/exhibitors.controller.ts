@@ -71,6 +71,16 @@ export class ExhibitorsController {
     return this.service.getStatistics(exhibitorId, fairId);
   }
 
+  @Get(':exhibitorId')
+  @ApiOperation({ summary: 'Detalhamento completo do expositor' })
+  details(
+    @Param('exhibitorId', ParseUUIDPipe) exhibitorId: string,
+    @Request() req,
+  ) {
+    this.assertAdmin(req);
+    return this.service.getCompleteDetails(exhibitorId);
+  }
+
   @Post(':exhibitorId/finance-clients')
   linkFinanceClient(
     @Param('exhibitorId', ParseUUIDPipe) exhibitorId: string,
