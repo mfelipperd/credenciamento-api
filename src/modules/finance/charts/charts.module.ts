@@ -11,6 +11,7 @@ import { Fair } from '../../fairs/entity/fair.entity';
 import { Stand } from '../stands/entities/stand.entity';
 import { ExpensesModule } from '../expenses/expenses.module';
 import { OverheadExpensesModule } from '../overhead/overhead-expenses.module';
+import { CashFlowModule } from '../cash-flow/cash-flow.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { OverheadExpensesModule } from '../overhead/overhead-expenses.module';
     ]),
     ExpensesModule,
     OverheadExpensesModule,
+    CashFlowModule,
   ],
   controllers: [ChartsController],
   providers: [ChartsService],

@@ -260,7 +260,8 @@ export class CashFlowController {
     name: 'rbt12',
     required: false,
     type: Number,
-    description: 'RBT12 real da Oficina d\'Ideias, em reais. Se omitido, usa receitas anteriores cadastradas.',
+    description:
+      "RBT12 real da Oficina d'Ideias, em reais. Se omitido, usa receitas anteriores cadastradas.",
     example: 250000,
   })
   @ApiQuery({
@@ -307,8 +308,13 @@ export class CashFlowController {
     @Query('annex') annex?: string,
   ) {
     const parsedRbt12 = rbt12 === undefined ? undefined : Number(rbt12);
-    if (parsedRbt12 !== undefined && (!Number.isFinite(parsedRbt12) || parsedRbt12 <= 0)) {
-      throw new BadRequestException('rbt12 deve ser um numero positivo em reais');
+    if (
+      parsedRbt12 !== undefined &&
+      (!Number.isFinite(parsedRbt12) || parsedRbt12 <= 0)
+    ) {
+      throw new BadRequestException(
+        'rbt12 deve ser um numero positivo em reais',
+      );
     }
     if (annex !== undefined && annex !== 'III' && annex !== 'V') {
       throw new BadRequestException('annex deve ser III ou V');

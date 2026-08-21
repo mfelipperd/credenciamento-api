@@ -10,6 +10,8 @@ import { Fair } from '../../fairs/entity/fair.entity';
 import { Stand } from '../stands/entities/stand.entity';
 import { ExpensesService } from '../expenses/expenses.service';
 import { OverheadExpensesService } from '../overhead/overhead-expenses.service';
+import { RevenueStatus } from '../common/enums/finance.enums';
+import { CashFlowService } from '../cash-flow/cash-flow.service';
 
 // ─── Response types (ApexCharts-ready) ───────────────────────────────────────
 
@@ -28,10 +30,13 @@ export interface ApexBarData {
 export interface FairKpi {
   receita: {
     totalContrato: number; // valor total dos contratos (base de cálculo)
+    contratosValidos: number;
+    ticketMedio: number;
     totalRecebido: number; // parcelas marcadas PAGA
     totalAReceber: number; // totalContrato - totalRecebido
     totalVencido: number; // parcelas VENCIDA não pagas
     inadimplencia: number; // % totalVencido / totalContrato
+    taxaRecebimento: number; // % totalRecebido / totalContrato
   };
   despesas: {
     total: number;
@@ -43,6 +48,7 @@ export interface FairKpi {
     lucroRealizado: number; // totalRecebido - despesas (caixa atual)
     margemProjetada: number; // % sobre totalContrato
     margemRealizada: number; // % sobre totalRecebido
+    despesasSobreReceita: number; // % despesas / totalContrato
     isProfitable: boolean; // baseado no projetado
   };
   visitantes: {
@@ -51,6 +57,20 @@ export interface FairKpi {
     taxaComparecimento: number; // %
     custoPorVisitante: number; // R$ (baseado em despesas de marketing)
     custoPorStand: number; // R$ (despesas de montagem / stands ocupados)
+  };
+  impostos: {
+    cnae: '8230-0/01';
+    annex: 'III' | 'V';
+    annualRevenue: number | null;
+    annualAmount: number | null;
+    amount: number | null;
+    rbt12: number | null;
+    rbt12Complete: boolean;
+    bracket: number | null;
+    nominalRate: number | null;
+    deduction: number | null;
+    effectiveRate: number | null;
+    message: string;
   };
 }
 
@@ -121,6 +141,7 @@ export class ChartsService {
     private standRepo: Repository<Stand>,
     private expensesService: ExpensesService,
     private overheadExpensesService: OverheadExpensesService,
+    private cashFlowService: CashFlowService,
   ) {}
 
   // ─── Private helpers ──────────────────────────────────────────────────────
@@ -248,9 +269,10 @@ export class ChartsService {
   //    visitantes.total, visitantes.taxaComparecimento
 
   async fairKpi(fairId: string): Promise<FairKpi> {
+    const financialReport =
+      await this.cashFlowService.generateConsolidatedReport(fairId);
     const [
       revenues,
-      paidRow,
       overdueRow,
       expenses,
       visitors,
@@ -264,16 +286,14 @@ export class ChartsService {
         .createQueryBuilder('i')
         .innerJoin('i.revenue', 'r')
         .select('SUM(i.valueCents)', 'total')
-        .where('r.fairId = :fairId AND i.status = :st', { fairId, st: 'PAGA' })
-        .getRawOne(),
-      this.installmentRepo
-        .createQueryBuilder('i')
-        .innerJoin('i.revenue', 'r')
-        .select('SUM(i.valueCents)', 'total')
-        .where('r.fairId = :fairId AND i.status = :st', {
-          fairId,
-          st: 'VENCIDA',
-        })
+        .where(
+          "r.fairId = :fairId AND r.status <> :cancelled AND r.notes NOT LIKE '%permuta%' AND i.status = :st",
+          {
+            fairId,
+            cancelled: RevenueStatus.CANCELADO,
+            st: 'VENCIDA',
+          },
+        )
         .getRawOne(),
       this.totalExpenses(fairId),
       this.visitorCount(fairId),
@@ -283,21 +303,35 @@ export class ChartsService {
       this.occupiedStands(fairId),
     ]);
 
-    const totalContrato = r2(
-      revenues.reduce((s, rv) => s + Number(rv.contractValue) / 100, 0),
+    const validRevenues = revenues.filter(
+      (revenue) => revenue.status !== RevenueStatus.CANCELADO,
     );
-    const totalRecebido = r2(Number(paidRow?.total ?? 0) / 100);
+    const totalContrato = financialReport.totalRevenue;
+    const contratosValidos = validRevenues.length;
+    const ticketMedio =
+      contratosValidos > 0 ? r2(totalContrato / contratosValidos) : 0;
+    const totalRecebido = financialReport.receivedRevenue;
     const totalVencido = r2(Number(overdueRow?.total ?? 0) / 100);
-    const totalAReceber = r2(totalContrato - totalRecebido);
+    const totalAReceber = r2(Math.max(totalContrato - totalRecebido, 0));
     const inadimplencia =
       totalContrato > 0 ? r2((totalVencido / totalContrato) * 100) : 0;
+    const taxaRecebimento =
+      totalContrato > 0 ? r2((totalRecebido / totalContrato) * 100) : 0;
 
-    const lucroProjetado = r2(totalContrato - expenses.total);
-    const lucroRealizado = r2(totalRecebido - expenses.total);
+    const lucroProjetado = financialReport.netBalance;
+    const lucroRealizado = r2(
+      financialReport.receivedRevenue -
+        financialReport.totalExpenses -
+        (financialReport.taxes.amount ?? 0),
+    );
     const margemProjetada =
       totalContrato > 0 ? r2((lucroProjetado / totalContrato) * 100) : 0;
     const margemRealizada =
       totalRecebido > 0 ? r2((lucroRealizado / totalRecebido) * 100) : 0;
+    const despesasSobreReceita =
+      totalContrato > 0
+        ? r2((financialReport.totalExpenses / totalContrato) * 100)
+        : 0;
 
     const taxaComparecimento =
       visitors > 0 ? r2((checkins / visitors) * 100) : 0;
@@ -307,13 +341,16 @@ export class ChartsService {
     return {
       receita: {
         totalContrato,
+        contratosValidos,
+        ticketMedio,
         totalRecebido,
         totalAReceber,
         totalVencido,
         inadimplencia,
+        taxaRecebimento,
       },
       despesas: {
-        total: expenses.total,
+        total: financialReport.totalExpenses,
         diretas: expenses.diretas,
         rateadas: expenses.rateadas,
       },
@@ -322,6 +359,7 @@ export class ChartsService {
         lucroRealizado,
         margemProjetada,
         margemRealizada,
+        despesasSobreReceita,
         isProfitable: lucroProjetado > 0,
       },
       visitantes: {
@@ -331,6 +369,7 @@ export class ChartsService {
         custoPorVisitante,
         custoPorStand,
       },
+      impostos: financialReport.taxes,
     };
   }
 
