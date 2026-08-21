@@ -48,7 +48,7 @@ export class ExhibitorInvitation {
   @Column({ type: 'datetime' })
   expiresAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   invitedBy?: number | null;
 
   @CreateDateColumn()

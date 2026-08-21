@@ -38,7 +38,7 @@ export class ExhibitorFair {
   })
   status: ExhibitorFairStatus;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   source?: string | null;
 
   @CreateDateColumn()

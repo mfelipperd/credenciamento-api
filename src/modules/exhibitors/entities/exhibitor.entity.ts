@@ -31,7 +31,7 @@ export class Exhibitor {
   @Column({ type: 'enum', enum: ExhibitorType, default: ExhibitorType.OTHER })
   type: ExhibitorType;
 
-  @Column({ length: 14, nullable: true })
+  @Column({ type: 'varchar', length: 14, nullable: true })
   cnpj?: string | null;
 
   @Column({ default: true })

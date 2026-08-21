@@ -31,7 +31,7 @@ export class ExhibitorMember {
   @Column()
   exhibitorId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   userId?: number | null;
 
   @Column({ length: 255 })
@@ -40,13 +40,13 @@ export class ExhibitorMember {
   @Column({ length: 255 })
   normalizedName: string;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   email?: string | null;
 
-  @Column({ length: 30, nullable: true })
+  @Column({ type: 'varchar', length: 30, nullable: true })
   phone?: string | null;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   jobTitle?: string | null;
 
   @Column({
