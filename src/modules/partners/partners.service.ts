@@ -878,9 +878,10 @@ export class PartnersService {
             .reduce((s, w) => s + Number(w.amount), 0),
         );
 
-        const projectedEarnings = isProfitable
-          ? this.r2((fairProfit * fp.percentage) / 100)
-          : 0;
+        const projectedEarnings =
+          isProfitable && fp.isActive
+            ? this.r2((fairProfit * fp.percentage) / 100)
+            : 0;
 
         const sacadoTotal = this.r2(sacadoAprovado + sacadoPendente);
         const saldoDisponivel = this.r2(projectedEarnings - sacadoAprovado);
@@ -918,10 +919,14 @@ export class PartnersService {
           fairPartnerId: fp.id,
           partnerId: fp.partnerId,
           partnerName: fp.partner?.name ?? '',
+          partnerCpf: fp.partner?.cpf ?? '',
           partnerEmail: fp.partner?.email ?? '',
           partnerPhone: fp.partner?.phone ?? '',
           percentage: fp.percentage,
           isActive: fp.isActive,
+          notes: fp.notes,
+          createdAt: fp.createdAt,
+          updatedAt: fp.updatedAt,
           projectedEarnings,
           sacadoAprovado,
           sacadoPendente,
@@ -1028,9 +1033,10 @@ export class PartnersService {
             .reduce((s, w) => s + Number(w.amount), 0),
         );
 
-        const projectedEarnings = isProfitable
-          ? this.r2((fairProfit * fp.percentage) / 100)
-          : 0;
+        const projectedEarnings =
+          isProfitable && fp.isActive
+            ? this.r2((fairProfit * fp.percentage) / 100)
+            : 0;
 
         const sacadoTotal = this.r2(sacadoAprovado + sacadoPendente);
         const saldoDisponivel = this.r2(projectedEarnings - sacadoAprovado);

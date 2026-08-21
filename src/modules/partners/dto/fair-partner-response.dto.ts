@@ -23,6 +23,9 @@ export class FairPartnerResponseDto {
   @ApiProperty({ description: 'Saldo disponível desta feira' })
   availableBalance: number;
 
+  @ApiProperty({ description: 'Saques pendentes nesta feira' })
+  pendingWithdrawals: number;
+
   @ApiProperty({ description: 'Se está ativo nesta feira' })
   isActive: boolean;
 

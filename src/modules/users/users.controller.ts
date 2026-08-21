@@ -9,6 +9,8 @@ import {
   UseGuards,
   Request,
   ParseIntPipe,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +19,7 @@ import {
   ApiParam,
   ApiBearerAuth,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -67,13 +70,33 @@ export class UsersController {
     type: [UserResponseDto],
   })
   @ApiResponse({ status: 403, description: 'Acesso negado' })
-  async findAll(@Request() req) {
+  @ApiQuery({ name: 'role', required: false, enum: EUserRole })
+  @ApiQuery({ name: 'isActive', required: false, type: Boolean })
+  async findAll(
+    @Request() req,
+    @Query('role') role?: EUserRole,
+    @Query('isActive') isActive?: string,
+  ) {
     // Verificar se é admin
     if (req.user.role !== EUserRole.ADMIN) {
       throw new Error('Apenas administradores podem listar todos os usuários');
     }
 
-    return await this.usersService.findAll();
+    if (role && !Object.values(EUserRole).includes(role)) {
+      throw new BadRequestException('Role inválida');
+    }
+    if (
+      isActive !== undefined &&
+      !['true', 'false'].includes(isActive.toLowerCase())
+    ) {
+      throw new BadRequestException('isActive deve ser true ou false');
+    }
+
+    return await this.usersService.findAll({
+      role,
+      isActive:
+        isActive === undefined ? undefined : isActive.toLowerCase() === 'true',
+    });
   }
 
   @Get('me')

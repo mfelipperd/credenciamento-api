@@ -13,6 +13,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UserFairService } from './user-fair.service';
+import { EUserRole } from '../../enum/role';
 
 @Injectable()
 export class UsersService {
@@ -80,8 +81,17 @@ export class UsersService {
     return new UserResponseDto(savedUser, associatedFairIds);
   }
 
-  async findAll(): Promise<UserResponseDto[]> {
+  async findAll(filters?: {
+    role?: EUserRole;
+    isActive?: boolean;
+  }): Promise<UserResponseDto[]> {
     const users = await this.userRepository.find({
+      where: {
+        ...(filters?.role ? { role: filters.role } : {}),
+        ...(filters?.isActive !== undefined
+          ? { isActive: filters.isActive }
+          : {}),
+      },
       order: { name: 'ASC' },
     });
 

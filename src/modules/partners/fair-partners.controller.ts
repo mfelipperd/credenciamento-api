@@ -87,7 +87,24 @@ export class FairPartnersController {
       throw new Error('Apenas administradores podem listar sócios de feiras');
     }
 
-    return await this.fairPartnersService.findAllByFair(fairId);
+    const overview = await this.partnersService.getFairPartnersOverview(fairId);
+    return overview.partners.map((partner) => ({
+      id: partner.fairPartnerId,
+      fairId,
+      partnerId: partner.partnerId,
+      percentage: partner.percentage,
+      totalEarnings: partner.projectedEarnings,
+      totalWithdrawn: partner.sacadoAprovado,
+      availableBalance: partner.saldoDisponivel,
+      pendingWithdrawals: partner.sacadoPendente,
+      isActive: partner.isActive,
+      notes: partner.notes,
+      createdAt: partner.createdAt,
+      updatedAt: partner.updatedAt,
+      partnerName: partner.partnerName,
+      partnerCpf: partner.partnerCpf,
+      partnerEmail: partner.partnerEmail,
+    }));
   }
 
   @Get('partner/:partnerId')
@@ -297,7 +314,9 @@ export class FairPartnersController {
     @Request() req,
   ) {
     if (req.user.role !== EUserRole.ADMIN) {
-      throw new Error('Apenas administradores podem acessar a visão financeira');
+      throw new Error(
+        'Apenas administradores podem acessar a visão financeira',
+      );
     }
     return await this.partnersService.getFairPartnersOverview(fairId);
   }
@@ -321,7 +340,20 @@ export class FairPartnersController {
       );
     }
 
-    return await this.fairPartnersService.getFairPartnersSummary(fairId);
+    const overview = await this.partnersService.getFairPartnersOverview(fairId);
+    return {
+      fairId,
+      totalPartners: overview.partners.length,
+      totalPercentage: overview.totalPartnerPercentage,
+      partners: overview.partners.map((partner) => ({
+        partnerId: partner.partnerId,
+        partnerName: partner.partnerName,
+        percentage: partner.percentage,
+        totalEarnings: partner.projectedEarnings,
+        availableBalance: partner.saldoDisponivel,
+        pendingWithdrawals: partner.sacadoPendente,
+      })),
+    };
   }
 
   @Get('fair/:fairId/partner/:partnerId/financial-summary')
@@ -372,9 +404,9 @@ export class FairPartnersController {
       }
     }
 
-    return await this.fairPartnersService.getFinancialSummary(
-      fairId,
+    return await this.partnersService.getFinancialSummaryByFair(
       actualPartnerId,
+      fairId,
     );
   }
 

@@ -22,16 +22,47 @@ export class FairPartner {
   @Column()
   partnerId: string;
 
-  @Column('decimal', { precision: 5, scale: 2 })
+  @Column('decimal', {
+    precision: 5,
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => Number(value),
+    },
+  })
   percentage: number; // Porcentagem específica para esta feira
 
-  @Column('decimal', { precision: 15, scale: 2, default: 0 })
+  @Column('decimal', {
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => Number(value),
+    },
+  })
   totalEarnings: number; // Ganhos específicos desta feira
 
-  @Column('decimal', { precision: 15, scale: 2, default: 0 })
+  @Column('decimal', {
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => Number(value),
+    },
+  })
   totalWithdrawn: number; // Saques específicos desta feira
 
-  @Column('decimal', { precision: 15, scale: 2, default: 0 })
+  @Column('decimal', {
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => Number(value),
+    },
+  })
   availableBalance: number; // Saldo disponível desta feira
 
   @Column({ default: true })
