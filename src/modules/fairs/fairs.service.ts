@@ -208,6 +208,29 @@ export class FairsService {
     return new FairResponseDto({ ...fair, ...financial } as Fair);
   }
 
+  /**
+   * Acha a edição anterior da mesma feira: mesma cidade, a mais recente
+   * com startDate anterior ao da feira informada (ou, se a feira informada
+   * ainda não tem data, a mais recente disponível na cidade).
+   */
+  async findPreviousEdition(fairId: string): Promise<Fair | null> {
+    const fair = await this.fairRepository.findOne({ where: { id: fairId } });
+    if (!fair?.city) return null;
+
+    const qb = this.fairRepository
+      .createQueryBuilder('f')
+      .where('f.city = :city AND f.id != :fairId', {
+        city: fair.city,
+        fairId,
+      });
+
+    if (fair.startDate) {
+      qb.andWhere('f.startDate < :startDate', { startDate: fair.startDate });
+    }
+
+    return qb.orderBy('f.startDate', 'DESC').getOne();
+  }
+
   async update(id: string, dto: UpdateFairDto): Promise<FairResponseDto> {
     this.logger.log(`Atualizando feira: ${id}`);
 

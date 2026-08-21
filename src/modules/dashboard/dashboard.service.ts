@@ -305,6 +305,36 @@ export class DashboardService {
     }
   }
 
+  /**
+   * Data do primeiro cadastro registrado por canal (howDidYouKnow) numa feira —
+   * usado para estimar quando cada canal "começou a puxar" cadastros em
+   * edições anteriores.
+   */
+  async getFirstRegistrationByChannel(
+    fairId: string,
+  ): Promise<Array<{ howDidYouKnow: string; firstRegistrationDate: Date }>> {
+    if (!fairId) {
+      throw new BadRequestException('Fair ID is required');
+    }
+
+    return this.visitorsRepository
+      .createQueryBuilder('visitor')
+      .innerJoin(
+        'fair_visitor',
+        'fv',
+        'fv.visitorsRegistrationCode = visitor.registrationCode',
+      )
+      .where('fv.fairsId = :fairId', { fairId })
+      .andWhere(
+        'visitor.howDidYouKnow IS NOT NULL AND visitor.howDidYouKnow != :empty',
+        { empty: '' },
+      )
+      .select('visitor.howDidYouKnow', 'howDidYouKnow')
+      .addSelect('MIN(visitor.registrationDate)', 'firstRegistrationDate')
+      .groupBy('visitor.howDidYouKnow')
+      .getRawMany();
+  }
+
   async getConversionsByHowDidYouKnow(fairId: string) {
     if (!fairId) {
       throw new BadRequestException('Fair ID is required');

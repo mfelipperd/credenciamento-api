@@ -21,6 +21,7 @@ import { registerFinanceTools } from './finance.tools';
 import { registerEmailTools } from './email.tools';
 import { registerWhatsappTools } from './whatsapp.tools';
 import { registerChannelTools } from './channel.tools';
+import { registerMarketingInsightsTools } from './marketing-insights.tools';
 
 @ApiExcludeController()
 @Controller('mcp')
@@ -56,6 +57,14 @@ export class McpController {
     registerEmailTools(server, this.emailsService);
     registerWhatsappTools(server, this.whatsappService);
     registerChannelTools(server, this.dashboardService, this.expensesService);
+    registerMarketingInsightsTools(
+      server,
+      this.fairsService,
+      this.dashboardService,
+      this.expensesService,
+      this.chartsService,
+      this.revenueChartsService,
+    );
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
