@@ -46,6 +46,10 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Local import, maintenance and source-data files
+/scripts/
+/arquivos/
+
 # Runtime data
 pids
 *.pid
