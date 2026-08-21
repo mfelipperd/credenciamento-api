@@ -22,6 +22,7 @@ import { registerEmailTools } from './email.tools';
 import { registerWhatsappTools } from './whatsapp.tools';
 import { registerChannelTools } from './channel.tools';
 import { registerMarketingInsightsTools } from './marketing-insights.tools';
+import { registerExhibitorReportTools } from './exhibitor-report.tools';
 
 @ApiExcludeController()
 @Controller('mcp')
@@ -61,6 +62,15 @@ export class McpController {
       server,
       this.fairsService,
       this.dashboardService,
+      this.expensesService,
+      this.chartsService,
+      this.revenueChartsService,
+    );
+    registerExhibitorReportTools(
+      server,
+      this.fairsService,
+      this.dashboardService,
+      this.checkInsService,
       this.expensesService,
       this.chartsService,
       this.revenueChartsService,
