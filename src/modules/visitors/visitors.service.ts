@@ -1051,7 +1051,7 @@ export class VisitorsService {
                         <td class="cell col-name">${visitor.name}</td>
                         <td class="cell col-company">${visitor.company}</td>
                         <td class="cell col-email">${visitor.email}</td>
-                        <td class="cell col-cnpj">${visitor.category?.toLowerCase() === 'visitante' ? 'Visitante' : visitor.cnpj || 'N/A'}</td>
+                        <td class="cell col-cnpj">${visitor.cnpj || 'N/A'}</td>
                         <td class="cell col-phone">${visitor.phone}</td>
                         <td class="cell col-zipcode">${visitor.zipCode}</td>
                     </tr>
