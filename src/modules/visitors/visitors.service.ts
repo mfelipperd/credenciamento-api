@@ -875,6 +875,8 @@ export class VisitorsService {
     }
   }
 
+  private static readonly OFICINA_DE_IDEIAS_CNPJ = '29615037000106';
+
   private generateVisitorsHtml(visitors: Visitor[], fair: Fair): string {
     const currentDate = new Date().toLocaleDateString('pt-BR');
 
@@ -1051,7 +1053,7 @@ export class VisitorsService {
                         <td class="cell col-name">${visitor.name}</td>
                         <td class="cell col-company">${visitor.company}</td>
                         <td class="cell col-email">${visitor.email}</td>
-                        <td class="cell col-cnpj">${visitor.cnpj || 'N/A'}</td>
+                        <td class="cell col-cnpj">${visitor.cnpj?.replace(/\D/g, '') === VisitorsService.OFICINA_DE_IDEIAS_CNPJ ? 'N/A' : visitor.cnpj || 'N/A'}</td>
                         <td class="cell col-phone">${visitor.phone}</td>
                         <td class="cell col-zipcode">${visitor.zipCode}</td>
                     </tr>
