@@ -20,6 +20,7 @@ import { OAuthClient } from 'src/modules/mcp/oauth/entities/oauth-client.entity'
 import { OAuthAuthorizationCode } from 'src/modules/mcp/oauth/entities/oauth-authorization-code.entity';
 import { OAuthRefreshToken } from 'src/modules/mcp/oauth/entities/oauth-refresh-token.entity';
 import { EmailCampaignPreview } from 'src/modules/emails/entities/email-campaign-preview.entity';
+import { PushSubscription } from 'src/modules/push/entities/push-subscription.entity';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'mysql',
@@ -45,5 +46,6 @@ export const databaseConfig: TypeOrmModuleOptions = {
     OAuthAuthorizationCode,
     OAuthRefreshToken,
     EmailCampaignPreview,
+    PushSubscription,
   ],
 };

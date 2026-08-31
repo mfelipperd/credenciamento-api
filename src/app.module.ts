@@ -24,6 +24,7 @@ import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { ProspectingModule } from './modules/prospecting/prospecting.module';
 import { McpModule } from './modules/mcp/mcp.module';
 import { ExhibitorsModule } from './modules/exhibitors/exhibitors.module';
+import { PushModule } from './modules/push/push.module';
 
 @Module({
   providers: [
@@ -65,6 +66,7 @@ import { ExhibitorsModule } from './modules/exhibitors/exhibitors.module';
     ProspectingModule,
     McpModule,
     ExhibitorsModule,
+    PushModule,
   ],
   controllers: [],
 })
