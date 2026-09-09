@@ -32,6 +32,9 @@ import { UpdateVisitorDto } from './update-visitor.dto';
 import { PaginatedVisitorsDto, PaginatedResponse } from './dto/paginated-visitors.dto';
 import { Visitor } from './entities/visitor.entity';
 import { FrontendOriginGuard } from 'src/auth/frontend-origin.guard';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
+import { CheckExistingVisitorDto } from './dto/check-existing-visitor.dto';
+import { RequestReuseDto } from './dto/request-reuse.dto';
 
 class EnrollInFairDto {
   @IsNotEmpty()
@@ -215,6 +218,53 @@ export class VisitorsController {
     @Body() dto: EnrollInFairDto,
   ) {
     return this.visitorsService.enrollInFair(registrationCode, dto.fairId);
+  }
+
+  @Get('public/check-existing')
+  @IsPublicRoute()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ 'visitor-reuse': { limit: 5, ttl: 600_000 } })
+  @ApiOperation({
+    summary: 'Verifica se já existe cadastro (público, dados mascarados)',
+    description:
+      'Consulta por email OU telefone completo (match exato, não parcial). Se existir, retorna email/telefone/CNPJ ' +
+      'mascarados — nunca dados completos. Use antes de request-reuse pra o usuário confirmar visualmente que é ele mesmo.',
+  })
+  @ApiQuery({ name: 'email', required: false })
+  @ApiQuery({ name: 'phone', required: false })
+  async checkExisting(@Query() query: CheckExistingVisitorDto) {
+    return this.visitorsService.checkExisting(query);
+  }
+
+  @Post('public/request-reuse')
+  @IsPublicRoute()
+  @UseGuards(FrontendOriginGuard, ThrottlerGuard)
+  @Throttle({ 'visitor-reuse': { limit: 5, ttl: 600_000 } })
+  @ApiOperation({
+    summary: 'Solicita reaproveitamento de dados (público)',
+    description:
+      'Reenvia um email de confirmação pro endereço JÁ CADASTRADO (não altera nada ainda). O telefone informado só é ' +
+      'aplicado quando o usuário clicar no link do email (confirm-reuse) — evita que alguém que só adivinhe o ' +
+      'identificador consiga sobrescrever o telefone real de outra pessoa sem provar posse do email.',
+  })
+  @ApiBody({ type: RequestReuseDto })
+  async requestReuse(@Body() dto: RequestReuseDto) {
+    return this.visitorsService.requestReuse(dto);
+  }
+
+  @Get('public/confirm-reuse')
+  @IsPublicRoute()
+  @ApiOperation({
+    summary: 'Confirma reaproveitamento via link do email (público)',
+    description:
+      'Alvo do link enviado por request-reuse. Aplica a atualização de telefone (se houver) e matricula o visitante na ' +
+      'feira, depois redireciona pro site da ExpoMultiMix. Não usa FrontendOriginGuard de propósito — é acessado por ' +
+      'navegação direta a partir do cliente de email, sem cabeçalho Origin.',
+  })
+  @ApiQuery({ name: 'token', required: true })
+  async confirmReuse(@Query('token') token: string, @Res() res: Response) {
+    const { redirectUrl } = await this.visitorsService.confirmReuse(token);
+    return res.redirect(redirectUrl);
   }
 
   @Post('sync-prospects')

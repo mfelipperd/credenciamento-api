@@ -21,6 +21,15 @@ import {
 } from './dto/paginated-visitors.dto';
 import * as puppeteer from 'puppeteer';
 import { ProspectingService } from '../prospecting/services/prospecting.service';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { maskEmail, maskPhone, maskCnpj } from './utils/mask.util';
+
+interface VisitorReuseTokenPayload {
+  registrationCode: string;
+  fairId: string;
+  newPhone?: string;
+}
 
 @Injectable()
 export class VisitorsService {
@@ -32,7 +41,21 @@ export class VisitorsService {
     @InjectRepository(Fair) private fairRepository: Repository<Fair>,
     private readonly emailsService: EmailsService,
     private readonly prospectingService: ProspectingService,
+    private readonly jwtService: JwtService,
+    private readonly config: ConfigService,
   ) {}
+
+  private get reuseJwtSecret(): string {
+    return (
+      this.config.get<string>('VISITOR_REUSE_JWT_SECRET') ??
+      this.config.get<string>('JWT_SECRET') ??
+      'your-secret-key'
+    );
+  }
+
+  private get apiBaseUrl(): string {
+    return (this.config.get<string>('MCP_BASE_URL') ?? '').replace(/\/$/, '');
+  }
 
   async getVisitors(user: User | null, fairId?: string): Promise<Visitor[]> {
     const query = this.visitorRepository
@@ -526,6 +549,151 @@ export class VisitorsService {
       );
 
     return saved;
+  }
+
+  // ── Reaproveitamento seguro de dados entre feiras ───────────────────────────
+  //
+  // Fluxo: 1) checkExisting (GET, público) — dados mascarados, sem expor nada
+  // sensível; 2) requestReuse (POST, público) — dispara email de confirmação
+  // pro endereço JÁ cadastrado (não o que a pessoa digitou agora), sem
+  // alterar nada no banco ainda; 3) confirmReuse (GET, público, link do
+  // email) — só aqui o telefone é atualizado (se mudou) e a inscrição na
+  // feira é efetivada. Atualizar o telefone só na confirmação evita que
+  // alguém que apenas adivinhe o email/telefone mascarado de outra pessoa
+  // consiga sobrescrever o dado real dela sem clicar no link.
+
+  async checkExisting(params: { email?: string; phone?: string }): Promise<
+    | { exists: false }
+    | {
+        exists: true;
+        maskedEmail: string;
+        maskedPhone: string | null;
+        maskedCnpj: string | null;
+      }
+  > {
+    const { email, phone } = params;
+    if (!email && !phone) {
+      throw new BadRequestException('Informe email ou telefone.');
+    }
+
+    const qb = this.visitorRepository.createQueryBuilder('visitor');
+    if (email) {
+      qb.where('LOWER(visitor.email) = :email', {
+        email: email.trim().toLowerCase(),
+      });
+    } else {
+      qb.where(
+        'REPLACE(REPLACE(REPLACE(REPLACE(visitor.phone," ",""),"-",""),"(",""),")","") = :phone',
+        { phone: (phone ?? '').replace(/\D/g, '') },
+      );
+    }
+
+    const visitor = await qb.getOne();
+    if (!visitor) {
+      return { exists: false };
+    }
+
+    return {
+      exists: true,
+      maskedEmail: maskEmail(visitor.email),
+      maskedPhone: visitor.phone ? maskPhone(visitor.phone) : null,
+      maskedCnpj: visitor.cnpj ? maskCnpj(visitor.cnpj) : null,
+    };
+  }
+
+  async requestReuse(params: {
+    identifier: string;
+    fairId: string;
+    phone: string;
+  }): Promise<{ sent: true }> {
+    const { identifier, fairId, phone } = params;
+
+    const fair = await this.fairRepository.findOne({ where: { id: fairId } });
+    if (!fair) throw new NotFoundException('Feira não encontrada');
+
+    const qb = this.visitorRepository.createQueryBuilder('visitor');
+    if (identifier.includes('@')) {
+      qb.where('LOWER(visitor.email) = :identifier', {
+        identifier: identifier.trim().toLowerCase(),
+      });
+    } else {
+      qb.where(
+        'REPLACE(REPLACE(REPLACE(REPLACE(visitor.phone," ",""),"-",""),"(",""),")","") = :identifier',
+        { identifier: identifier.replace(/\D/g, '') },
+      );
+    }
+
+    const visitor = await qb.getOne();
+    // Resposta idêntica independente de achar ou não — não revela se o
+    // identificador existe na base.
+    if (!visitor) {
+      return { sent: true };
+    }
+
+    const currentPhoneDigits = (visitor.phone ?? '').replace(/\D/g, '');
+    const newPhoneDigits = phone.replace(/\D/g, '');
+    const newPhone = newPhoneDigits !== currentPhoneDigits ? phone : undefined;
+
+    const payload: VisitorReuseTokenPayload = {
+      registrationCode: visitor.registrationCode,
+      fairId,
+      newPhone,
+    };
+    const token = this.jwtService.sign(payload, {
+      secret: this.reuseJwtSecret,
+      expiresIn: '48h',
+    });
+
+    const confirmUrl = `${this.apiBaseUrl}/visitors/public/confirm-reuse?token=${encodeURIComponent(token)}`;
+
+    const html = `
+      <p>Olá, ${visitor.name}!</p>
+      <p>Recebemos um pedido pra reaproveitar seus dados e te inscrever na feira <strong>${fair.name}</strong>.</p>
+      ${
+        newPhone
+          ? `<p>Seu telefone cadastrado será atualizado para <strong>${newPhone}</strong>. Se não foi você quem solicitou, ignore este email — nada será alterado.</p>`
+          : ''
+      }
+      <p><a href="${confirmUrl}">Clique aqui para confirmar sua inscrição</a></p>
+      <p>Este link expira em 48 horas.</p>
+    `;
+
+    await this.emailsService.sendTransactionalEmail(
+      visitor.email,
+      visitor.name,
+      `Confirme sua inscrição — ${fair.name}`,
+      html,
+    );
+
+    return { sent: true };
+  }
+
+  async confirmReuse(token: string): Promise<{ redirectUrl: string }> {
+    let payload: VisitorReuseTokenPayload;
+    try {
+      payload = this.jwtService.verify<VisitorReuseTokenPayload>(token, {
+        secret: this.reuseJwtSecret,
+      });
+    } catch {
+      throw new BadRequestException('Link inválido ou expirado.');
+    }
+
+    const visitor = await this.visitorRepository.findOne({
+      where: { registrationCode: payload.registrationCode },
+    });
+    if (!visitor) throw new NotFoundException('Visitante não encontrado');
+
+    if (payload.newPhone && payload.newPhone !== visitor.phone) {
+      visitor.phone = payload.newPhone;
+      await this.visitorRepository.save(visitor);
+    }
+
+    await this.enrollInFair(payload.registrationCode, payload.fairId);
+
+    const siteUrl =
+      this.config.get<string>('EXPO_MM_SITE_URL') ??
+      'https://www.expomultimix.com';
+    return { redirectUrl: siteUrl };
   }
 
   // ── Criação de novo visitante ─────────────────────────────────────────────
