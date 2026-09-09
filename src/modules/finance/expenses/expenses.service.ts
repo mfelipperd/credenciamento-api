@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Brackets } from 'typeorm';
 import { Expense } from './entities/expense.entity';
 import { ExpenseFairAllocation } from './entities/expense-fair-allocation.entity';
 import { CreateExpenseDto } from './dto/create-expense.dto';
@@ -218,6 +218,59 @@ export class ExpensesService {
   async getTotalDirectOverheadForFair(fairId: string): Promise<number> {
     const items = await this.findOverheadAllocatedForFair(fairId);
     return items.reduce((sum, i) => sum + i.valorAlocado, 0);
+  }
+
+  /**
+   * Busca despesas parecidas (mesma feira, direta ou rateada via overhead) pra
+   * evitar duplicidade antes de cadastrar uma nova. Pelo menos um filtro
+   * (valor, descricaoContains ou data) deve ser informado.
+   */
+  async findSimilarExpenses(params: {
+    fairId: string;
+    valor?: number;
+    descricaoContains?: string;
+    data?: string;
+    diasTolerancia?: number;
+  }): Promise<Expense[]> {
+    const { fairId, valor, descricaoContains, data, diasTolerancia = 45 } =
+      params;
+
+    if (valor === undefined && !descricaoContains && !data) {
+      throw new BadRequestException(
+        'Informe pelo menos um filtro: valor, descricaoContains ou data.',
+      );
+    }
+
+    const qb = this.expensesRepository
+      .createQueryBuilder('expense')
+      .leftJoinAndSelect('expense.category', 'category')
+      .leftJoinAndSelect('expense.fairAllocations', 'allocation')
+      .where(
+        new Brackets((qb2) => {
+          qb2
+            .where('expense.fairId = :fairId AND expense.isOverhead = false', {
+              fairId,
+            })
+            .orWhere('allocation.fairId = :fairId', { fairId });
+        }),
+      );
+
+    if (valor !== undefined) {
+      qb.andWhere('ABS(expense.valor - :valor) <= 0.5', { valor });
+    }
+    if (descricaoContains) {
+      qb.andWhere('expense.descricao LIKE :desc', {
+        desc: `%${descricaoContains}%`,
+      });
+    }
+    if (data) {
+      qb.andWhere('ABS(DATEDIFF(expense.data, :data)) <= :dias', {
+        data,
+        dias: diasTolerancia,
+      });
+    }
+
+    return qb.orderBy('expense.data', 'DESC').getMany();
   }
 
   async findOne(id: string): Promise<Expense> {
