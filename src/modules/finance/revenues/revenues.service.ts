@@ -263,10 +263,10 @@ export class RevenuesService {
           `[SERVICE] Removendo ${standsCount[0].count} stands relacionados à receita ${id}...`,
         );
         await this.revenueRepository.manager.query(
-          'UPDATE stands SET revenue_id = NULL WHERE revenue_id = ?',
+          'UPDATE stands SET revenue_id = NULL, is_available = 1 WHERE revenue_id = ?',
           [id],
         );
-        console.log(`[SERVICE] Stands desvinculados com sucesso`);
+        console.log(`[SERVICE] Stands desvinculados e liberados com sucesso`);
       }
 
       // Agora remover a receita
