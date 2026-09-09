@@ -55,8 +55,8 @@ export interface FairKpi {
     total: number;
     checkins: number;
     taxaComparecimento: number; // %
-    custoPorVisitante: number; // R$ (baseado em despesas de marketing)
-    custoPorStand: number; // R$ (despesas de montagem / stands ocupados)
+    custoPorVisitante: number; // R$ (baseado em despesas de marketing — CAC, não custo operacional total)
+    custoPorStand: number; // R$ (despesas totais da feira, diretas + rateadas / stands ocupados)
   };
   impostos: {
     cnae: '8230-0/01';
@@ -243,14 +243,6 @@ export class ChartsService {
     return this.totalExpensesByCategoriesPattern(fairId, ['marketing']);
   }
 
-  // Despesas de montagem/montadora (categoria contém "montagem" OU "montadora")
-  private creationExpenses(fairId: string): Promise<number> {
-    return this.totalExpensesByCategoriesPattern(fairId, [
-      'montagem',
-      'montadora',
-    ]);
-  }
-
   // Stands ocupados (com contrato vinculado)
   private occupiedStands(fairId: string): Promise<number> {
     return this.standRepo
@@ -278,7 +270,6 @@ export class ChartsService {
       visitors,
       checkins,
       marketingExp,
-      creationExp,
       standCount,
     ] = await Promise.all([
       this.revenueRepo.find({ where: { fairId } }),
@@ -299,7 +290,6 @@ export class ChartsService {
       this.visitorCount(fairId),
       this.checkinCount(fairId),
       this.marketingExpenses(fairId),
-      this.creationExpenses(fairId),
       this.occupiedStands(fairId),
     ]);
 
@@ -336,7 +326,10 @@ export class ChartsService {
     const taxaComparecimento =
       visitors > 0 ? r2((checkins / visitors) * 100) : 0;
     const custoPorVisitante = visitors > 0 ? r2(marketingExp / visitors) : 0;
-    const custoPorStand = standCount > 0 ? r2(creationExp / standCount) : 0;
+    // Custo total da feira (diretas + rateadas, todas as categorias) dividido pelos
+    // estandes ocupados — antes considerava só despesas de montagem/montadora.
+    const custoPorStand =
+      standCount > 0 ? r2(financialReport.totalExpenses / standCount) : 0;
 
     return {
       receita: {
