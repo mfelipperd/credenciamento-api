@@ -69,6 +69,18 @@ export class CreateStandConfigurationDto {
   setupCostPerSquareMeter: number;
 
   @ApiProperty({
+    description:
+      'Valor de mercado projetado (âncora), exibido riscado ao lado do preço real no site',
+    example: 7873.41,
+    required: false,
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  anchorPrice?: number;
+
+  @ApiProperty({
     description: 'Descrição do stand',
     example: 'Stand padrão 2x3 metros, ideal para pequenas empresas',
     required: false,

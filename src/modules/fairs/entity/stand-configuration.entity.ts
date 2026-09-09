@@ -38,6 +38,9 @@ export class StandConfiguration {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalPrice: number; // Preço total (área * preço por m²)
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  anchorPrice: number | null; // Valor de mercado projetado (âncora), pra exibir riscado ao lado do totalPrice
+
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalSetupCost: number; // Custo total de montagem
 

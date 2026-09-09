@@ -126,6 +126,7 @@ export class PublicFairsService {
           area: sc.width * sc.height,
           quantity: sc.quantity,
           totalPrice: Number(sc.totalPrice),
+          anchorPrice: sc.anchorPrice != null ? Number(sc.anchorPrice) : null,
           description: sc.description ?? null,
         })),
     };

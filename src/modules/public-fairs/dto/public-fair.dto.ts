@@ -23,6 +23,11 @@ export class PublicStandOptionDto {
   @ApiProperty({ description: 'Área total em m² (width × height)' }) area: number;
   @ApiProperty({ description: 'Quantidade de stands disponíveis deste tipo' }) quantity: number;
   @ApiProperty({ description: 'Preço total do stand (R$)' }) totalPrice: number;
+  @ApiProperty({
+    required: false,
+    description: 'Valor de mercado projetado (âncora), pra exibir riscado ao lado do totalPrice',
+  })
+  anchorPrice?: number | null;
   @ApiProperty({ required: false }) description?: string | null;
 }
 

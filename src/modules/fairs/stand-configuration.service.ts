@@ -238,6 +238,7 @@ export class StandConfigurationService {
       pricePerSquareMeter: config.pricePerSquareMeter,
       setupCostPerSquareMeter: config.setupCostPerSquareMeter,
       totalPrice: config.totalPrice,
+      anchorPrice: config.anchorPrice,
       totalSetupCost: config.totalSetupCost,
       profitPerStand: config.profitPerStand,
       profitMargin: config.profitMargin,

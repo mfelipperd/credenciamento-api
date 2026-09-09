@@ -8,6 +8,7 @@ export class StandConfigurationResponseDto {
   pricePerSquareMeter: number;
   setupCostPerSquareMeter: number;
   totalPrice: number;
+  anchorPrice?: number | null;
   totalSetupCost: number;
   profitPerStand: number;
   profitMargin: number;
