@@ -18,6 +18,7 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { ChartsModule } from '../finance/charts/charts.module';
 import { RevenuesModule } from '../finance/revenues/revenues.module';
 import { ExpensesModule } from '../finance/expenses/expenses.module';
+import { AuditReportModule } from '../finance/audit-report/audit-report.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ExpensesModule } from '../finance/expenses/expenses.module';
     ChartsModule,
     RevenuesModule,
     ExpensesModule,
+    AuditReportModule,
   ],
   controllers: [WellKnownController, OAuthController, McpController],
   providers: [OAuthService, McpAuthGuard],

@@ -8,6 +8,7 @@ import { FinanceCommonModule } from './common/finance-common.module';
 import { CashFlowModule } from './cash-flow/cash-flow.module';
 import { OverheadExpensesModule } from './overhead/overhead-expenses.module';
 import { ChartsModule } from './charts/charts.module';
+import { AuditReportModule } from './audit-report/audit-report.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ChartsModule } from './charts/charts.module';
     CashFlowModule,
     OverheadExpensesModule,
     ChartsModule,
+    AuditReportModule,
   ],
 })
 export class FinanceModule {}

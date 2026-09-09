@@ -14,6 +14,7 @@ import { WhatsappService } from 'src/modules/whatsapp/whatsapp.service';
 import { ChartsService } from 'src/modules/finance/charts/charts.service';
 import { RevenueChartsService } from 'src/modules/finance/revenues/revenue-charts.service';
 import { ExpensesService } from 'src/modules/finance/expenses/expenses.service';
+import { AuditReportService } from 'src/modules/finance/audit-report/audit-report.service';
 import { registerFairTools } from './fair.tools';
 import { registerVisitorTools } from './visitor.tools';
 import { registerCheckinTools } from './checkin.tools';
@@ -23,6 +24,7 @@ import { registerWhatsappTools } from './whatsapp.tools';
 import { registerChannelTools } from './channel.tools';
 import { registerMarketingInsightsTools } from './marketing-insights.tools';
 import { registerExhibitorReportTools } from './exhibitor-report.tools';
+import { registerAuditTools } from './audit.tools';
 
 @ApiExcludeController()
 @Controller('mcp')
@@ -37,6 +39,7 @@ export class McpController {
     private readonly chartsService: ChartsService,
     private readonly revenueChartsService: RevenueChartsService,
     private readonly expensesService: ExpensesService,
+    private readonly auditReportService: AuditReportService,
   ) {}
 
   @IsPublicRoute()
@@ -75,6 +78,7 @@ export class McpController {
       this.chartsService,
       this.revenueChartsService,
     );
+    registerAuditTools(server, this.auditReportService);
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
