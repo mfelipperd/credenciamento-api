@@ -49,6 +49,9 @@ lerna-debug.log*
 # Local import, maintenance and source-data files
 /scripts/
 /arquivos/
+/backups/
+*.sql
+*.sql.gz
 
 # Runtime data
 pids
