@@ -91,6 +91,188 @@ function buildTransportButtons(loc: FairLocationInfo): string {
     </tr>`;
 }
 
+export function generateReuseConfirmationEmail(
+  visitorName: string,
+  fairName: string,
+  confirmUrl: string,
+  newPhone?: string,
+): string {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirme sua inscrição – ExpoMultimix</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f0f0f5;font-family:Arial,Helvetica,sans-serif;">
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f0f0f5;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+
+      <!-- Card principal -->
+      <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"
+             style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+
+        <!-- ── HEADER ── -->
+        <tr>
+          <td style="background-color:#0f0f2b;padding:32px 30px 24px;text-align:center;">
+            <img src="${LOGO_URL}" alt="ExpoMultimix" width="200"
+                 style="display:block;margin:0 auto;" />
+            <p style="margin:16px 0 0;color:#29ABE2;font-size:11px;letter-spacing:3px;
+                      text-transform:uppercase;font-weight:bold;">
+              A MAIOR FEIRA MULTISSETORIAL DO NORTE
+            </p>
+          </td>
+        </tr>
+
+        <!-- ── HERO ── -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#E8196A 0%,#c4143e 50%,#F26522 100%);
+                     padding:44px 30px 36px;text-align:center;">
+            <p style="margin:0 0 10px;color:rgba(255,255,255,0.9);font-size:12px;
+                      letter-spacing:3px;text-transform:uppercase;font-weight:bold;">
+              🔐 &nbsp;CONFIRME SUA INSCRIÇÃO
+            </p>
+            <h1 style="margin:0 0 14px;color:#ffffff;font-size:28px;line-height:1.25;
+                       font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,0.2);">
+              Olá, ${visitorName}!
+            </h1>
+            <p style="margin:0;color:rgba(255,255,255,0.95);font-size:16px;line-height:1.6;">
+              Recebemos um pedido pra reaproveitar seus dados e te inscrever na<br>
+              <strong>${fairName}</strong>. Confirme abaixo pra garantir sua vaga.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Faixa decorativa tricolor -->
+        <tr>
+          <td style="padding:0;line-height:0;font-size:0;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td width="33%" height="5" style="background-color:#E8196A;"></td>
+                <td width="34%" height="5" style="background-color:#29ABE2;"></td>
+                <td width="33%" height="5" style="background-color:#F26522;"></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ── CTA ── -->
+        <tr>
+          <td style="background-color:#ffffff;padding:44px 30px 36px;text-align:center;">
+            <h2 style="margin:0 0 8px;color:#0f0f2b;font-size:22px;font-weight:900;">
+              Um clique pra confirmar
+            </h2>
+            <p style="margin:0 0 28px;color:#666666;font-size:14px;line-height:1.5;">
+              Clique no botão abaixo pra confirmar sua inscrição<br>reaproveitando os dados do seu cadastro anterior.
+            </p>
+
+            <a href="${confirmUrl}" target="_blank"
+               style="display:inline-block;background:linear-gradient(135deg,#E8196A 0%,#F26522 100%);
+                      color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:50px;
+                      font-weight:bold;font-size:16px;letter-spacing:0.5px;
+                      box-shadow:0 4px 16px rgba(232,25,106,0.35);">
+              ✅ &nbsp;Confirmar Inscrição
+            </a>
+
+            <p style="margin:24px 0 0;color:#999999;font-size:12px;">
+              Este link expira em 48 horas.
+            </p>
+          </td>
+        </tr>
+
+        ${
+          newPhone
+            ? `<!-- ── AVISO DE TELEFONE NOVO ── -->
+        <tr>
+          <td style="background-color:#f8f9ff;padding:0 30px 36px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td style="background:#ffffff;border-left:4px solid #29ABE2;border-radius:0 10px 10px 0;
+                           padding:16px 20px;text-align:left;">
+                  <p style="margin:0 0 6px;color:#0f0f2b;font-size:14px;font-weight:bold;">
+                    📱 Seu telefone será atualizado
+                  </p>
+                  <p style="margin:0;color:#555555;font-size:13px;line-height:1.6;">
+                    Ao confirmar, seu telefone cadastrado passa a ser <strong>${newPhone}</strong>.
+                    Se não foi você quem solicitou essa alteração, apenas ignore este email —
+                    nada será alterado.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`
+            : ''
+        }
+
+        <!-- Faixa tricolor -->
+        <tr>
+          <td style="padding:0;line-height:0;font-size:0;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td width="33%" height="5" style="background-color:#E8196A;"></td>
+                <td width="34%" height="5" style="background-color:#29ABE2;"></td>
+                <td width="33%" height="5" style="background-color:#F26522;"></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ── FOOTER ── -->
+        <tr>
+          <td style="background-color:#0f0f2b;padding:32px 30px;text-align:center;">
+            <img src="${LOGO_URL}" alt="ExpoMultimix" width="140"
+                 style="display:block;margin:0 auto 16px;" />
+            <p style="margin:0 0 6px;color:#888888;font-size:12px;">
+              A Maior Feira Multissetorial do Norte
+            </p>
+            <p style="margin:0 0 16px;color:#888888;font-size:12px;">
+              ✉️ &nbsp;expomultimix@gmail.com
+            </p>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+              <tr>
+                <td style="padding:0 8px;">
+                  <a href="https://www.expomultimix.com.br"
+                     style="color:#29ABE2;font-size:12px;text-decoration:none;font-weight:bold;">
+                    Site Oficial
+                  </a>
+                </td>
+                <td style="color:#444444;font-size:12px;">|</td>
+                <td style="padding:0 8px;">
+                  <a href="https://www.instagram.com/expomultimix"
+                     style="color:#E8196A;font-size:12px;text-decoration:none;font-weight:bold;">
+                    Instagram
+                  </a>
+                </td>
+                <td style="color:#444444;font-size:12px;">|</td>
+                <td style="padding:0 8px;">
+                  <a href="https://www.facebook.com/expomultimix"
+                     style="color:#F26522;font-size:12px;text-decoration:none;font-weight:bold;">
+                    Facebook
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:20px 0 0;color:#444444;font-size:11px;line-height:1.7;">
+              Você recebeu este e-mail porque solicitou reaproveitar seu cadastro na ExpoMultimix.<br>
+              Este é um e-mail transacional de confirmação de inscrição.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+      <!-- /Card principal -->
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>`;
+}
+
 export function generateConfirmationEmail(
   visitorName: string,
   registrationCode: string,

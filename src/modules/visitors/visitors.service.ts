@@ -24,6 +24,7 @@ import { ProspectingService } from '../prospecting/services/prospecting.service'
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { maskEmail, maskPhone, maskCnpj } from './utils/mask.util';
+import { generateReuseConfirmationEmail } from 'src/utils/emailLayoutGenerator';
 
 interface VisitorReuseTokenPayload {
   registrationCode: string;
@@ -646,17 +647,12 @@ export class VisitorsService {
 
     const confirmUrl = `${this.apiBaseUrl}/visitors/public/confirm-reuse?token=${encodeURIComponent(token)}`;
 
-    const html = `
-      <p>Olá, ${visitor.name}!</p>
-      <p>Recebemos um pedido pra reaproveitar seus dados e te inscrever na feira <strong>${fair.name}</strong>.</p>
-      ${
-        newPhone
-          ? `<p>Seu telefone cadastrado será atualizado para <strong>${newPhone}</strong>. Se não foi você quem solicitou, ignore este email — nada será alterado.</p>`
-          : ''
-      }
-      <p><a href="${confirmUrl}">Clique aqui para confirmar sua inscrição</a></p>
-      <p>Este link expira em 48 horas.</p>
-    `;
+    const html = generateReuseConfirmationEmail(
+      visitor.name,
+      fair.name,
+      confirmUrl,
+      newPhone,
+    );
 
     await this.emailsService.sendTransactionalEmail(
       visitor.email,
@@ -692,7 +688,7 @@ export class VisitorsService {
 
     const siteUrl =
       this.config.get<string>('EXPO_MM_SITE_URL') ??
-      'https://www.expomultimix.com';
+      'https://www.expomultimix.com.br/credenciamento-confirmado';
     return { redirectUrl: siteUrl };
   }
 
