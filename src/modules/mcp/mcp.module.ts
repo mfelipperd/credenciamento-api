@@ -14,7 +14,6 @@ import { DashboardModule } from '../dashboard/dashboard.module';
 import { VisitorsModule } from '../visitors/visitors.module';
 import { CheckInsModule } from '../checkins/checkins.module';
 import { EmailsModule } from '../emails/emails.module';
-import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { ChartsModule } from '../finance/charts/charts.module';
 import { RevenuesModule } from '../finance/revenues/revenues.module';
 import { ExpensesModule } from '../finance/expenses/expenses.module';
@@ -35,7 +34,6 @@ import { PartnersModule } from '../partners/partners.module';
     VisitorsModule,
     CheckInsModule,
     EmailsModule,
-    WhatsappModule,
     ChartsModule,
     RevenuesModule,
     ExpensesModule,

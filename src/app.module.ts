@@ -20,7 +20,6 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { PartnersModule } from './modules/partners/partners.module';
 import { PublicFairsModule } from './modules/public-fairs/public-fairs.module';
-import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { ProspectingModule } from './modules/prospecting/prospecting.module';
 import { McpModule } from './modules/mcp/mcp.module';
 import { ExhibitorsModule } from './modules/exhibitors/exhibitors.module';
@@ -62,7 +61,6 @@ import { PushModule } from './modules/push/push.module';
     FinanceModule,
     PartnersModule,
     PublicFairsModule,
-    WhatsappModule,
     ProspectingModule,
     McpModule,
     ExhibitorsModule,
