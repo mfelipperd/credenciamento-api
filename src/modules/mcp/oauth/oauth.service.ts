@@ -13,6 +13,10 @@ import { OAuthClient } from './entities/oauth-client.entity';
 import { OAuthAuthorizationCode } from './entities/oauth-authorization-code.entity';
 import { OAuthRefreshToken } from './entities/oauth-refresh-token.entity';
 import { UsersService } from 'src/modules/users/users.service';
+import { UserResponseDto } from 'src/modules/users/dto/user-response.dto';
+import { FairsService } from 'src/modules/fairs/fairs.service';
+import { PartnersService } from 'src/modules/partners/partners.service';
+import { FairPartnersService } from 'src/modules/partners/fair-partners.service';
 import { EUserRole } from 'src/enum/role';
 import { RegisterClientDto } from './dto/register-client.dto';
 import { AuthorizeFormDto } from './dto/authorize-form.dto';
@@ -32,9 +36,35 @@ export class OAuthService {
     @InjectRepository(OAuthRefreshToken)
     private readonly refreshTokenRepository: Repository<OAuthRefreshToken>,
     private readonly usersService: UsersService,
+    private readonly fairsService: FairsService,
+    private readonly partnersService: PartnersService,
+    private readonly fairPartnersService: FairPartnersService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
   ) {}
+
+  /**
+   * Feiras que o usuário pode ver via MCP: admin vê todas, sócio vê só as
+   * que tem no fair_partners, demais perfis usam a associação manual
+   * (user_fair) já existente.
+   */
+  private async computeFairIds(user: UserResponseDto): Promise<string[]> {
+    if (user.role === EUserRole.ADMIN) {
+      const fairs = await this.fairsService.findAll();
+      return fairs.map((f) => f.id);
+    }
+
+    if (user.role === EUserRole.PARTNER) {
+      const partner = await this.partnersService.findByUserId(user.id);
+      if (!partner) return [];
+      const fairPartners = await this.fairPartnersService.findAllByPartner(
+        partner.id,
+      );
+      return fairPartners.map((fp) => fp.fairId);
+    }
+
+    return user.fairIds ?? [];
+  }
 
   private get mcpJwtSecret(): string {
     const secret = this.config.get<string>('MCP_JWT_SECRET');
@@ -177,6 +207,7 @@ export class OAuthService {
 
   private async issueTokens(userId: number, clientId: string) {
     const userResponse = await this.usersService.findOne(userId);
+    const fairIds = await this.computeFairIds(userResponse);
 
     const accessToken = this.jwtService.sign(
       {
@@ -184,7 +215,7 @@ export class OAuthService {
         email: userResponse.email,
         name: userResponse.name,
         role: userResponse.role,
-        fairIds: userResponse.fairIds ?? [],
+        fairIds,
         aud: 'mcp',
         iss: this.baseUrl,
       },

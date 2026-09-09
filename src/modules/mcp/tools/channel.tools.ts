@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { DashboardService } from 'src/modules/dashboard/dashboard.service';
 import { ExpensesService } from 'src/modules/finance/expenses/expenses.service';
-import { textResult, registerToolWithInput } from './common';
+import { McpRequestUser } from '../oauth/mcp-auth.guard';
+import { textResult, registerToolWithInput, assertFairAccess } from './common';
 
 const normalize = (value: string) => value.trim().toLowerCase();
 
@@ -142,14 +143,17 @@ export function registerChannelTools(
   server: McpServer,
   dashboardService: DashboardService,
   expensesService: ExpensesService,
+  user: McpRequestUser,
 ) {
   registerToolWithInput(
     server,
     'get_channel_performance',
     'Retorna, por canal de aquisição (campo "como conheceu a feira" do visitante), o total de cadastrados, total de check-ins, taxa de conversão cadastro→check-in e % do total de visitantes que aquele canal representa.',
     { fairId: z.string().describe('id da feira, obtido via list_fairs') },
-    async ({ fairId }) =>
-      textResult(await getChannelPerformanceData(dashboardService, fairId)),
+    async ({ fairId }) => {
+      assertFairAccess(user, fairId);
+      return textResult(await getChannelPerformanceData(dashboardService, fairId));
+    },
   );
 
   registerToolWithInput(
@@ -165,14 +169,16 @@ export function registerChannelTools(
           'limite de custo por comparecimento (R$), opcional. Canais com conversão acima da média do conjunto e CPA acima desse valor são marcados com flaggedExpensive.',
         ),
     },
-    async ({ fairId, cpaThreshold }) =>
-      textResult(
+    async ({ fairId, cpaThreshold }) => {
+      assertFairAccess(user, fairId);
+      return textResult(
         await getChannelCostEffectivenessData(
           dashboardService,
           expensesService,
           fairId,
           cpaThreshold,
         ),
-      ),
+      );
+    },
   );
 }

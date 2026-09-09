@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { EmailsService } from 'src/modules/emails/emails.service';
-import { textResult, registerToolWithInput } from './common';
+import { McpRequestUser } from '../oauth/mcp-auth.guard';
+import { textResult, registerToolWithInput, assertFairAccess } from './common';
 
 export function registerEmailTools(
   server: McpServer,
   emailsService: EmailsService,
+  user: McpRequestUser,
 ) {
   server.registerTool(
     'list_email_campaigns',
@@ -103,7 +105,17 @@ export function registerEmailTools(
           'Segmentação avançada combinando condições entre múltiplas feiras. Exemplos: {operator:"AND",conditions:[{fairId:X,status:"absent"},{fairId:Y,status:"absent"}]} = cadastrado em X e Y mas não foi em nenhuma das duas. {operator:"AND",conditions:[{fairId:X,status:"registered"},{fairId:Y,status:"present"}]} = cadastrado em X e foi em Y. Use isso OU targetFairId+templateFairId+sendTo, não os dois.',
         ),
     },
-    async (params) => textResult(await emailsService.previewMarketingEmail(params)),
+    async (params) => {
+      const fairIdsToCheck = [
+        params.targetFairId,
+        params.templateFairId,
+        ...(params.additionalFairIds ?? []),
+        ...(params.audienceQuery?.conditions.map((c) => c.fairId) ?? []),
+      ].filter((id): id is string => !!id);
+      for (const fid of fairIdsToCheck) assertFairAccess(user, fid);
+
+      return textResult(await emailsService.previewMarketingEmail(params));
+    },
     { readOnlyHint: true, title: 'Pré-visualizar campanha (não envia)' },
   );
 

@@ -1,11 +1,28 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
+import { EUserRole } from 'src/enum/role';
+import { McpRequestUser } from '../oauth/mcp-auth.guard';
 
 export function textResult(data: unknown) {
   return {
     content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
   };
+}
+
+/**
+ * Garante que o usuário logado pode acessar a feira informada: admin acessa
+ * qualquer uma, os demais perfis só as que estão em user.fairIds (calculado
+ * na emissão do token — ver OAuthService.computeFairIds). Lança erro (que o
+ * MCP SDK devolve como resultado de erro pro chamador) se não tiver acesso.
+ */
+export function assertFairAccess(user: McpRequestUser, fairId: string): void {
+  if (user.role === EUserRole.ADMIN) return;
+  if (!user.fairIds.includes(fairId)) {
+    throw new Error(
+      `Acesso negado: o usuário ${user.email} não tem acesso à feira ${fairId}.`,
+    );
+  }
 }
 
 type ToolResult = { content: { type: 'text'; text: string }[] };

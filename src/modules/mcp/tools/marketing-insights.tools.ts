@@ -11,7 +11,8 @@ import {
   ChannelPerformanceItem,
   ChannelCostItem,
 } from './channel.tools';
-import { textResult, registerToolWithInput } from './common';
+import { McpRequestUser } from '../oauth/mcp-auth.guard';
+import { textResult, registerToolWithInput, assertFairAccess } from './common';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -311,6 +312,7 @@ export function registerMarketingInsightsTools(
   expensesService: ExpensesService,
   chartsService: ChartsService,
   revenueChartsService: RevenueChartsService,
+  user: McpRequestUser,
 ) {
   registerToolWithInput(
     server,
@@ -326,8 +328,10 @@ export function registerMarketingInsightsTools(
           'id da feira usada como base de comparação (ex.: edição anterior)',
         ),
     },
-    async ({ fairId, compareToFairId }) =>
-      textResult(
+    async ({ fairId, compareToFairId }) => {
+      assertFairAccess(user, fairId);
+      assertFairAccess(user, compareToFairId);
+      return textResult(
         await getFairComparisonData(
           fairsService,
           dashboardService,
@@ -336,7 +340,8 @@ export function registerMarketingInsightsTools(
           fairId,
           compareToFairId,
         ),
-      ),
+      );
+    },
   );
 
   registerToolWithInput(
@@ -344,14 +349,16 @@ export function registerMarketingInsightsTools(
     'get_marketing_recommendations',
     'Gera recomendações por canal de aquisição para uma feira: quais canais aumentar, manter, reduzir ou testar (baseado em conversão e CPA relativos à média da própria feira), e uma estimativa de quando começar a campanha de cada canal na próxima edição, baseada em quando os cadastros começaram a chegar na edição anterior na mesma cidade (se existir).',
     { fairId: z.string().describe('id da feira, obtido via list_fairs') },
-    async ({ fairId }) =>
-      textResult(
+    async ({ fairId }) => {
+      assertFairAccess(user, fairId);
+      return textResult(
         await getMarketingRecommendationsData(
           fairsService,
           dashboardService,
           expensesService,
           fairId,
         ),
-      ),
+      );
+    },
   );
 }

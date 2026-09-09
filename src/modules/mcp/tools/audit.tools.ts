@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { AuditReportService } from 'src/modules/finance/audit-report/audit-report.service';
-import { textResult, registerToolWithInput } from './common';
+import { McpRequestUser } from '../oauth/mcp-auth.guard';
+import { textResult, registerToolWithInput, assertFairAccess } from './common';
 
 export function registerAuditTools(
   server: McpServer,
   auditReportService: AuditReportService,
+  user: McpRequestUser,
 ) {
   registerToolWithInput(
     server,
@@ -29,6 +31,7 @@ export function registerAuditTools(
         .describe('Anexo do Simples Nacional a aplicar, se validado contabilmente. Padrão: III.'),
     },
     async ({ fairId, rbt12, annex }) => {
+      assertFairAccess(user, fairId);
       const data = await auditReportService.buildReportData(fairId, { rbt12, annex });
       return textResult(data);
     },

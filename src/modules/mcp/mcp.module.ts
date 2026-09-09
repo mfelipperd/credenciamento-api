@@ -19,6 +19,8 @@ import { ChartsModule } from '../finance/charts/charts.module';
 import { RevenuesModule } from '../finance/revenues/revenues.module';
 import { ExpensesModule } from '../finance/expenses/expenses.module';
 import { AuditReportModule } from '../finance/audit-report/audit-report.module';
+import { FinanceCommonModule } from '../finance/common/finance-common.module';
+import { PartnersModule } from '../partners/partners.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { AuditReportModule } from '../finance/audit-report/audit-report.module';
     RevenuesModule,
     ExpensesModule,
     AuditReportModule,
+    FinanceCommonModule,
+    PartnersModule,
   ],
   controllers: [WellKnownController, OAuthController, McpController],
   providers: [OAuthService, McpAuthGuard],

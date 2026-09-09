@@ -15,7 +15,8 @@ import {
   getFairComparisonData,
   getMarketingRecommendationsData,
 } from './marketing-insights.tools';
-import { textResult, registerToolWithInput } from './common';
+import { McpRequestUser } from '../oauth/mcp-auth.guard';
+import { textResult, registerToolWithInput, assertFairAccess } from './common';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const money = (n: number) =>
@@ -332,6 +333,7 @@ export function registerExhibitorReportTools(
   expensesService: ExpensesService,
   chartsService: ChartsService,
   revenueChartsService: RevenueChartsService,
+  user: McpRequestUser,
 ) {
   registerToolWithInput(
     server,
@@ -339,6 +341,7 @@ export function registerExhibitorReportTools(
     'Gera um relatório completo da feira para o expositor: visão geral, distribuição de check-ins por hora, desempenho por canal, CPL/CPA por canal, comparativo com a edição anterior (se existir) e recomendações — com glossário explicando cada índice em linguagem simples. Retorna os dados estruturados e um HTML pronto para impressão/PDF (o consumidor da tool decide como renderizar/converter).',
     { fairId: z.string().describe('id da feira, obtido via list_fairs') },
     async ({ fairId }) => {
+      assertFairAccess(user, fairId);
       const [
         fair,
         overview,

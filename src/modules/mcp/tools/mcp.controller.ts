@@ -15,6 +15,8 @@ import { ChartsService } from 'src/modules/finance/charts/charts.service';
 import { RevenueChartsService } from 'src/modules/finance/revenues/revenue-charts.service';
 import { ExpensesService } from 'src/modules/finance/expenses/expenses.service';
 import { AuditReportService } from 'src/modules/finance/audit-report/audit-report.service';
+import { FinanceCategoriesService } from 'src/modules/finance/common/services/finance-categories.service';
+import { AccountsService } from 'src/modules/finance/common/services/accounts.service';
 import { registerFairTools } from './fair.tools';
 import { registerVisitorTools } from './visitor.tools';
 import { registerCheckinTools } from './checkin.tools';
@@ -25,6 +27,7 @@ import { registerChannelTools } from './channel.tools';
 import { registerMarketingInsightsTools } from './marketing-insights.tools';
 import { registerExhibitorReportTools } from './exhibitor-report.tools';
 import { registerAuditTools } from './audit.tools';
+import { registerExpenseTools } from './expense.tools';
 
 @ApiExcludeController()
 @Controller('mcp')
@@ -40,6 +43,8 @@ export class McpController {
     private readonly revenueChartsService: RevenueChartsService,
     private readonly expensesService: ExpensesService,
     private readonly auditReportService: AuditReportService,
+    private readonly financeCategoriesService: FinanceCategoriesService,
+    private readonly accountsService: AccountsService,
   ) {}
 
   @IsPublicRoute()
@@ -54,13 +59,13 @@ export class McpController {
       version: '1.0.0',
     });
 
-    registerFairTools(server, this.fairsService, this.dashboardService);
+    registerFairTools(server, this.fairsService, this.dashboardService, req.user);
     registerVisitorTools(server, this.visitorsService, req.user);
-    registerCheckinTools(server, this.checkInsService);
-    registerFinanceTools(server, this.chartsService, this.revenueChartsService);
-    registerEmailTools(server, this.emailsService);
+    registerCheckinTools(server, this.checkInsService, req.user);
+    registerFinanceTools(server, this.chartsService, this.revenueChartsService, req.user);
+    registerEmailTools(server, this.emailsService, req.user);
     registerWhatsappTools(server, this.whatsappService);
-    registerChannelTools(server, this.dashboardService, this.expensesService);
+    registerChannelTools(server, this.dashboardService, this.expensesService, req.user);
     registerMarketingInsightsTools(
       server,
       this.fairsService,
@@ -68,6 +73,7 @@ export class McpController {
       this.expensesService,
       this.chartsService,
       this.revenueChartsService,
+      req.user,
     );
     registerExhibitorReportTools(
       server,
@@ -77,8 +83,16 @@ export class McpController {
       this.expensesService,
       this.chartsService,
       this.revenueChartsService,
+      req.user,
     );
-    registerAuditTools(server, this.auditReportService);
+    registerAuditTools(server, this.auditReportService, req.user);
+    registerExpenseTools(
+      server,
+      this.expensesService,
+      this.financeCategoriesService,
+      this.accountsService,
+      req.user,
+    );
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
