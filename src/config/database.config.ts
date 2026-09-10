@@ -15,6 +15,7 @@ import { PartnerWithdrawal } from 'src/modules/partners/entities/partner-withdra
 import { FairPartner } from 'src/modules/partners/entities/fair-partner.entity';
 import { User } from 'src/modules/users/entitie/users.entity';
 import { UserFair } from 'src/modules/users/entities/user-fair.entity';
+import { PasswordResetToken } from 'src/modules/users/entities/password-reset-token.entity';
 import { StandConfiguration } from 'src/modules/fairs/entity/stand-configuration.entity';
 import { OAuthClient } from 'src/modules/mcp/oauth/entities/oauth-client.entity';
 import { OAuthAuthorizationCode } from 'src/modules/mcp/oauth/entities/oauth-authorization-code.entity';
@@ -41,6 +42,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     FairPartner,
     User,
     UserFair,
+    PasswordResetToken,
     StandConfiguration,
     OAuthClient,
     OAuthAuthorizationCode,

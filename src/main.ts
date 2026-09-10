@@ -5,11 +5,15 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { DataSource } from 'typeorm';
 import { join } from 'path';
 import { swaggerConfig, swaggerOptions } from './config/swagger.config';
+import { ensureSchema } from './database/ensure-schema';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  await ensureSchema(app.get(DataSource));
 
   // Servir uploads de arquivos estáticos locais
   app.useStaticAssets(join(process.cwd(), 'uploads'), {

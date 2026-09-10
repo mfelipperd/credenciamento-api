@@ -18,6 +18,11 @@ export class UserResponseDto {
   @ApiProperty({ description: 'Se está ativo' })
   isActive: boolean;
 
+  @ApiProperty({
+    description: 'Se o usuário já concluiu o primeiro acesso (definiu a própria senha)',
+  })
+  passwordSet: boolean;
+
   @ApiProperty({ description: 'CPF do usuário', required: false })
   cpf?: string;
 
@@ -46,6 +51,7 @@ export class UserResponseDto {
     this.email = user.email;
     this.role = user.role;
     this.isActive = user.isActive;
+    this.passwordSet = user.passwordSet;
     this.cpf = user.cpf;
     this.phone = user.phone;
     this.notes = user.notes;

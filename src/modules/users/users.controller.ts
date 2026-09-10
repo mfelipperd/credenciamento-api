@@ -290,6 +290,26 @@ export class UsersController {
     return await this.usersService.toggleActive(id);
   }
 
+  @Patch(':id/resend-invite')
+  @ApiOperation({
+    summary: 'Reenviar convite de primeiro acesso',
+    description:
+      'Reemite o código de primeiro acesso e reenvia o email (apenas admins, só pra usuários que ainda não concluíram o primeiro acesso)',
+  })
+  @ApiParam({ name: 'id', description: 'ID do usuário' })
+  @ApiResponse({ status: 200, description: 'Convite reenviado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Usuário já concluiu o primeiro acesso' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
+  @ApiResponse({ status: 403, description: 'Acesso negado' })
+  async resendInvite(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    if (req.user.role !== EUserRole.ADMIN) {
+      throw new Error('Apenas administradores podem reenviar convites');
+    }
+
+    await this.usersService.resendInvite(id);
+    return { message: 'Convite reenviado com sucesso' };
+  }
+
   @Delete(':id')
   @ApiOperation({
     summary: 'Remover usuário',

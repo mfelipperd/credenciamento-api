@@ -273,6 +273,148 @@ export function generateReuseConfirmationEmail(
 </html>`;
 }
 
+function generateCodeEmail(
+  title: string,
+  greeting: string,
+  message: string,
+  code: string,
+  expiryLabel: string,
+) {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title} – ExpoMultimix</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f0f0f5;font-family:Arial,Helvetica,sans-serif;">
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f0f0f5;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+
+      <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"
+             style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+
+        <!-- ── HEADER ── -->
+        <tr>
+          <td style="background-color:#0f0f2b;padding:32px 30px 24px;text-align:center;">
+            <img src="${LOGO_URL}" alt="ExpoMultimix" width="200"
+                 style="display:block;margin:0 auto;" />
+            <p style="margin:16px 0 0;color:#29ABE2;font-size:11px;letter-spacing:3px;
+                      text-transform:uppercase;font-weight:bold;">
+              A MAIOR FEIRA MULTISSETORIAL DO NORTE
+            </p>
+          </td>
+        </tr>
+
+        <!-- ── HERO ── -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#E8196A 0%,#c4143e 50%,#F26522 100%);
+                     padding:40px 30px 32px;text-align:center;">
+            <h1 style="margin:0 0 10px;color:#ffffff;font-size:26px;line-height:1.3;
+                       font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,0.2);">
+              ${greeting}
+            </h1>
+            <p style="margin:0;color:rgba(255,255,255,0.95);font-size:15px;line-height:1.6;">
+              ${message}
+            </p>
+          </td>
+        </tr>
+
+        <!-- Faixa decorativa tricolor -->
+        <tr>
+          <td style="padding:0;line-height:0;font-size:0;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td width="33%" height="5" style="background-color:#E8196A;"></td>
+                <td width="34%" height="5" style="background-color:#29ABE2;"></td>
+                <td width="33%" height="5" style="background-color:#F26522;"></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ── CÓDIGO ── -->
+        <tr>
+          <td style="background-color:#ffffff;padding:44px 30px 36px;text-align:center;">
+            <p style="margin:0 0 20px;color:#999999;font-size:12px;
+                      text-transform:uppercase;letter-spacing:1px;">
+              Seu código
+            </p>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center"
+                   style="border-radius:16px;overflow:hidden;">
+              <tr>
+                <td style="padding:4px;background:linear-gradient(135deg,#E8196A,#29ABE2,#F26522);
+                           border-radius:16px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="background:#ffffff;border-radius:13px;padding:20px 36px;">
+                        <p style="margin:0;color:#0f0f2b;font-size:40px;font-weight:900;
+                                  letter-spacing:10px;font-family:'Courier New',monospace;">
+                          ${code}
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:24px 0 0;color:#666666;font-size:13px;line-height:1.6;">
+              ${expiryLabel}<br>
+              Se você não pediu isso, pode ignorar este e-mail com segurança.
+            </p>
+          </td>
+        </tr>
+
+        <!-- ── FOOTER ── -->
+        <tr>
+          <td style="background-color:#0f0f2b;padding:32px 30px;text-align:center;">
+            <img src="${LOGO_URL}" alt="ExpoMultimix" width="140"
+                 style="display:block;margin:0 auto 16px;" />
+            <p style="margin:0 0 6px;color:#888888;font-size:12px;">
+              A Maior Feira Multissetorial do Norte
+            </p>
+            <p style="margin:0 0 16px;color:#888888;font-size:12px;">
+              ✉️ &nbsp;expomultimix@gmail.com
+            </p>
+            <p style="margin:20px 0 0;color:#444444;font-size:11px;line-height:1.7;">
+              Este é um e-mail transacional relacionado à sua conta no sistema de gestão ExpoMultimix.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+      <!-- /Card principal -->
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>`;
+}
+
+export function generateFirstAccessEmail(name: string, code: string): string {
+  return generateCodeEmail(
+    'Primeiro acesso',
+    `Bem-vindo(a), ${name}!`,
+    'Sua conta foi criada no sistema ExpoMultimix. Use o código abaixo pra definir sua senha e acessar.',
+    code,
+    'Este código expira em 7 dias.',
+  );
+}
+
+export function generatePasswordResetEmail(name: string, code: string): string {
+  return generateCodeEmail(
+    'Recuperação de senha',
+    `Olá, ${name}`,
+    'Recebemos um pedido pra redefinir sua senha. Use o código abaixo pra continuar.',
+    code,
+    'Este código expira em 15 minutos.',
+  );
+}
+
 export function generateConfirmationEmail(
   visitorName: string,
   registrationCode: string,

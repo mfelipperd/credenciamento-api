@@ -8,12 +8,18 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entitie/users.entity';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UserFairService } from './user-fair.service';
+import { PasswordResetTokenService } from './password-reset-token.service';
+import { EmailsService } from '../emails/emails.service';
 import { EUserRole } from '../../enum/role';
+
+const BCRYPT_ROUNDS = 10;
 
 @Injectable()
 export class UsersService {
@@ -22,6 +28,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
     private userFairService: UserFairService,
+    private passwordResetTokenService: PasswordResetTokenService,
+    private emailsService: EmailsService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
@@ -52,7 +60,16 @@ export class UsersService {
     // Extrair fairIds do DTO
     const { fairIds, ...userData } = createUserDto;
 
-    const user = this.userRepository.create(userData);
+    // Senha nunca é definida pelo admin: gera um segredo aleatório inutilizável
+    // e hasheia. O usuário define a própria senha pelo fluxo de primeiro acesso.
+    const unusablePassword = randomBytes(32).toString('hex');
+    const hashedPassword = await bcrypt.hash(unusablePassword, BCRYPT_ROUNDS);
+
+    const user = this.userRepository.create({
+      ...userData,
+      password: hashedPassword,
+      passwordSet: false,
+    });
     const savedUser = await this.userRepository.save(user);
 
     // Associar usuário às feiras se fornecidas
@@ -70,6 +87,22 @@ export class UsersService {
           );
         }
       }
+    }
+
+    try {
+      const code = await this.passwordResetTokenService.issueCode(
+        savedUser,
+        'first_access',
+      );
+      await this.emailsService.sendFirstAccessEmail(
+        savedUser.email,
+        savedUser.name,
+        code,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Erro ao enviar email de primeiro acesso pra ${savedUser.email}: ${error.message}`,
+      );
     }
 
     this.logger.log(`Usuário criado: ${savedUser.name} (ID: ${savedUser.id})`);
@@ -164,8 +197,10 @@ export class UsersService {
       }
     }
 
-    // Extrair fairIds do DTO
+    // Extrair fairIds do DTO — senha nunca é alterada por aqui (só via
+    // changePassword/reset-password/first-access), mesmo que venha no corpo
     const { fairIds, ...userData } = updateUserDto;
+    delete (userData as Record<string, unknown>).password;
 
     Object.assign(user, userData);
     const updatedUser = await this.userRepository.save(user);
@@ -235,15 +270,67 @@ export class UsersService {
     }
 
     // Verificar senha atual
-    if (changePasswordDto.currentPassword !== user.password) {
+    const isCurrentPasswordValid = await bcrypt.compare(
+      changePasswordDto.currentPassword,
+      user.password,
+    );
+    if (!isCurrentPasswordValid) {
       throw new BadRequestException('Senha atual incorreta');
     }
 
     // Atualizar senha
-    user.password = changePasswordDto.newPassword;
+    user.password = await bcrypt.hash(
+      changePasswordDto.newPassword,
+      BCRYPT_ROUNDS,
+    );
+    user.passwordSet = true;
     await this.userRepository.save(user);
 
     this.logger.log(`Senha alterada para usuário: ${user.name} (ID: ${id})`);
+  }
+
+  /** Usado pelos fluxos de primeiro acesso e recuperação de senha, depois do código já validado. */
+  async setPassword(userId: number, newPassword: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    user.password = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    user.passwordSet = true;
+    await this.userRepository.save(user);
+
+    this.logger.log(`Senha definida via código para usuário: ${user.name} (ID: ${userId})`);
+  }
+
+  async resendInvite(id: number): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+    if (user.passwordSet) {
+      throw new BadRequestException(
+        'Este usuário já concluiu o primeiro acesso. Use a recuperação de senha se necessário.',
+      );
+    }
+
+    const code = await this.passwordResetTokenService.issueCode(
+      user,
+      'first_access',
+    );
+
+    try {
+      await this.emailsService.sendFirstAccessEmail(user.email, user.name, code);
+    } catch (error) {
+      this.logger.warn(
+        `Erro ao reenviar email de primeiro acesso pra ${user.email}: ${error.message}`,
+      );
+      throw new BadRequestException(
+        'Não foi possível enviar o email. Tente novamente em instantes.',
+      );
+    }
+
+    this.logger.log(`Convite de primeiro acesso reenviado: ${user.name} (ID: ${id})`);
   }
 
   async toggleActive(id: number): Promise<UserResponseDto> {

@@ -32,6 +32,9 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ default: false })
+  passwordSet: boolean;
+
   @Column({ length: 14, nullable: true })
   cpf: string;
 

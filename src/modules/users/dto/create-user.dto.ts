@@ -5,8 +5,6 @@ import {
   IsEnum,
   IsOptional,
   IsBoolean,
-  MinLength,
-  MaxLength,
   Length,
   Matches,
   IsArray,
@@ -24,21 +22,12 @@ export class CreateUserDto {
   name: string;
 
   @ApiProperty({
-    description: 'Email do usuário',
+    description:
+      'Email do usuário. Um código de primeiro acesso é enviado pra esse email — o usuário define a própria senha, o admin nunca a define.',
     example: 'joao.silva@email.com',
   })
   @IsEmail()
   email: string;
-
-  @ApiProperty({
-    description: 'Senha do usuário (mínimo 8 caracteres)',
-    example: 'minhasenha123',
-    minLength: 8,
-  })
-  @IsString()
-  @MinLength(8)
-  @MaxLength(255)
-  password: string;
 
   @ApiProperty({
     description: 'Role do usuário',

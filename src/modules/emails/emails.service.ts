@@ -16,7 +16,11 @@ import { FairsService } from '../fairs/fairs.service';
 import { Visitor } from '../visitors/entities/visitor.entity';
 import { EmailCampaign } from './entities/email-campaign.entity';
 import { EmailCampaignPreview } from './entities/email-campaign-preview.entity';
-import { generateConfirmationEmail } from 'src/utils/emailLayoutGenerator';
+import {
+  generateConfirmationEmail,
+  generateFirstAccessEmail,
+  generatePasswordResetEmail,
+} from 'src/utils/emailLayoutGenerator';
 import { AudienceCondition, AudienceQuery } from './types/audience-query';
 
 const PREVIEW_TTL_MINUTES = 15;
@@ -241,6 +245,28 @@ export class EmailsService {
         unsubscribed: report.unsubscribed ?? 0,
       },
     };
+  }
+
+  // ── Account emails (primeiro acesso / recuperação de senha) ───────────────
+
+  async sendFirstAccessEmail(to: string, name: string, code: string) {
+    const html = generateFirstAccessEmail(name, code);
+    await this.sendTransactionalEmail(
+      to,
+      name,
+      'Bem-vindo(a) à ExpoMultimix — defina sua senha',
+      html,
+    );
+  }
+
+  async sendPasswordResetEmail(to: string, name: string, code: string) {
+    const html = generatePasswordResetEmail(name, code);
+    await this.sendTransactionalEmail(
+      to,
+      name,
+      'Código pra redefinir sua senha',
+      html,
+    );
   }
 
   // ── Confirmation email ────────────────────────────────────────────────────
