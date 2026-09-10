@@ -21,7 +21,10 @@ export class AuthController {
   @IsPublicRoute()
   @UseGuards(ThrottlerGuard)
   @Throttle(AUTH_THROTTLE)
-  @ApiOperation({ summary: 'Login', description: 'Autentica o usuário e retorna o token JWT.' })
+  @ApiOperation({
+    summary: 'Login',
+    description: 'Autentica o usuário e retorna o token JWT.',
+  })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: 201,
@@ -29,7 +32,12 @@ export class AuthController {
     schema: {
       example: {
         access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        user: { id: 1, name: 'João Silva', email: 'joao@email.com', role: 'admin' },
+        user: {
+          id: 1,
+          name: 'João Silva',
+          email: 'joao@email.com',
+          role: 'admin',
+        },
       },
     },
   })
@@ -44,10 +52,14 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE)
   @ApiOperation({
     summary: 'Solicitar recuperação de senha',
-    description: 'Envia um código de 6 dígitos por email pra redefinir a senha.',
+    description:
+      'Envia um código de 6 dígitos por email pra redefinir a senha.',
   })
   @ApiBody({ type: ForgotPasswordDto })
-  @ApiResponse({ status: 201, description: 'Solicitação processada (resposta genérica)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Solicitação processada (resposta genérica)',
+  })
   async forgotPassword(@Body() data: ForgotPasswordDto) {
     return this.authService.forgotPassword(data);
   }
@@ -73,7 +85,8 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE)
   @ApiOperation({
     summary: 'Primeiro acesso',
-    description: 'Confirma o código de primeiro acesso e define a senha inicial.',
+    description:
+      'Confirma o código de primeiro acesso e define a senha inicial.',
   })
   @ApiBody({ type: FirstAccessDto })
   @ApiResponse({ status: 201, description: 'Senha definida com sucesso' })
