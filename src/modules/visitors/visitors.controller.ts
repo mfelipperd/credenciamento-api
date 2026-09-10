@@ -32,11 +32,21 @@ import { UpdateVisitorDto } from './update-visitor.dto';
 import { PaginatedVisitorsDto, PaginatedResponse } from './dto/paginated-visitors.dto';
 import { Visitor } from './entities/visitor.entity';
 import { FrontendOriginGuard } from 'src/auth/frontend-origin.guard';
+import { BotApiKeyGuard } from 'src/auth/bot-api-key.guard';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { CheckExistingVisitorDto } from './dto/check-existing-visitor.dto';
 import { RequestReuseDto } from './dto/request-reuse.dto';
 
 class EnrollInFairDto {
+  @IsNotEmpty()
+  @IsUUID()
+  fairId: string;
+}
+
+class BotEnrollDto {
+  @IsNotEmpty()
+  @IsUUID()
+  registrationCode: string;
   @IsNotEmpty()
   @IsUUID()
   fairId: string;
@@ -265,6 +275,48 @@ export class VisitorsController {
   async confirmReuse(@Query('token') token: string, @Res() res: Response) {
     const { redirectUrl } = await this.visitorsService.confirmReuse(token);
     return res.redirect(redirectUrl);
+  }
+
+  // ── Integração bot do WhatsApp (Emmelly) ──────────────────────────────────
+  // Autenticado por chave de API fixa (BotApiKeyGuard), não pelo JWT de
+  // usuário nem pelo FrontendOriginGuard (o n8n não é um navegador). Canal
+  // confiável: quem chama já provou posse do número (é o WhatsApp mandando).
+
+  @Get('bot/lookup-by-phone')
+  @IsPublicRoute()
+  @UseGuards(BotApiKeyGuard)
+  @ApiOperation({
+    summary: 'Busca visitante por telefone pro bot do WhatsApp',
+    description:
+      'Match exato pelo telefone (dígitos). Retorna dado completo (não mascarado) — protegido por X-Bot-Api-Key.',
+  })
+  @ApiQuery({ name: 'phone', required: true })
+  async botLookupByPhone(@Query('phone') phone: string) {
+    return this.visitorsService.lookupVisitorByPhoneForBot(phone);
+  }
+
+  @Post('bot/create')
+  @IsPublicRoute()
+  @UseGuards(BotApiKeyGuard)
+  @ApiOperation({
+    summary: 'Inscrever visitante via bot do WhatsApp',
+    description: 'Mesmo contrato de POST /visitors — protegido por X-Bot-Api-Key.',
+  })
+  @ApiBody({ type: CreateVisitorInputDto })
+  async botCreateVisitor(@Body() visitor: CreateVisitorInputDto) {
+    return this.visitorsService.createVisitor(visitor);
+  }
+
+  @Post('bot/enroll')
+  @IsPublicRoute()
+  @UseGuards(BotApiKeyGuard)
+  @ApiOperation({
+    summary: 'Matricular visitante existente em nova feira via bot do WhatsApp',
+    description: 'Equivalente a POST /visitors/:registrationCode/enroll — protegido por X-Bot-Api-Key.',
+  })
+  @ApiBody({ schema: { example: { registrationCode: 'uuid', fairId: 'uuid' } } })
+  async botEnrollInFair(@Body() dto: BotEnrollDto) {
+    return this.visitorsService.enrollInFair(dto.registrationCode, dto.fairId);
   }
 
   @Post('sync-prospects')

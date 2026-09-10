@@ -489,6 +489,107 @@ export class VisitorsService {
     });
   }
 
+  // ── Lookup por telefone pro bot do WhatsApp (canal confiável) ─────────────
+  //
+  // Diferente de lookupVisitors (público, exige ≥2 campos) e checkExisting
+  // (público, dado mascarado): aqui quem chama já provou posse do número (é
+  // o WhatsApp dela mandando a mensagem), então devolve o dado completo pra
+  // Emmelly confirmar naturalmente ("é a Ana da Loja X, certo?"). Protegido
+  // pelo BotApiKeyGuard — nunca exposto sem autenticação.
+
+  async lookupVisitorByPhoneForBot(phone: string): Promise<
+    | { found: false }
+    | {
+        found: true;
+        registrationCode: string;
+        name: string;
+        company: string;
+        email: string;
+        cnpj: string;
+        phone: string;
+        zipCode: string;
+        street: string | null;
+        number: string | null;
+        complement: string | null;
+        neighborhood: string | null;
+        city: string | null;
+        state: string | null;
+        sectors: string[];
+        howDidYouKnow: string;
+        category: string;
+        missingFields: string[];
+        fairHistory: Array<{
+          fairId: string;
+          fairName: string;
+          state: string | null;
+          startDate: Date | null;
+        }>;
+      }
+  > {
+    const cleanPhone = (phone ?? '').replace(/\D/g, '');
+    if (!cleanPhone) {
+      throw new BadRequestException('Telefone inválido.');
+    }
+
+    const visitor = await this.visitorRepository
+      .createQueryBuilder('visitor')
+      .leftJoinAndSelect('visitor.fair_visitor', 'fair')
+      .where(
+        'REPLACE(REPLACE(REPLACE(REPLACE(visitor.phone," ",""),"-",""),"(",""),")","") = :phone',
+        { phone: cleanPhone },
+      )
+      .orderBy('visitor.registrationDate', 'DESC')
+      .getOne();
+
+    if (!visitor) {
+      return { found: false };
+    }
+
+    const REQUIRED_FIELDS: Array<keyof Visitor> = [
+      'name',
+      'company',
+      'email',
+      'cnpj',
+      'phone',
+      'zipCode',
+      'sectors',
+      'howDidYouKnow',
+      'category',
+    ];
+    const missingFields = REQUIRED_FIELDS.filter((f) => {
+      const val = visitor[f];
+      if (Array.isArray(val)) return val.length === 0;
+      return !val;
+    }) as string[];
+
+    return {
+      found: true,
+      registrationCode: visitor.registrationCode,
+      name: visitor.name,
+      company: visitor.company,
+      email: visitor.email,
+      cnpj: visitor.cnpj,
+      phone: visitor.phone,
+      zipCode: visitor.zipCode,
+      street: visitor.street ?? null,
+      number: visitor.number ?? null,
+      complement: visitor.complement ?? null,
+      neighborhood: visitor.neighborhood ?? null,
+      city: visitor.city ?? null,
+      state: visitor.state ?? null,
+      sectors: visitor.sectors ?? [],
+      howDidYouKnow: visitor.howDidYouKnow,
+      category: visitor.category,
+      missingFields,
+      fairHistory: (visitor.fair_visitor ?? []).map((f) => ({
+        fairId: f.id,
+        fairName: f.name,
+        state: f.state ?? null,
+        startDate: f.startDate ?? null,
+      })),
+    };
+  }
+
   // ── Enroll visitante existente em nova feira ──────────────────────────────
 
   /**
