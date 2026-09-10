@@ -1,6 +1,6 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import {
   ForgotPasswordDto,
@@ -19,6 +19,7 @@ export class AuthController {
 
   @Post('login')
   @IsPublicRoute()
+  @UseGuards(ThrottlerGuard)
   @Throttle(AUTH_THROTTLE)
   @ApiOperation({ summary: 'Login', description: 'Autentica o usuário e retorna o token JWT.' })
   @ApiBody({ type: LoginDto })
@@ -39,6 +40,7 @@ export class AuthController {
 
   @Post('forgot-password')
   @IsPublicRoute()
+  @UseGuards(ThrottlerGuard)
   @Throttle(AUTH_THROTTLE)
   @ApiOperation({
     summary: 'Solicitar recuperação de senha',
@@ -52,6 +54,7 @@ export class AuthController {
 
   @Post('reset-password')
   @IsPublicRoute()
+  @UseGuards(ThrottlerGuard)
   @Throttle(AUTH_THROTTLE)
   @ApiOperation({
     summary: 'Redefinir senha',
@@ -66,6 +69,7 @@ export class AuthController {
 
   @Post('first-access')
   @IsPublicRoute()
+  @UseGuards(ThrottlerGuard)
   @Throttle(AUTH_THROTTLE)
   @ApiOperation({
     summary: 'Primeiro acesso',

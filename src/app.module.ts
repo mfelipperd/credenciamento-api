@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { databaseConfig } from './config/database.config';
 import { VisitorsModule } from './modules/visitors/visitors.module';
 import { UsersModule } from './modules/users/users.module';
@@ -29,7 +29,6 @@ import { PushModule } from './modules/push/push.module';
 @Module({
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_FILTER, useClass: MySqlFilter },
     CategoriesService,
   ],
