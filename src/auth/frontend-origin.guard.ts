@@ -19,6 +19,8 @@ export class FrontendOriginGuard implements CanActivate {
       'https://credenciamento-frontend.vercel.app', // Production
       'https://www.expomultimix.com', // Production www
       'https://expo-mm-site.vercel.app', // Production new
+      'https://credenciamento.expomultimix.com.br', // Production - módulo credenciamento
+      'https://gestao.expomultimix.com.br', // Production - gestão completa
     ];
   }
 

@@ -27,6 +27,8 @@ async function bootstrap() {
       'https://www.expomultimix.com',
       'https://www.expomultimix.com.br',
       'https://expo-mm-site.vercel.app',
+      'https://credenciamento.expomultimix.com.br',
+      'https://gestao.expomultimix.com.br',
     ],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'x-frontend-auth'],
