@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, createHash } from 'node:crypto';
+import * as bcrypt from 'bcrypt';
 import { OAuthClient } from './entities/oauth-client.entity';
 import { OAuthAuthorizationCode } from './entities/oauth-authorization-code.entity';
 import { OAuthRefreshToken } from './entities/oauth-refresh-token.entity';
@@ -115,7 +116,22 @@ export class OAuthService {
     await this.getValidClient(dto.client_id, dto.redirect_uri);
 
     const user = await this.usersService.findByEmail(dto.email);
-    if (!user || dto.password !== user.password) {
+    if (!user) {
+      throw new UnauthorizedException('Email ou senha inválidos');
+    }
+
+    const isBcryptHash = user.password.startsWith('$2');
+    let isValidPassword = false;
+
+    if (isBcryptHash) {
+      isValidPassword = await bcrypt.compare(dto.password, user.password);
+    } else if (dto.password === user.password) {
+      // Conta ainda não migrada pro hash — migra silenciosamente nesse login
+      isValidPassword = true;
+      await this.usersService.setPassword(user.id, dto.password);
+    }
+
+    if (!isValidPassword) {
       throw new UnauthorizedException('Email ou senha inválidos');
     }
     if (user.role !== EUserRole.ADMIN) {
