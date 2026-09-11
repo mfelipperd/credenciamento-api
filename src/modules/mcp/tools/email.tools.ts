@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { EmailsService } from 'src/modules/emails/emails.service';
+import { ProspectType } from 'src/modules/prospecting/entities/prospect.entity';
 import { McpRequestUser } from '../oauth/mcp-auth.guard';
 import { textResult, registerToolWithInput, assertFairAccess } from './common';
 
@@ -109,6 +110,68 @@ export function registerEmailTools(
       idempotentHint: false,
       openWorldHint: true,
       title: 'Enviar campanha para expositores (ação real, irreversível)',
+    },
+  );
+
+  registerToolWithInput(
+    server,
+    'preview_prospect_marketing_email',
+    'Prepara uma campanha de email marketing para prospects (leads) de uma feira. SEMPRE exige o tipo — EXPOSITOR (fábrica/fornecedor candidato a comprar estande) ou VISITANTE (lojista candidato a visitar a feira) — os dois públicos nunca são misturados no mesmo envio. Exclui prospects com status DESCARTADO. Retorna quantos prospects receberiam o envio, SEM enviar nada. Use antes de send_prospect_marketing_email.',
+    {
+      title: z
+        .string()
+        .describe('título interno da campanha (para o painel de campanhas)'),
+      subject: z
+        .string()
+        .describe(
+          'assunto do email. Pode incluir {{VISITOR_NAME}} para personalizar com o nome do destinatário.',
+        ),
+      htmlContent: z
+        .string()
+        .describe(
+          'HTML completo do email. Pode incluir {{VISITOR_NAME}} no corpo para personalização.',
+        ),
+      fairId: z
+        .string()
+        .describe('id da feira alvo dos prospects, obtido via list_fairs'),
+      type: z
+        .enum(['EXPOSITOR', 'VISITANTE'])
+        .describe(
+          'EXPOSITOR = fábrica/fornecedor candidato a expositor | VISITANTE = lojista candidato a visitante. Obrigatório, pergunte ao usuário se não estiver claro qual público ele quer atingir.',
+        ),
+    },
+    async ({ title, subject, htmlContent, fairId, type }) => {
+      assertFairAccess(user, fairId);
+      return textResult(
+        await emailsService.previewProspectMarketingEmail({
+          title,
+          subject,
+          htmlContent,
+          fairId,
+          type: type as ProspectType,
+        }),
+      );
+    },
+    { readOnlyHint: true, title: 'Pré-visualizar campanha para prospects' },
+  );
+
+  registerToolWithInput(
+    server,
+    'send_prospect_marketing_email',
+    'ENVIA DE VERDADE uma campanha de email marketing para prospects (leads) de um tipo específico (EXPOSITOR ou VISITANTE). Exige um previewId obtido via preview_prospect_marketing_email — sempre confirme os números e o tipo do preview com o usuário antes de chamar esta tool.',
+    {
+      previewId: z
+        .string()
+        .describe('id retornado por preview_prospect_marketing_email'),
+    },
+    async ({ previewId }) =>
+      textResult(await emailsService.confirmProspectMarketingEmail(previewId)),
+    {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+      title: 'Enviar campanha para prospects (ação real, irreversível)',
     },
   );
 

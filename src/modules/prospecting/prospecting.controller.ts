@@ -136,8 +136,8 @@ CNPJs já cadastrados para a feira são ignorados.`,
 
   @Get('fairs/:fairId/prospects/analytics/geo')
   @ApiOperation({
-    summary: 'Analytics geográfico — mapa de calor de onde vêm os lojistas',
-    description: `Retorna distribuição geográfica dos prospects em múltiplos níveis:
+    summary: 'Analytics geográfico — mapa de calor de onde vêm os lojistas (ou expositores, via ?type=)',
+    description: `Retorna distribuição geográfica dos prospects em múltiplos níveis, filtrado por \`type\` (padrão VISITANTE — nunca mistura os dois públicos):
 - **byState**: contagem por UF com percentual — dados para choropleth do mapa do Brasil
 - **byCity**: top 50 cidades com contagem — dados para treemap / mapa de marcadores
 - **byNeighborhood**: top 100 bairros (endereço registrado da empresa no CNPJ) — ranking de densidade
@@ -147,6 +147,7 @@ CNPJs já cadastrados para a feira são ignorados.`,
 > Os dados de bairro são preenchidos após o enriquecimento via BrasilAPI (\`POST /prospects/enrich-all\`).`,
   })
   @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
+  @ApiQuery({ name: 'type', required: false, enum: ProspectType, description: 'EXPOSITOR = comprador de stand | VISITANTE = lojista (padrão). Nunca mistura os dois no mesmo agregado.' })
   @ApiResponse({
     status: 200,
     description: 'Dados geográficos para mapa',
@@ -166,14 +167,17 @@ CNPJs já cadastrados para a feira são ignorados.`,
     },
   })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
-  async getGeoAnalytics(@Param('fairId', ParseUUIDPipe) fairId: string) {
-    return this.service.getGeoAnalytics(fairId);
+  async getGeoAnalytics(
+    @Param('fairId', ParseUUIDPipe) fairId: string,
+    @Query('type') type?: ProspectType,
+  ) {
+    return this.service.getGeoAnalytics(fairId, type);
   }
 
   @Get('fairs/:fairId/prospects/analytics')
   @ApiOperation({
-    summary: 'Analytics completo de prospects da feira',
-    description: `Retorna dados consolidados para os dashboards de audiência:
+    summary: 'Analytics completo de prospects da feira (VISITANTE por padrão, use ?type= para EXPOSITOR)',
+    description: `Retorna dados consolidados para os dashboards de audiência, filtrado por \`type\` (padrão VISITANTE — nunca mistura os dois públicos, exceto em \`overview.byType\` que mostra a contagem bruta dos dois):
 - **overview**: totais, taxa de conversão, contatos com e-mail/telefone
 - **funnel**: distribuição por status (NOVO → CONVERTIDO)
 - **sectorDistribution**: prospects agrupados por setor CNAE
@@ -182,10 +186,14 @@ CNPJs já cadastrados para a feira são ignorados.`,
 - **charts**: dados prontos para ApexCharts (donut, bar, horizontal bar)`,
   })
   @ApiParam({ name: 'fairId', description: 'ID da feira (UUID)' })
+  @ApiQuery({ name: 'type', required: false, enum: ProspectType, description: 'EXPOSITOR = comprador de stand | VISITANTE = lojista (padrão). Nunca mistura os dois no mesmo agregado.' })
   @ApiResponse({ status: 200, description: 'Analytics completo com dados para gráficos' })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
-  async getAnalytics(@Param('fairId', ParseUUIDPipe) fairId: string) {
-    return this.service.getAnalytics(fairId);
+  async getAnalytics(
+    @Param('fairId', ParseUUIDPipe) fairId: string,
+    @Query('type') type?: ProspectType,
+  ) {
+    return this.service.getAnalytics(fairId, type);
   }
 
   @Get('fairs/:fairId/prospects/:id')

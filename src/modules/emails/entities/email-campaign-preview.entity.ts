@@ -34,6 +34,10 @@ export class EmailCampaignPreview {
   @Column({ type: 'varchar', length: 10, nullable: true })
   sendTo: string | null;
 
+  // Só usado quando sendTo = 'prospects' — EXPOSITOR ou VISITANTE, nunca os dois juntos.
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  prospectType: string | null;
+
   // Advanced multi-fair segmentation — set instead of the legacy fields above
   // when the preview was built with audienceQuery.
   @Column({ type: 'simple-json', nullable: true })

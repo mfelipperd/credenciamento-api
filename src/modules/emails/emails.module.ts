@@ -10,6 +10,7 @@ import { Fair } from '../fairs/entity/fair.entity';
 import { EmailCampaign } from './entities/email-campaign.entity';
 import { EmailCampaignPreview } from './entities/email-campaign-preview.entity';
 import { ExhibitorMember } from '../exhibitors/entities/exhibitor-member.entity';
+import { Prospect } from '../prospecting/entities/prospect.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ExhibitorMember } from '../exhibitors/entities/exhibitor-member.entity'
       EmailCampaign,
       EmailCampaignPreview,
       ExhibitorMember,
+      Prospect,
     ]),
     FairsModule,
     BullModule.registerQueue({ name: EMAIL_QUEUE }),

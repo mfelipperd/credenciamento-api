@@ -506,9 +506,9 @@ export class ProspectingService {
     SE: [-37.447,-10.574],  SP: [-48.549,-22.974],  TO: [-48.333,-10.181],
   };
 
-  async getGeoAnalytics(fairId: string) {
+  async getGeoAnalytics(fairId: string, type: ProspectType = ProspectType.VISITANTE) {
     const [all, fair] = await Promise.all([
-      this.repo.find({ where: { fairId } }),
+      this.repo.find({ where: { fairId, type } }),
       this.fairRepo.findOne({ where: { id: fairId } }),
     ]);
     const total = all.length;
@@ -734,13 +734,16 @@ export class ProspectingService {
 
   // ─── Analytics ─────────────────────────────────────────────────────────────
 
-  async getAnalytics(fairId: string) {
-    const all = await this.repo.find({ where: { fairId } });
+  async getAnalytics(fairId: string, type: ProspectType = ProspectType.VISITANTE) {
+    const [all, byTypeCounts] = await Promise.all([
+      this.repo.find({ where: { fairId, type } }),
+      this.repo.find({ where: { fairId }, select: ['type'] }),
+    ]);
 
     const total = all.length;
     const byType = {
-      expositores: all.filter((p) => p.type === ProspectType.EXPOSITOR).length,
-      visitantes: all.filter((p) => p.type === ProspectType.VISITANTE).length,
+      expositores: byTypeCounts.filter((p) => p.type === ProspectType.EXPOSITOR).length,
+      visitantes: byTypeCounts.filter((p) => p.type === ProspectType.VISITANTE).length,
     };
 
     // Funil de conversão

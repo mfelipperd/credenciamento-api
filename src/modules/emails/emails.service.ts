@@ -23,6 +23,11 @@ import {
 } from 'src/utils/emailLayoutGenerator';
 import { AudienceCondition, AudienceQuery } from './types/audience-query';
 import { ExhibitorMember } from '../exhibitors/entities/exhibitor-member.entity';
+import {
+  Prospect,
+  ProspectStatus,
+  ProspectType,
+} from '../prospecting/entities/prospect.entity';
 
 const PREVIEW_TTL_MINUTES = 15;
 
@@ -48,6 +53,8 @@ export class EmailsService {
     private readonly visitorsRepository: Repository<Visitor>,
     @InjectRepository(ExhibitorMember)
     private readonly exhibitorMembersRepository: Repository<ExhibitorMember>,
+    @InjectRepository(Prospect)
+    private readonly prospectsRepository: Repository<Prospect>,
     @InjectRepository(EmailCampaign)
     private readonly campaignRepository: Repository<EmailCampaign>,
     @InjectRepository(EmailCampaignPreview)
@@ -720,6 +727,42 @@ export class EmailsService {
     return { recipients, filtered, suppressedCount };
   }
 
+  // Prospects (leads) sempre filtrados por type — EXPOSITOR e VISITANTE nunca
+  // podem ser misturados no mesmo envio. Exclui DESCARTADO (lead já recusada).
+  private async resolveProspectMarketingRecipients(
+    fairId: string,
+    type: ProspectType,
+  ) {
+    const rows = await this.prospectsRepository
+      .createQueryBuilder('prospect')
+      .where('prospect.fairId = :fairId', { fairId })
+      .andWhere('prospect.type = :type', { type })
+      .andWhere('prospect.status != :discarded', {
+        discarded: ProspectStatus.DESCARTADO,
+      })
+      .andWhere('prospect.email IS NOT NULL')
+      .andWhere("TRIM(prospect.email) <> ''")
+      .select('prospect.email', 'email')
+      .addSelect(
+        'MAX(COALESCE(prospect.nomeFantasia, prospect.razaoSocial))',
+        'name',
+      )
+      .groupBy('prospect.email')
+      .getRawMany<{ email: string; name: string }>();
+
+    const deduped = new Map<string, { email: string; name: string }>();
+    for (const row of rows) {
+      const email = row.email.trim().toLowerCase();
+      if (!email || deduped.has(email)) continue;
+      deduped.set(email, { email, name: row.name?.trim() || email });
+    }
+
+    const recipients = [...deduped.values()];
+    const { filtered, suppressedCount } = await this.filterBlocked(recipients);
+
+    return { recipients, filtered, suppressedCount };
+  }
+
   // Shared by confirmMarketingEmail's audienceQuery path. sendMarketingEmail (the
   // legacy direct-send path used by the existing frontend endpoint) is untouched
   // and does its own persist+enqueue — kept separate deliberately to avoid any
@@ -910,6 +953,9 @@ export class EmailsService {
     if (preview.sendTo === 'exhibitors') {
       return this.confirmExhibitorMarketingEmail(previewId);
     }
+    if (preview.sendTo === 'prospects') {
+      return this.confirmProspectMarketingEmail(previewId);
+    }
 
     preview.used = true;
     await this.campaignPreviewRepository.save(preview);
@@ -1071,6 +1117,123 @@ export class EmailsService {
       targetFairId: preview.targetFairId,
       audienceQuery: null,
       sendTo: 'exhibitors',
+      recipients,
+      filtered,
+      suppressedCount,
+    });
+  }
+
+  async previewProspectMarketingEmail(params: {
+    title: string;
+    subject: string;
+    htmlContent: string;
+    fairId: string;
+    type: ProspectType;
+  }) {
+    const fair = await this.fairsService.findOne(params.fairId);
+    if (!fair) {
+      throw new BadRequestException('Feira destino não encontrada.');
+    }
+
+    const { recipients, filtered, suppressedCount } =
+      await this.resolveProspectMarketingRecipients(params.fairId, params.type);
+
+    const expiresAt = new Date(Date.now() + PREVIEW_TTL_MINUTES * 60 * 1000);
+    const preview = this.campaignPreviewRepository.create({
+      title: params.title,
+      subject: params.subject,
+      htmlContent: params.htmlContent,
+      targetFairId: params.fairId,
+      templateFairId: null,
+      additionalFairIds: [],
+      sendTo: 'prospects',
+      prospectType: params.type,
+      audienceQuery: null,
+      totalRecipients: recipients.length,
+      suppressedByBrevo: suppressedCount,
+      used: false,
+      expiresAt,
+    });
+
+    const saved = await this.campaignPreviewRepository.save(preview);
+
+    return {
+      previewId: saved.id,
+      title: params.title,
+      subject: params.subject,
+      audience: {
+        fair: fair.name,
+        type: params.type,
+        sendTo: 'prospects',
+        note: `Destinatários: prospects tipo ${params.type} desta feira, com e-mail válido e status diferente de DESCARTADO.`,
+      },
+      totalRecipients: recipients.length,
+      suppressedByBrevo: suppressedCount,
+      totalWouldBeQueued: filtered.length,
+      expiresAt,
+      note: 'Nenhum email foi enviado. Chame send_prospect_marketing_email com este previewId para enviar de verdade.',
+    };
+  }
+
+  async confirmProspectMarketingEmail(previewId: string) {
+    const preview = await this.campaignPreviewRepository.findOne({
+      where: { id: previewId },
+    });
+    if (!preview) {
+      throw new NotFoundException('Preview não encontrado');
+    }
+    if (preview.used) {
+      throw new BadRequestException('Este preview já foi enviado');
+    }
+    if (preview.expiresAt < new Date()) {
+      throw new BadRequestException(
+        'Preview expirado — gere um novo com preview_prospect_marketing_email',
+      );
+    }
+    if (!preview.targetFairId || !preview.prospectType) {
+      throw new BadRequestException(
+        'Preview de prospects sem feira/tipo alvo — gere um novo preview.',
+      );
+    }
+
+    preview.used = true;
+    await this.campaignPreviewRepository.save(preview);
+
+    const { recipients, filtered, suppressedCount } =
+      await this.resolveProspectMarketingRecipients(
+        preview.targetFairId,
+        preview.prospectType as ProspectType,
+      );
+
+    if (recipients.length === 0) {
+      return {
+        success: true,
+        message: 'Nenhum prospect elegível encontrado para os critérios informados',
+        totalRecipients: 0,
+        suppressedByBrevo: 0,
+        totalQueued: 0,
+        status: 'QUEUED',
+      };
+    }
+
+    if (filtered.length === 0) {
+      return {
+        success: true,
+        message: 'Todos os destinatários estão na lista de supressão da Brevo',
+        totalRecipients: recipients.length,
+        suppressedByBrevo: suppressedCount,
+        totalQueued: 0,
+        status: 'SUPPRESSED',
+      };
+    }
+
+    return this.persistCampaignAndEnqueue({
+      title: preview.title,
+      subject: preview.subject,
+      htmlContent: preview.htmlContent,
+      targetFairId: preview.targetFairId,
+      audienceQuery: null,
+      sendTo: 'prospects',
       recipients,
       filtered,
       suppressedCount,
