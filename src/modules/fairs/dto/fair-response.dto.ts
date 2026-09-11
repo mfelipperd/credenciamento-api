@@ -68,6 +68,7 @@ export class FairResponseDto {
   @ApiProperty({ required: false }) edition?: string | null;
   @ApiProperty({ required: false }) description?: string | null;
   @ApiProperty({ required: false }) bannerUrl?: string | null;
+  @ApiProperty({ required: false }) floorPlanUrl?: string | null;
   @ApiProperty({ enum: FairStatus }) status: FairStatus;
   @ApiProperty() isActive: boolean;
   @ApiProperty() createdAt: Date;
@@ -145,6 +146,7 @@ export class FairResponseDto {
     this.edition = fair.edition ?? null;
     this.description = fair.description ?? null;
     this.bannerUrl = fair.bannerUrl ?? null;
+    this.floorPlanUrl = fair.floorPlanUrl ?? null;
     this.status = fair.status ?? FairStatus.UPCOMING;
     this.isActive = fair.isActive;
     this.createdAt = fair.createdAt;

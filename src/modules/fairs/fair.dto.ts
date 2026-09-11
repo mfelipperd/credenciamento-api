@@ -65,6 +65,13 @@ export class CreateInputFairDto {
   @Length(1, 500)
   bannerUrl?: string;
 
+  /** Caminho (relativo ao site público) ou URL da planta SVG interativa do
+   * pavilhão, usada na reserva online de stand. Ex: /floor-plans/xyz.svg */
+  @IsOptional()
+  @IsString()
+  @Length(1, 500)
+  floorPlanUrl?: string;
+
   @IsOptional()
   @IsEnum(FairStatus)
   status?: FairStatus;
