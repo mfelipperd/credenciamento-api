@@ -25,6 +25,7 @@ import { ProspectingModule } from './modules/prospecting/prospecting.module';
 import { McpModule } from './modules/mcp/mcp.module';
 import { ExhibitorsModule } from './modules/exhibitors/exhibitors.module';
 import { ExhibitorAuthModule } from './modules/exhibitor-auth/exhibitor-auth.module';
+import { StandReservationsModule } from './modules/stand-reservations/stand-reservations.module';
 import { PushModule } from './modules/push/push.module';
 
 @Module({
@@ -68,6 +69,7 @@ import { PushModule } from './modules/push/push.module';
     McpModule,
     ExhibitorsModule,
     ExhibitorAuthModule,
+    StandReservationsModule,
     PushModule,
   ],
   controllers: [],

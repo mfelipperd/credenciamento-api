@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Fair } from './fair.entity';
+import { EntryModel } from '../../finance/entry-models/entities/entry-model.entity';
 
 @Entity('stand_configurations')
 export class StandConfiguration {
@@ -19,6 +20,15 @@ export class StandConfiguration {
 
   @Column({ length: 50 })
   name: string; // Ex: "Stand 2x3", "Stand 3x3", "Stand 4x4"
+
+  /** Modelo de lançamento financeiro correspondente — usado pra gerar a Revenue
+   * automaticamente quando uma reserva online desse tipo de stand é paga. */
+  @Column({ type: 'uuid', nullable: true })
+  entryModelId: string | null;
+
+  @ManyToOne(() => EntryModel, { nullable: true })
+  @JoinColumn({ name: 'entryModelId' })
+  entryModel?: EntryModel;
 
   @Column({ type: 'int' })
   width: number; // Largura em metros

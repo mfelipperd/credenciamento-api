@@ -41,8 +41,9 @@ export async function ensureSchema(dataSource: DataSource): Promise<void> {
 
 /**
  * Schema para a reserva de stand com pagamento online (expositor auto-atendido
- * via Mercado Pago): vínculo stand↔tipo, hold temporário, conta de acesso do
- * expositor e o ciclo de vida do pagamento.
+ * via InfinitePay): vínculo stand↔tipo, hold temporário, conta de acesso do
+ * expositor e o ciclo de vida do pagamento (pode cobrir vários stands numa
+ * única cobrança, ver stand_reservation_items).
  */
 async function ensureStandOnlineCheckoutSchema(
   dataSource: DataSource,
@@ -88,6 +89,24 @@ async function ensureStandOnlineCheckoutSchema(
     await dataSource.query(`
       ALTER TABLE stands ADD CONSTRAINT fk_stands_stand_configuration
         FOREIGN KEY (stand_configuration_id) REFERENCES stand_configurations(id) ON DELETE SET NULL
+    `);
+  }
+
+  // Vínculo entre o tipo do stand exibido no mapa/site (stand_configurations)
+  // e o modelo de lançamento financeiro (finance_entry_models) — sem isso não
+  // dá pra gerar a Revenue automaticamente quando uma reserva online é paga.
+  const [entryModelColumn] = await dataSource.query(
+    `SELECT column_name FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = 'stand_configurations' AND column_name = 'entryModelId'`,
+  );
+  if (!entryModelColumn) {
+    logger.log('Adicionando coluna stand_configurations.entryModelId...');
+    await dataSource.query(
+      `ALTER TABLE stand_configurations ADD COLUMN entryModelId VARCHAR(36) NULL`,
+    );
+    await dataSource.query(`
+      ALTER TABLE stand_configurations ADD CONSTRAINT fk_stand_configurations_entry_model
+        FOREIGN KEY (entryModelId) REFERENCES finance_entry_models(id) ON DELETE SET NULL
     `);
   }
 
@@ -149,31 +168,64 @@ async function ensureStandOnlineCheckoutSchema(
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   `);
 
+  // stand_reservation_payments nunca chegou a ser usada de verdade (nenhum
+  // código grava nela ainda) — o formato foi mudando enquanto o gateway de
+  // pagamento era decidido (Mercado Pago, formato final). Sempre que a
+  // tabela existir sem bater com o formato atual, ela é recriada do zero —
+  // seguro só porque nunca teve nenhuma escrita real.
+  const [currentShapeColumn] = await dataSource.query(
+    `SELECT column_name FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = 'stand_reservation_payments' AND column_name = 'mpOrderId'`,
+  );
+  if (!currentShapeColumn) {
+    const [tableExists] = await dataSource.query(
+      `SELECT table_name FROM information_schema.tables
+       WHERE table_schema = DATABASE() AND table_name = 'stand_reservation_payments'`,
+    );
+    if (tableExists) {
+      logger.log('Recriando stand_reservation_payments pro formato atual (comprador sem conta ainda)...');
+      // stand_reservation_items referencia essa tabela — precisa cair primeiro.
+      await dataSource.query(`DROP TABLE IF EXISTS stand_reservation_items`);
+      await dataSource.query(`DROP TABLE stand_reservation_payments`);
+    }
+  }
+
   await dataSource.query(`
     CREATE TABLE IF NOT EXISTS stand_reservation_payments (
       id VARCHAR(36) PRIMARY KEY,
-      standId INT NOT NULL,
-      exhibitorAccountId VARCHAR(36) NOT NULL,
       fairId VARCHAR(36) NOT NULL,
-      paymentMethod ENUM('PIX', 'BOLETO', 'CARTAO', 'TED', 'DINHEIRO') NOT NULL,
+      buyerCompanyName VARCHAR(255) NOT NULL,
+      buyerCnpj VARCHAR(20) NULL,
+      buyerEmail VARCHAR(255) NOT NULL,
+      buyerPhone VARCHAR(30) NULL,
+      exhibitorAccountId VARCHAR(36) NULL,
       status ENUM('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
-      installments INT NOT NULL DEFAULT 1,
       amountCents BIGINT NOT NULL,
-      interestCents BIGINT NOT NULL DEFAULT 0,
-      mpPaymentId VARCHAR(64) NULL,
-      mpPreferenceId VARCHAR(64) NULL,
+      mpOrderId VARCHAR(64) NULL,
+      mpStatus VARCHAR(32) NULL,
+      paymentMethodId VARCHAR(32) NULL,
+      installments INT NULL,
       pixQrCode TEXT NULL,
       pixQrCodeBase64 LONGTEXT NULL,
-      pixCopyPaste TEXT NULL,
-      boletoUrl VARCHAR(512) NULL,
-      boletoBarcode VARCHAR(128) NULL,
       createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      CONSTRAINT fk_stand_reservation_payments_stand FOREIGN KEY (standId) REFERENCES stands(id) ON DELETE CASCADE,
-      CONSTRAINT fk_stand_reservation_payments_exhibitor_account FOREIGN KEY (exhibitorAccountId) REFERENCES exhibitor_accounts(id) ON DELETE CASCADE,
+      CONSTRAINT fk_stand_reservation_payments_exhibitor_account FOREIGN KEY (exhibitorAccountId) REFERENCES exhibitor_accounts(id) ON DELETE SET NULL,
       CONSTRAINT fk_stand_reservation_payments_fair FOREIGN KEY (fairId) REFERENCES fairs(id) ON DELETE CASCADE,
-      UNIQUE INDEX idx_stand_reservation_payments_mp_payment (mpPaymentId),
-      INDEX idx_stand_reservation_payments_stand (standId, status)
+      UNIQUE INDEX idx_stand_reservation_payments_mp_order (mpOrderId),
+      INDEX idx_stand_reservation_payments_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  `);
+
+  await dataSource.query(`
+    CREATE TABLE IF NOT EXISTS stand_reservation_items (
+      id VARCHAR(36) PRIMARY KEY,
+      reservationPaymentId VARCHAR(36) NOT NULL,
+      standId INT NOT NULL,
+      priceCents BIGINT NOT NULL,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT fk_stand_reservation_items_payment FOREIGN KEY (reservationPaymentId) REFERENCES stand_reservation_payments(id) ON DELETE CASCADE,
+      CONSTRAINT fk_stand_reservation_items_stand FOREIGN KEY (standId) REFERENCES stands(id) ON DELETE CASCADE,
+      INDEX idx_stand_reservation_items_stand (standId)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   `);
 }
