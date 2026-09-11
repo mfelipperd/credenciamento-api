@@ -7,12 +7,17 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
+import { ExpensesService } from '../finance/expenses/expenses.service';
+import { getChannelPerformanceWithCostData } from '../mcp/tools/channel.tools';
 
 @ApiTags('Dashboard')
 @ApiBearerAuth('JWT-auth')
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) {}
+  constructor(
+    private readonly dashboardService: DashboardService,
+    private readonly expensesService: ExpensesService,
+  ) {}
 
   @Get('overview')
   @ApiOperation({ summary: 'Visão geral da feira', description: 'Retorna um resumo consolidado com inscrições, check-ins e receitas.' })
@@ -96,11 +101,50 @@ export class DashboardController {
   }
 
   @Get('conversions/how-did-you-know')
-  @ApiOperation({ summary: 'Visitantes por canal de aquisição', description: 'Agrupa visitantes pela resposta "como ficou sabendo" do evento.' })
+  @ApiOperation({
+    summary: 'Visitantes por canal de aquisição',
+    description:
+      'Agrupa visitantes pela resposta "como ficou sabendo" do evento, com o gasto de mídia paga casado por palavra-chave (spend/cpl/cpa). Quando duas respostas compartilham a mesma verba (ex: "instagram" e "facebook" pagos pela mesma despesa de Meta Ads), o campo sharedWithChannels avisa quais — o spend não deve ser somado entre elas.',
+  })
   @ApiQuery({ name: 'fairId', required: true, description: 'ID da feira' })
-  @ApiResponse({ status: 200, description: 'Contagem por canal', schema: { example: [{ channel: 'Instagram', count: 130 }, { channel: 'Indicação', count: 60 }] } })
+  @ApiResponse({
+    status: 200,
+    description: 'Contagem por canal, com custo',
+    schema: {
+      example: {
+        fairId: '...',
+        conversions: [
+          {
+            howDidYouKnow: 'instagram',
+            totalRegistered: 307,
+            visitorsWithCheckins: 79,
+            totalCheckIns: 89,
+            conversionRate: 25.73,
+            percentOfTotal: 34.2,
+            spend: 8397.83,
+            cpl: 27.35,
+            cpa: 106.3,
+            sharedWithChannels: ['facebook'],
+          },
+        ],
+      },
+    },
+  })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
   async getConversionsByHowDidYouKnow(@Query('fairId') fairId: string) {
-    return this.dashboardService.getConversionsByHowDidYouKnow(fairId);
+    const { totalVisitors, channels } = await getChannelPerformanceWithCostData(
+      this.dashboardService,
+      this.expensesService,
+      fairId,
+    );
+
+    return {
+      fairId,
+      totalVisitors,
+      conversions: channels.map(({ channel, ...rest }) => ({
+        howDidYouKnow: channel,
+        ...rest,
+      })),
+    };
   }
 }

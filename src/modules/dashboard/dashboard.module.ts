@@ -5,9 +5,13 @@ import { DashboardController } from './dashboard.controller';
 import { Visitor } from '../visitors/entities/visitor.entity';
 import { CheckIn } from '../checkins/entity/checkins.entity';
 import { Fair } from '../fairs/entity/fair.entity';
+import { ExpensesModule } from '../finance/expenses/expenses.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Visitor, CheckIn, Fair])],
+  imports: [
+    TypeOrmModule.forFeature([Visitor, CheckIn, Fair]),
+    ExpensesModule,
+  ],
   providers: [DashboardService],
   controllers: [DashboardController],
   exports: [DashboardService],
