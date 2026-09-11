@@ -60,6 +60,11 @@ export class PublicFairDetailDto {
   @ApiProperty({ required: false }) edition?: string | null;
   @ApiProperty({ required: false }) description?: string | null;
   @ApiProperty({ required: false }) bannerUrl?: string | null;
+  @ApiProperty({
+    required: false,
+    description: 'URL da planta SVG interativa do pavilhão, pra reserva online de stand',
+  })
+  floorPlanUrl?: string | null;
   @ApiProperty({ enum: FairStatus }) status: FairStatus;
 
   // Local

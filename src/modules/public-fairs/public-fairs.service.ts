@@ -52,6 +52,13 @@ export class PublicFairsService {
     return this.toDetail(fair, brands, standStats.available);
   }
 
+  async getStandMap(fairId: string) {
+    const fair = await this.fairRepository.findOne({ where: { id: fairId } });
+    if (!fair) throw new NotFoundException('Feira não encontrada');
+
+    return this.standsService.getPublicStandMap(fairId);
+  }
+
   private toSummary(fair: Fair, standsAvailable: number): PublicFairSummaryDto {
     return {
       id: fair.id,
@@ -77,6 +84,7 @@ export class PublicFairsService {
       edition: fair.edition ?? null,
       description: fair.description ?? null,
       bannerUrl: fair.bannerUrl ?? null,
+      floorPlanUrl: fair.floorPlanUrl ?? null,
       status: fair.status,
 
       venueName: fair.venueName ?? null,

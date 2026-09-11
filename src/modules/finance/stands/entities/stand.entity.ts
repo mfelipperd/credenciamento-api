@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Fair } from '../../../fairs/entity/fair.entity';
 import { Revenue } from '../../revenues/entities/revenue.entity';
+import { StandConfiguration } from '../../../fairs/entity/stand-configuration.entity';
 
 @Entity('stands')
 export class Stand {
@@ -28,6 +29,15 @@ export class Stand {
   @Column({ name: 'is_available', default: true })
   isAvailable: boolean;
 
+  @Column({ name: 'stand_configuration_id', type: 'uuid', nullable: true })
+  standConfigurationId?: string;
+
+  @Column({ name: 'held_until', type: 'datetime', nullable: true })
+  heldUntil?: Date | null;
+
+  @Column({ name: 'held_by_reservation_id', type: 'uuid', nullable: true })
+  heldByReservationId?: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
@@ -42,4 +52,8 @@ export class Stand {
   @OneToOne(() => Revenue, { nullable: true })
   @JoinColumn({ name: 'revenue_id' })
   revenue?: Revenue;
+
+  @ManyToOne(() => StandConfiguration, { nullable: true })
+  @JoinColumn({ name: 'stand_configuration_id' })
+  standConfiguration?: StandConfiguration;
 }

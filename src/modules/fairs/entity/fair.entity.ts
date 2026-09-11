@@ -44,6 +44,10 @@ export class Fair {
   @Column({ type: 'varchar', length: 500, nullable: true })
   bannerUrl: string | null;
 
+  /** URL da planta SVG interativa do pavilhão, usada na reserva online de stand */
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  floorPlanUrl: string | null;
+
   /** Ciclo de vida: upcoming → ongoing → ended (ou cancelled) */
   @Column({
     type: 'enum',

@@ -9,6 +9,7 @@ import { ExhibitorInvitation } from './entities/exhibitor-invitation.entity';
 import { ExhibitorMember } from './entities/exhibitor-member.entity';
 import { Exhibitor } from './entities/exhibitor.entity';
 import { ExhibitorFinanceClient } from './entities/exhibitor-finance-client.entity';
+import { ExhibitorAccount } from './entities/exhibitor-account.entity';
 import { ExhibitorsController } from './exhibitors.controller';
 import { ExhibitorsService } from './exhibitors.service';
 
@@ -24,6 +25,7 @@ import { ExhibitorsService } from './exhibitors.service';
       ExhibitorInvitation,
       Exhibitor,
       ExhibitorFinanceClient,
+      ExhibitorAccount,
     ]),
   ],
   controllers: [ExhibitorsController],

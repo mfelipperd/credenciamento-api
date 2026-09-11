@@ -7,7 +7,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Stand } from './entities/stand.entity';
 import { Revenue } from '../revenues/entities/revenue.entity';
-import { StandResponseDto, ConfigureFairStandsDto } from './stands.dto';
+import {
+  StandResponseDto,
+  ConfigureFairStandsDto,
+  PublicStandMapItemDto,
+} from './stands.dto';
 
 @Injectable()
 export class StandsService {
@@ -290,6 +294,47 @@ export class StandsService {
       .getRawMany<{ fairId: string; count: string }>();
 
     return Object.fromEntries(results.map((r) => [r.fairId, parseInt(r.count)]));
+  }
+
+  /**
+   * Versão pública do mapa de stands (planta interativa) — só o essencial
+   * pra desenhar a planta e permitir a seleção, mais a marca/logo do
+   * expositor em stands já ocupados (informação que a própria empresa quer
+   * exibir). Nunca inclui dados de contato ou financeiros do
+   * cliente/receita — isso continua exclusivo de getFairStands/
+   * getOccupiedStands, de uso interno do financeiro.
+   */
+  async getPublicStandMap(fairId: string): Promise<PublicStandMapItemDto[]> {
+    const stands = await this.standRepository
+      .createQueryBuilder('stand')
+      .leftJoinAndSelect('stand.standConfiguration', 'standConfiguration')
+      .leftJoinAndSelect('stand.revenue', 'revenue')
+      .leftJoinAndSelect('revenue.client', 'client')
+      .leftJoinAndSelect('client.brands', 'brand')
+      .where('stand.fairId = :fairId', { fairId })
+      .orderBy('stand.standNumber', 'ASC')
+      .addOrderBy('brand.name', 'ASC')
+      .getMany();
+
+    const now = new Date();
+
+    return stands.map((stand) => {
+      const brand = stand.revenue?.client?.brands?.[0];
+      return {
+        id: stand.id,
+        standNumber: stand.standNumber,
+        isAvailable:
+          stand.isAvailable && (!stand.heldUntil || stand.heldUntil < now),
+        standConfigurationId: stand.standConfigurationId,
+        standConfigurationName: stand.standConfiguration?.name,
+        standConfigurationArea: stand.standConfiguration
+          ? stand.standConfiguration.width * stand.standConfiguration.height
+          : undefined,
+        exhibitorName: brand?.name ?? stand.revenue?.client?.name,
+        exhibitorLogoUrl: brand?.logoUrl,
+        standConfigurationPrice: stand.standConfiguration?.totalPrice,
+      };
+    });
   }
 
   async getStandStats(fairId: string): Promise<{

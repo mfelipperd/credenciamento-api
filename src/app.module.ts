@@ -24,6 +24,7 @@ import { PublicFairsModule } from './modules/public-fairs/public-fairs.module';
 import { ProspectingModule } from './modules/prospecting/prospecting.module';
 import { McpModule } from './modules/mcp/mcp.module';
 import { ExhibitorsModule } from './modules/exhibitors/exhibitors.module';
+import { ExhibitorAuthModule } from './modules/exhibitor-auth/exhibitor-auth.module';
 import { PushModule } from './modules/push/push.module';
 
 @Module({
@@ -66,6 +67,7 @@ import { PushModule } from './modules/push/push.module';
     ProspectingModule,
     McpModule,
     ExhibitorsModule,
+    ExhibitorAuthModule,
     PushModule,
   ],
   controllers: [],

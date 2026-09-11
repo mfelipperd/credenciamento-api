@@ -167,6 +167,44 @@ export class StandResponseDto {
   revenueCreatedAt?: Date;
 }
 
+export class PublicStandMapItemDto {
+  @ApiProperty({ description: 'ID do stand', example: 1 })
+  id: number;
+
+  @ApiProperty({ description: 'Número do stand', example: 1 })
+  standNumber: number;
+
+  @ApiProperty({ description: 'Se o stand está disponível para reserva agora' })
+  isAvailable: boolean;
+
+  @ApiProperty({
+    description: 'ID do tipo/configuração de stand (nulo se ainda não associado)',
+    required: false,
+  })
+  standConfigurationId?: string;
+
+  @ApiProperty({ required: false, example: 'Stand 3x3' })
+  standConfigurationName?: string;
+
+  @ApiProperty({ required: false, example: 9 })
+  standConfigurationArea?: number;
+
+  @ApiProperty({ required: false, example: 250000, description: 'Preço total em R$' })
+  standConfigurationPrice?: number;
+
+  @ApiProperty({
+    required: false,
+    description: 'Nome da marca/empresa expositora (quando o stand já está ocupado)',
+  })
+  exhibitorName?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'URL da logo da marca expositora (quando o stand já está ocupado)',
+  })
+  exhibitorLogoUrl?: string;
+}
+
 export class ConfigureFairStandsDto {
   @ApiProperty({
     description: 'ID da feira (UUID)',
