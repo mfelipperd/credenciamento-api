@@ -22,6 +22,7 @@ import {
   generatePasswordResetEmail,
 } from 'src/utils/emailLayoutGenerator';
 import { AudienceCondition, AudienceQuery } from './types/audience-query';
+import { ExhibitorMember } from '../exhibitors/entities/exhibitor-member.entity';
 
 const PREVIEW_TTL_MINUTES = 15;
 
@@ -45,6 +46,8 @@ export class EmailsService {
     private readonly fairsService: FairsService,
     @InjectRepository(Visitor)
     private readonly visitorsRepository: Repository<Visitor>,
+    @InjectRepository(ExhibitorMember)
+    private readonly exhibitorMembersRepository: Repository<ExhibitorMember>,
     @InjectRepository(EmailCampaign)
     private readonly campaignRepository: Repository<EmailCampaign>,
     @InjectRepository(EmailCampaignPreview)
@@ -664,13 +667,57 @@ export class EmailsService {
 
   private async filterBlocked(
     recipients: { email: string; name: string }[],
-  ): Promise<{ filtered: { email: string; name: string }[]; suppressedCount: number }> {
+  ): Promise<{
+    filtered: { email: string; name: string }[];
+    suppressedCount: number;
+  }> {
     if (recipients.length === 0) return { filtered: [], suppressedCount: 0 };
     const blockedEmails = await this.getBrevoBlockedEmails();
     const filtered = recipients.filter(
       (v) => !blockedEmails.has(v.email.toLowerCase()),
     );
     return { filtered, suppressedCount: recipients.length - filtered.length };
+  }
+
+  private async resolveExhibitorMarketingRecipients(targetFairId: string) {
+    const rows = await this.exhibitorMembersRepository
+      .createQueryBuilder('member')
+      .innerJoin('exhibitors', 'exhibitor', 'exhibitor.id = member.exhibitorId')
+      .leftJoin(
+        'exhibitor_fairs',
+        'ef',
+        'ef.exhibitorId = exhibitor.id AND ef.fairId = :targetFairId',
+        {
+          targetFairId,
+        },
+      )
+      .where('member.isActive = :isActive', { isActive: true })
+      .andWhere('member.email IS NOT NULL')
+      .andWhere("TRIM(member.email) <> ''")
+      .andWhere('exhibitor.isActive = :exhibitorActive', {
+        exhibitorActive: true,
+      })
+      .andWhere('ef.id IS NULL')
+      .select('member.email', 'email')
+      .addSelect('MAX(member.name)', 'name')
+      .groupBy('member.email')
+      .getRawMany<{ email: string; name: string }>();
+
+    const deduped = new Map<string, { email: string; name: string }>();
+
+    for (const row of rows) {
+      const email = row.email.trim().toLowerCase();
+      if (!email || deduped.has(email)) continue;
+      deduped.set(email, {
+        email,
+        name: row.name?.trim() || email,
+      });
+    }
+
+    const recipients = [...deduped.values()];
+    const { filtered, suppressedCount } = await this.filterBlocked(recipients);
+
+    return { recipients, filtered, suppressedCount };
   }
 
   // Shared by confirmMarketingEmail's audienceQuery path. sendMarketingEmail (the
@@ -683,6 +730,7 @@ export class EmailsService {
     htmlContent: string;
     targetFairId: string | null;
     audienceQuery: AudienceQuery | null;
+    sendTo?: string;
     recipients: { email: string; name: string }[];
     filtered: { email: string; name: string }[];
     suppressedCount: number;
@@ -694,7 +742,7 @@ export class EmailsService {
       htmlContent: params.htmlContent,
       targetFairId: params.targetFairId,
       audienceQuery: params.audienceQuery,
-      sendTo: 'custom',
+      sendTo: params.sendTo ?? 'custom',
       totalQueued: params.filtered.length,
       suppressedCount: params.suppressedCount,
       brevoTag,
@@ -859,17 +907,23 @@ export class EmailsService {
       );
     }
 
+    if (preview.sendTo === 'exhibitors') {
+      return this.confirmExhibitorMarketingEmail(previewId);
+    }
+
     preview.used = true;
     await this.campaignPreviewRepository.save(preview);
 
     if (preview.audienceQuery) {
       const recipients = await this.resolveAudienceQuery(preview.audienceQuery);
-      const { filtered, suppressedCount } = await this.filterBlocked(recipients);
+      const { filtered, suppressedCount } =
+        await this.filterBlocked(recipients);
 
       if (recipients.length === 0) {
         return {
           success: true,
-          message: 'Nenhum destinatário encontrado para os critérios informados',
+          message:
+            'Nenhum destinatário encontrado para os critérios informados',
           totalRecipients: 0,
           suppressedByBrevo: 0,
           totalQueued: 0,
@@ -879,7 +933,8 @@ export class EmailsService {
       if (filtered.length === 0) {
         return {
           success: true,
-          message: 'Todos os destinatários estão na lista de supressão da Brevo',
+          message:
+            'Todos os destinatários estão na lista de supressão da Brevo',
           totalRecipients: recipients.length,
           suppressedByBrevo: suppressedCount,
           totalQueued: 0,
@@ -908,6 +963,118 @@ export class EmailsService {
       preview.title,
       preview.additionalFairIds,
     );
+  }
+
+  async previewExhibitorMarketingEmail(params: {
+    title: string;
+    subject: string;
+    htmlContent: string;
+    targetFairId: string;
+  }) {
+    const targetFair = await this.fairsService.findOne(params.targetFairId);
+    if (!targetFair) {
+      throw new BadRequestException('Feira destino não encontrada.');
+    }
+
+    const { recipients, filtered, suppressedCount } =
+      await this.resolveExhibitorMarketingRecipients(params.targetFairId);
+
+    const expiresAt = new Date(Date.now() + PREVIEW_TTL_MINUTES * 60 * 1000);
+    const preview = this.campaignPreviewRepository.create({
+      title: params.title,
+      subject: params.subject,
+      htmlContent: params.htmlContent,
+      targetFairId: params.targetFairId,
+      templateFairId: null,
+      additionalFairIds: [],
+      sendTo: 'exhibitors',
+      audienceQuery: null,
+      totalRecipients: recipients.length,
+      suppressedByBrevo: suppressedCount,
+      used: false,
+      expiresAt,
+    });
+
+    const saved = await this.campaignPreviewRepository.save(preview);
+
+    return {
+      previewId: saved.id,
+      title: params.title,
+      subject: params.subject,
+      audience: {
+        targetFair: targetFair.name,
+        sendTo: 'exhibitors',
+        note: 'Destinatários: expositores ativos ainda não vinculados a esta feira.',
+      },
+      totalRecipients: recipients.length,
+      suppressedByBrevo: suppressedCount,
+      totalWouldBeQueued: filtered.length,
+      expiresAt,
+      note: 'Nenhum email foi enviado. Chame send_exhibitor_marketing_email com este previewId para enviar de verdade.',
+    };
+  }
+
+  async confirmExhibitorMarketingEmail(previewId: string) {
+    const preview = await this.campaignPreviewRepository.findOne({
+      where: { id: previewId },
+    });
+    if (!preview) {
+      throw new NotFoundException('Preview não encontrado');
+    }
+    if (preview.used) {
+      throw new BadRequestException('Este preview já foi enviado');
+    }
+    if (preview.expiresAt < new Date()) {
+      throw new BadRequestException(
+        'Preview expirado — gere um novo com preview_exhibitor_marketing_email',
+      );
+    }
+    if (!preview.targetFairId) {
+      throw new BadRequestException(
+        'Preview de expositores sem feira alvo — gere um novo preview.',
+      );
+    }
+
+    preview.used = true;
+    await this.campaignPreviewRepository.save(preview);
+
+    const { recipients, filtered, suppressedCount } =
+      await this.resolveExhibitorMarketingRecipients(preview.targetFairId);
+
+    if (recipients.length === 0) {
+      return {
+        success: true,
+        message:
+          'Nenhum expositor elegível encontrado para participar da feira alvo',
+        totalRecipients: 0,
+        suppressedByBrevo: 0,
+        totalQueued: 0,
+        status: 'QUEUED',
+      };
+    }
+
+    if (filtered.length === 0) {
+      return {
+        success: true,
+        message: 'Todos os destinatários estão na lista de supressão da Brevo',
+        totalRecipients: recipients.length,
+        suppressedByBrevo: suppressedCount,
+        totalQueued: 0,
+        status: 'SUPPRESSED',
+      };
+    }
+
+    return this.persistCampaignAndEnqueue({
+      title: preview.title,
+      subject: preview.subject,
+      htmlContent: preview.htmlContent,
+      targetFairId: preview.targetFairId,
+      audienceQuery: null,
+      sendTo: 'exhibitors',
+      recipients,
+      filtered,
+      suppressedCount,
+    });
   }
 
   async getCampaignHtmlContent(id: string) {

@@ -56,10 +56,70 @@ export function registerEmailTools(
 
   registerToolWithInput(
     server,
+    'preview_exhibitor_marketing_email',
+    'Prepara uma campanha de email marketing exclusiva para expositores ativos ainda não vinculados à feira alvo. Retorna quantos expositores receberiam o envio, SEM enviar nada. Use antes de send_exhibitor_marketing_email.',
+    {
+      title: z
+        .string()
+        .describe('título interno da campanha (para o painel de campanhas)'),
+      subject: z
+        .string()
+        .describe(
+          'assunto do email. Pode incluir {{VISITOR_NAME}} para personalizar com o nome do destinatário.',
+        ),
+      htmlContent: z
+        .string()
+        .describe(
+          'HTML completo do email. Pode incluir {{VISITOR_NAME}} no corpo para personalização.',
+        ),
+      fairId: z
+        .string()
+        .describe(
+          'id da feira Manaus 27 (ou outra feira alvo) obtido via list_fairs',
+        ),
+    },
+    async ({ title, subject, htmlContent, fairId }) => {
+      assertFairAccess(user, fairId);
+      return textResult(
+        await emailsService.previewExhibitorMarketingEmail({
+          title,
+          subject,
+          htmlContent,
+          targetFairId: fairId,
+        }),
+      );
+    },
+    { readOnlyHint: true, title: 'Pré-visualizar campanha para expositores' },
+  );
+
+  registerToolWithInput(
+    server,
+    'send_exhibitor_marketing_email',
+    'ENVIA DE VERDADE uma campanha de email marketing para expositores ativos ainda não vinculados à feira alvo. Exige um previewId obtido via preview_exhibitor_marketing_email — sempre confirme os números do preview com o usuário antes de chamar esta tool.',
+    {
+      previewId: z
+        .string()
+        .describe('id retornado por preview_exhibitor_marketing_email'),
+    },
+    async ({ previewId }) =>
+      textResult(await emailsService.confirmExhibitorMarketingEmail(previewId)),
+    {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+      title: 'Enviar campanha para expositores (ação real, irreversível)',
+    },
+  );
+
+  registerToolWithInput(
+    server,
     'preview_marketing_email',
     'Prepara uma campanha de email marketing e mostra quantos destinatários ela vai atingir, SEM enviar nada. Use antes de send_marketing_email. O htmlContent deve seguir a identidade visual da ExpoMultiMix — use get_campaign_html_reference numa campanha anterior antes de escrever o HTML. Para o público-alvo, use OU (targetFairId + templateFairId + sendTo) para o caso simples, OU audienceQuery para segmentação combinando múltiplas feiras — não os dois.',
     {
-      title: z.string().describe('título interno da campanha (para o painel de campanhas)'),
+      title: z
+        .string()
+        .describe('título interno da campanha (para o painel de campanhas)'),
       subject: z
         .string()
         .describe(
@@ -79,15 +139,21 @@ export function registerEmailTools(
       templateFairId: z
         .string()
         .optional()
-        .describe('Caso simples: id da feira usada como referência de template (geralmente igual a targetFairId). Só faz sentido junto de targetFairId.'),
+        .describe(
+          'Caso simples: id da feira usada como referência de template (geralmente igual a targetFairId). Só faz sentido junto de targetFairId.',
+        ),
       additionalFairIds: z
         .array(z.string())
         .optional()
-        .describe('Caso simples: ids de feiras adicionais para combinar público (dedup por email, sempre OR). Só faz sentido junto de targetFairId.'),
+        .describe(
+          'Caso simples: ids de feiras adicionais para combinar público (dedup por email, sempre OR). Só faz sentido junto de targetFairId.',
+        ),
       sendTo: z
         .enum(['all', 'absent'])
         .optional()
-        .describe('Caso simples: "all" = todos os cadastrados; "absent" = só quem não fez checkin. Só faz sentido junto de targetFairId.'),
+        .describe(
+          'Caso simples: "all" = todos os cadastrados; "absent" = só quem não fez checkin. Só faz sentido junto de targetFairId.',
+        ),
       audienceQuery: z
         .object({
           operator: z
@@ -98,7 +164,9 @@ export function registerEmailTools(
           conditions: z
             .array(audienceConditionSchema)
             .min(1)
-            .describe('Lista de condições de presença/cadastro por feira, combinadas pelo operator.'),
+            .describe(
+              'Lista de condições de presença/cadastro por feira, combinadas pelo operator.',
+            ),
         })
         .optional()
         .describe(
