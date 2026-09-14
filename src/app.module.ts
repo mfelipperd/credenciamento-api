@@ -27,6 +27,7 @@ import { ExhibitorsModule } from './modules/exhibitors/exhibitors.module';
 import { ExhibitorAuthModule } from './modules/exhibitor-auth/exhibitor-auth.module';
 import { StandReservationsModule } from './modules/stand-reservations/stand-reservations.module';
 import { PushModule } from './modules/push/push.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   providers: [
@@ -71,6 +72,7 @@ import { PushModule } from './modules/push/push.module';
     ExhibitorAuthModule,
     StandReservationsModule,
     PushModule,
+    HealthModule,
   ],
   controllers: [],
 })
