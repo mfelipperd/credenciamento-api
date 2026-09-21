@@ -387,7 +387,9 @@ export class StandsService {
           : undefined,
         exhibitorName: brand?.name ?? stand.revenue?.client?.name,
         exhibitorLogoUrl: brand?.logoUrl,
-        standConfigurationPrice: stand.standConfiguration?.totalPrice,
+        standConfigurationPrice: stand.standConfiguration
+          ? Number(stand.standConfiguration.totalPrice)
+          : undefined,
       };
     });
   }
