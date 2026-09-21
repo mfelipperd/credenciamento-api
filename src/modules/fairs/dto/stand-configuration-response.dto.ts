@@ -13,6 +13,7 @@ export class StandConfigurationResponseDto {
   profitPerStand: number;
   profitMargin: number;
   description?: string;
+  entryModelId: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

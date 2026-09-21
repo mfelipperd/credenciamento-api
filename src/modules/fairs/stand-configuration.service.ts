@@ -3,6 +3,7 @@ import {
   Logger,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,6 +11,14 @@ import { StandConfiguration } from './entity/stand-configuration.entity';
 import { CreateStandConfigurationDto } from './dto/create-stand-configuration.dto';
 import { UpdateStandConfigurationDto } from './dto/update-stand-configuration.dto';
 import { StandConfigurationResponseDto } from './dto/stand-configuration-response.dto';
+import { EntryModelsService } from '../finance/entry-models/entry-models.service';
+import { EntryModel } from '../finance/entry-models/entities/entry-model.entity';
+import { EntryModelType } from '../finance/common/enums/finance.enums';
+
+export type EntryModelLinkOutcome =
+  | 'already_linked'
+  | 'linked_existing'
+  | 'created';
 
 @Injectable()
 export class StandConfigurationService {
@@ -18,6 +27,7 @@ export class StandConfigurationService {
   constructor(
     @InjectRepository(StandConfiguration)
     private standConfigRepository: Repository<StandConfiguration>,
+    private readonly entryModelsService: EntryModelsService,
   ) {}
 
   async create(
@@ -174,6 +184,101 @@ export class StandConfigurationService {
     return this.mapToResponseDto(savedConfig);
   }
 
+  /**
+   * Vincula o tipo de stand a um modelo de lançamento financeiro já existente.
+   * É esse vínculo que permite gerar a receita automaticamente quando uma
+   * reserva online é paga.
+   */
+  async linkEntryModel(
+    id: string,
+    entryModelId: string,
+  ): Promise<StandConfigurationResponseDto> {
+    const config = await this.findEntityOrFail(id);
+    const entryModel = await this.entryModelsService.findOne(entryModelId);
+
+    if (entryModel.fairId !== config.fairId) {
+      throw new BadRequestException(
+        'O modelo de lançamento pertence a outra feira',
+      );
+    }
+    if (entryModel.type !== EntryModelType.STAND) {
+      throw new BadRequestException(
+        'Só modelos de lançamento do tipo STAND podem ser vinculados a um tipo de stand',
+      );
+    }
+    if (!entryModel.active) {
+      throw new BadRequestException('O modelo de lançamento está inativo');
+    }
+
+    config.entryModelId = entryModel.id;
+    const savedConfig = await this.standConfigRepository.save(config);
+
+    this.logger.log(
+      `Tipo de stand ${savedConfig.name} vinculado ao modelo de lançamento ${entryModel.id}`,
+    );
+    return this.mapToResponseDto(savedConfig);
+  }
+
+  /**
+   * Vincula o tipo de stand ao modelo de lançamento STAND ativo da mesma feira
+   * com o mesmo nome; se não houver, cria um a partir do próprio tipo (preço
+   * total e custo de montagem, em centavos).
+   */
+  async linkMatchingEntryModel(id: string): Promise<{
+    standConfiguration: StandConfigurationResponseDto;
+    entryModel: EntryModel;
+    outcome: EntryModelLinkOutcome;
+  }> {
+    const config = await this.findEntityOrFail(id);
+
+    if (config.entryModelId) {
+      return {
+        standConfiguration: this.mapToResponseDto(config),
+        entryModel: await this.entryModelsService.findOne(config.entryModelId),
+        outcome: 'already_linked',
+      };
+    }
+
+    const normalize = (value: string) => value.trim().toLowerCase();
+    const sameFairModels = await this.entryModelsService.findByType(
+      EntryModelType.STAND,
+      config.fairId,
+    );
+    const existing = sameFairModels.find(
+      (model) => normalize(model.name) === normalize(config.name),
+    );
+
+    const entryModel =
+      existing ??
+      (await this.entryModelsService.create({
+        fairId: config.fairId,
+        name: config.name,
+        type: EntryModelType.STAND,
+        baseValue: Math.round(Number(config.totalPrice) * 100),
+        costCents: Math.round(Number(config.totalSetupCost) * 100),
+      }));
+
+    config.entryModelId = entryModel.id;
+    const savedConfig = await this.standConfigRepository.save(config);
+
+    this.logger.log(
+      `Tipo de stand ${savedConfig.name} vinculado ao modelo de lançamento ${entryModel.id} (${existing ? 'existente' : 'criado'})`,
+    );
+    return {
+      standConfiguration: this.mapToResponseDto(savedConfig),
+      entryModel,
+      outcome: existing ? 'linked_existing' : 'created',
+    };
+  }
+
+  private async findEntityOrFail(id: string): Promise<StandConfiguration> {
+    const config = await this.standConfigRepository.findOne({ where: { id } });
+    if (!config) {
+      throw new NotFoundException('Configuração de stand não encontrada');
+    }
+    return config;
+  }
+
   async getStandStatistics(fairId: string): Promise<any> {
     const configs = await this.standConfigRepository.find({
       where: { fairId, isActive: true },
@@ -243,6 +348,7 @@ export class StandConfigurationService {
       profitPerStand: config.profitPerStand,
       profitMargin: config.profitMargin,
       description: config.description,
+      entryModelId: config.entryModelId,
       isActive: config.isActive,
       createdAt: config.createdAt,
       updatedAt: config.updatedAt,

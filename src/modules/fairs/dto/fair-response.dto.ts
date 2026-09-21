@@ -230,6 +230,7 @@ export class FairResponseDto {
         dto.profitPerStand = config.profitPerStand;
         dto.profitMargin = config.profitMargin;
         dto.description = config.description;
+        dto.entryModelId = config.entryModelId;
         dto.isActive = config.isActive;
         dto.createdAt = config.createdAt;
         dto.updatedAt = config.updatedAt;

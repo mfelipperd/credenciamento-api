@@ -25,6 +25,19 @@ export function assertFairAccess(user: McpRequestUser, fairId: string): void {
   }
 }
 
+/**
+ * Garante que o usuário logado é admin. Usado nas tools que criam ou alteram
+ * dados globais (ex: cadastro de feira), que não pertencem a uma feira que o
+ * usuário já enxerga.
+ */
+export function assertAdmin(user: McpRequestUser): void {
+  if (user.role !== EUserRole.ADMIN) {
+    throw new Error(
+      `Acesso negado: o usuário ${user.email} precisa ser administrador pra usar essa tool.`,
+    );
+  }
+}
+
 type ToolResult = { content: { type: 'text'; text: string }[] };
 
 /**

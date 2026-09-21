@@ -11,12 +11,14 @@ import { FairDaySchedule } from './entity/fair-day-schedule.entity';
 import { StandConfiguration } from './entity/stand-configuration.entity';
 import { RevenuesModule } from '../finance/revenues/revenues.module';
 import { ExpensesModule } from '../finance/expenses/expenses.module';
+import { EntryModelsModule } from '../finance/entry-models/entry-models.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Fair, FairDaySchedule, StandConfiguration]),
     RevenuesModule,
     ExpensesModule,
+    EntryModelsModule,
   ],
   providers: [FairsService, StandConfigurationService, FairAnalysisService],
   controllers: [

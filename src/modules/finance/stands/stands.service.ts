@@ -4,9 +4,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Stand } from './entities/stand.entity';
 import { Revenue } from '../revenues/entities/revenue.entity';
+import { StandConfiguration } from '../../fairs/entity/stand-configuration.entity';
 import {
   StandResponseDto,
   ConfigureFairStandsDto,
@@ -20,7 +21,61 @@ export class StandsService {
     private readonly standRepository: Repository<Stand>,
     @InjectRepository(Revenue)
     private readonly revenueRepository: Repository<Revenue>,
+    @InjectRepository(StandConfiguration)
+    private readonly standConfigurationRepository: Repository<StandConfiguration>,
   ) {}
+
+  /**
+   * Define o tipo (e portanto o preço) dos stands numerados informados. A feira
+   * é a do próprio tipo. Stands já vendidos ou em hold de reserva não trocam de
+   * tipo, pra não mudar o preço de algo que alguém já está pagando.
+   */
+  async assignStandConfiguration(
+    standConfigurationId: string,
+    standNumbers: number[],
+  ): Promise<{ assigned: number }> {
+    const config = await this.standConfigurationRepository.findOne({
+      where: { id: standConfigurationId },
+    });
+    if (!config) {
+      throw new NotFoundException(
+        `Tipo de stand ${standConfigurationId} não encontrado`,
+      );
+    }
+
+    const uniqueNumbers = [...new Set(standNumbers)];
+    const stands = await this.standRepository.find({
+      where: { fairId: config.fairId, standNumber: In(uniqueNumbers) },
+    });
+
+    const foundNumbers = new Set(stands.map((stand) => stand.standNumber));
+    const missing = uniqueNumbers.filter((number) => !foundNumbers.has(number));
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Stands inexistentes na feira: ${missing.join(', ')}`,
+      );
+    }
+
+    const now = new Date();
+    const locked = stands
+      .filter(
+        (stand) =>
+          !stand.isAvailable || (!!stand.heldUntil && stand.heldUntil > now),
+      )
+      .map((stand) => stand.standNumber);
+    if (locked.length > 0) {
+      throw new BadRequestException(
+        `Stands vendidos ou em reserva não podem trocar de tipo: ${locked.join(', ')}`,
+      );
+    }
+
+    await this.standRepository.update(
+      { id: In(stands.map((stand) => stand.id)) },
+      { standConfigurationId },
+    );
+
+    return { assigned: stands.length };
+  }
 
   async configureFairStands(
     configureFairStandsDto: ConfigureFairStandsDto,

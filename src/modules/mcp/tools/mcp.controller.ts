@@ -6,6 +6,9 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { IsPublicRoute } from 'src/auth/public.route';
 import { McpAuthGuard, McpRequestUser } from '../oauth/mcp-auth.guard';
 import { FairsService } from 'src/modules/fairs/fairs.service';
+import { StandConfigurationService } from 'src/modules/fairs/stand-configuration.service';
+import { StandsService } from 'src/modules/finance/stands/stands.service';
+import { EntryModelsService } from 'src/modules/finance/entry-models/entry-models.service';
 import { DashboardService } from 'src/modules/dashboard/dashboard.service';
 import { VisitorsService } from 'src/modules/visitors/visitors.service';
 import { CheckInsService } from 'src/modules/checkins/checkins.service';
@@ -17,6 +20,7 @@ import { AuditReportService } from 'src/modules/finance/audit-report/audit-repor
 import { FinanceCategoriesService } from 'src/modules/finance/common/services/finance-categories.service';
 import { AccountsService } from 'src/modules/finance/common/services/accounts.service';
 import { registerFairTools } from './fair.tools';
+import { registerFairSetupTools } from './fair-setup.tools';
 import { registerVisitorTools } from './visitor.tools';
 import { registerCheckinTools } from './checkin.tools';
 import { registerFinanceTools } from './finance.tools';
@@ -32,6 +36,9 @@ import { registerExpenseTools } from './expense.tools';
 export class McpController {
   constructor(
     private readonly fairsService: FairsService,
+    private readonly standConfigurationService: StandConfigurationService,
+    private readonly standsService: StandsService,
+    private readonly entryModelsService: EntryModelsService,
     private readonly dashboardService: DashboardService,
     private readonly visitorsService: VisitorsService,
     private readonly checkInsService: CheckInsService,
@@ -57,6 +64,14 @@ export class McpController {
     });
 
     registerFairTools(server, this.fairsService, this.dashboardService, req.user);
+    registerFairSetupTools(
+      server,
+      this.fairsService,
+      this.standConfigurationService,
+      this.standsService,
+      this.entryModelsService,
+      req.user,
+    );
     registerVisitorTools(server, this.visitorsService, req.user);
     registerCheckinTools(server, this.checkInsService, req.user);
     registerFinanceTools(server, this.chartsService, this.revenueChartsService, req.user);

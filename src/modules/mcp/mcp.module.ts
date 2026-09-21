@@ -10,6 +10,8 @@ import { McpAuthGuard } from './oauth/mcp-auth.guard';
 import { McpController } from './tools/mcp.controller';
 import { UsersModule } from '../users/users.module';
 import { FairsModule } from '../fairs/fairs.module';
+import { StandsModule } from '../finance/stands/stands.module';
+import { EntryModelsModule } from '../finance/entry-models/entry-models.module';
 import { DashboardModule } from '../dashboard/dashboard.module';
 import { VisitorsModule } from '../visitors/visitors.module';
 import { CheckInsModule } from '../checkins/checkins.module';
@@ -30,6 +32,8 @@ import { PartnersModule } from '../partners/partners.module';
     ]),
     UsersModule,
     FairsModule,
+    StandsModule,
+    EntryModelsModule,
     DashboardModule,
     VisitorsModule,
     CheckInsModule,
