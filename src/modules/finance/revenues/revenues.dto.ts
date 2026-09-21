@@ -15,6 +15,7 @@ import {
   RevenueStatus,
   PaymentMethod,
   InstallmentStatus,
+  EntryModelType,
 } from '../common/enums/finance.enums';
 
 export class CreateRevenueDto {
@@ -29,6 +30,15 @@ export class CreateRevenueDto {
   @ApiProperty({ description: 'ID do modelo de lançamento' })
   @IsString()
   entryModelId: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Tipo da receita — deve espelhar o tipo do modelo de lançamento (coluna obrigatória, sem default)',
+    enum: EntryModelType,
+  })
+  @IsOptional()
+  @IsEnum(EntryModelType)
+  type?: EntryModelType;
 
   @ApiPropertyOptional({
     description:

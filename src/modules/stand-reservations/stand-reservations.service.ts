@@ -12,7 +12,10 @@ import { ClientsService } from '../finance/clients/clients.service';
 import { ExhibitorsService } from '../exhibitors/exhibitors.service';
 import { ExhibitorAuthService } from '../exhibitor-auth/exhibitor-auth.service';
 import { RevenuesService } from '../finance/revenues/revenues.service';
-import { PaymentMethod } from '../finance/common/enums/finance.enums';
+import {
+  EntryModelType,
+  PaymentMethod,
+} from '../finance/common/enums/finance.enums';
 import { StandReservationPayment } from './entities/stand-reservation-payment.entity';
 import { StandReservationItem } from './entities/stand-reservation-item.entity';
 import { StandReservationStatus } from './enums/stand-reservation-status.enum';
@@ -235,6 +238,7 @@ export class StandReservationsService {
         fairId: reservation.fairId,
         clientId: client.id,
         entryModelId,
+        type: EntryModelType.STAND,
         standNumber: stand.standNumber,
         baseValue: item.priceCents,
         discountCents: 0,
