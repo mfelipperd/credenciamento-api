@@ -1,0 +1,317 @@
+<title>Radar de Feiras MultiMix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F5F7F6; --panel:#FFFFFF; --ink:#16231F; --muted:#5E6F6A; --line:#DCE3E0;
+  --accent:#0B6E5F; --accent-soft:#E2F1EE; --abrin:#B4462B; --abrin-soft:#F8E6E0;
+  --abup:#1F5FA8; --abup-soft:#E3ECF7; --oth:#6B5A1E; --oth-soft:#F2EDDA;
+  --warn:#B45309; --warn-soft:#FDF0E1; --mm:#0B6E5F;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0F1715; --panel:#16211E; --ink:#E4ECE9; --muted:#9AAEA8; --line:#2A3935;
+    --accent:#4FC2AE; --accent-soft:#16332D; --abrin:#F08C6E; --abrin-soft:#3A221B;
+    --abup:#7EB0EE; --abup-soft:#1B2A3D; --oth:#D8C07A; --oth-soft:#302A17;
+    --warn:#F2A55A; --warn-soft:#35261A; --mm:#4FC2AE;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0F1715; --panel:#16211E; --ink:#E4ECE9; --muted:#9AAEA8; --line:#2A3935;
+  --accent:#4FC2AE; --accent-soft:#16332D; --abrin:#F08C6E; --abrin-soft:#3A221B;
+  --abup:#7EB0EE; --abup-soft:#1B2A3D; --oth:#D8C07A; --oth-soft:#302A17;
+  --warn:#F2A55A; --warn-soft:#35261A; --mm:#4FC2AE;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 var(--body);padding-inline:16px;padding-block:28px 64px}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:44px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(30px,5vw,44px);font-weight:700;letter-spacing:-.02em}
+h2{font-size:24px;font-weight:700;letter-spacing:-.01em}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:68ch}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+header{display:grid;gap:14px}
+header .lede{font-size:17px;color:var(--muted)}
+.meta{font:12px var(--mono);color:var(--muted)}
+section{display:grid;gap:18px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:2px}
+.stat b{font:700 30px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:13px}
+.find{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.find li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:4px}
+.find li.hot{border-color:var(--warn);background:var(--warn-soft)}
+.find li strong{font-family:var(--display);font-size:16px}
+.tl{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.tl table{border-collapse:collapse;width:100%;min-width:640px}
+.tl td,.tl th{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:14px}
+.tl th{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tl td.d{font:500 13px var(--mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tl tr.mm td{background:var(--accent-soft);font-weight:600}
+.tl tr.clash td{background:var(--warn-soft)}
+.tag{display:inline-block;font:500 11px var(--mono);padding:2px 7px;border-radius:99px;white-space:nowrap}
+.tag.t{background:var(--abrin-soft);color:var(--abrin)} .tag.u{background:var(--abup-soft);color:var(--abup)}
+.tag.o{background:var(--oth-soft);color:var(--oth)} .tag.m{background:var(--accent);color:var(--panel)} .tag.w{background:var(--warn);color:var(--panel)}
+.bars{display:grid;gap:10px}
+.bar{display:grid;grid-template-columns:150px 1fr 40px;gap:10px;align-items:center;font-size:14px}
+.bar i{display:block;height:12px;border-radius:3px;background:var(--accent)}
+.bar em{font:500 13px var(--mono);font-style:normal;text-align:right;font-variant-numeric:tabular-nums}
+.bar.t i{background:var(--abrin)} .bar.u i{background:var(--abup)} .bar.o i{background:var(--oth)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:10px;align-content:start}
+.card ul{margin:0;padding-left:18px;display:grid;gap:6px}
+.matrix{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+.matrix table{border-collapse:collapse;width:100%;min-width:720px}
+.matrix th{position:sticky;top:0;background:var(--panel);font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:10px;border-bottom:1px solid var(--line);text-align:left}
+.matrix td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+.matrix td small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.matrix td.c{text-align:center;color:var(--accent);font-size:13px;width:62px}
+.matrix th.c{text-align:center;width:62px}
+.chip{display:inline-block;font:500 11px/1.5 var(--mono);padding:1px 7px;border-radius:99px;margin:0 4px 4px 0;white-space:nowrap}
+.chip.abrin{background:var(--abrin-soft);color:var(--abrin)} .chip.abup{background:var(--abup-soft);color:var(--abup)} .chip.oth{background:var(--oth-soft);color:var(--oth)}
+.none{color:var(--muted);font-size:12px}
+.filter{display:flex;gap:8px;flex-wrap:wrap}
+.filter button{font:500 13px var(--body);padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.filter button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.filter button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pros{columns:3 180px;column-gap:24px;margin:0;padding-left:18px;font-size:14px}
+.pros li{break-inside:avoid;padding:1px 0}
+.note{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:12px}
+.src a{color:var(--accent)}
+.src{font-size:13px;color:var(--muted);display:grid;gap:4px}
+@media (max-width:520px){.bar{grid-template-columns:110px 1fr 32px}}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Inteligência comercial · Expo MultiMix</span>
+  <h1>Onde nossos expositores também estão</h1>
+  <p class="lede">Cruzamento dos clientes das 4 últimas edições (Manaus e Belém, 2025–2026) com as feiras nacionais que eles frequentam, mais o calendário 2027 que pode afetar as edições de Manaus (1–3/jun) e Belém (15–17/jun).</p>
+  <span class="meta">Levantamento de 22/09/2026 · base: sistema de gestão Expo MultiMix (receitas por cliente) + pesquisa web</span>
+</header>
+
+<section>
+  <div class="stats">
+    <div class="stat"><b>94</b><span>empresas expositoras únicas em 4 edições (sem patrocínio e alimentação)</span></div>
+    <div class="stat"><b>6</b><span>clientes presentes nas 4 edições</span></div>
+    <div class="stat"><b>29</b><span>clientes com participação comprovada em outra feira nacional</span></div>
+    <div class="stat"><b>38% · 48%</b><span>retenção 2025→2026 em Manaus e em Belém</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">O que importa</span>
+  <h2>Principais conclusões</h2>
+  <ul class="find">
+    <li class="hot"><strong>A Celebra Show 2027 bate com a Expo MultiMix Manaus</strong><p>A Celebra Show (festas, Natal, confeitaria, balões; ABCasa, Expo Center Norte) acontece de 30/mai a 2/jun de 2027, e Manaus abre em 1/jun. Clientes de festas (Empório das Fantasias, Q Festa, BR Festa, Grupo Panda) e prospects como a Plastifesta terão que escolher uma das duas. Vale abordar esses clientes agora com condição especial ou avaliar mudar a data.</p></li>
+    <li><strong>Nossos clientes vivem em dois circuitos: ABRIN e ABUP/ABCasa</strong><p>14 clientes de brinquedos expuseram na ABRIN (mar/2026) e 12 de utilidades domésticas na ABUP Show ou na ABCasa Fair (fev/2026). Essas são feiras de <em>lançamento</em>. A Expo MultiMix vem 2 a 4 meses depois como feira regional de <em>venda</em>, e dá para vender assim: "leve os lançamentos da ABRIN/ABUP para o lojista do Norte".</p></li>
+    <li><strong>Janelas de venda de estande: fevereiro e abril</strong><p>A ABUP Show e a ABCasa Fair (14–17/fev/2027) e a ABRIN (4–7/abr/2027) reúnem quase toda a nossa base e centenas de prospects no mesmo pavilhão. Uma equipe comercial nessas feiras, com planta e preços de junho, é a ação de maior alcance por real gasto.</p></li>
+    <li><strong>Belém saiu de agosto para junho, entrando no circuito Norte/Nordeste de brinquedos</strong><p>Em 2027, Belém (15–17/jun) fica logo antes da Showbrinq São Luís (29/jun–1/jul), Fortaleza (6–8/jul), Caruaru e Feira de Santana. Tilin e Anjo já fazem a Showbrinq. Dá para montar um pacote "Rota Norte" (Manaus → Belém) para quem já desce para o Nordeste. A mudança também sai do conflito com a SuperNorte (supermercados, Belém, agosto).</p></li>
+    <li><strong>Segmentos para explorar</strong><p>Festas e sazonais (Celebra Show), aromas e presentes (ABUP/ABCasa), papelaria e escolar (Escolar Office, 1–4/ago) e canal supermercadista (APAS em maio, SuperNorte em agosto) aparecem pouco na nossa base, mas os mesmos fornecedores circulam nessas feiras.</p></li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">Sobreposição</span>
+  <h2>Em que feiras nacionais nossos clientes aparecem</h2>
+  <div class="bars">
+    <div class="bar t"><span>ABRIN (brinquedos)</span><i style="width:100%"></i><em>14</em></div>
+    <div class="bar u"><span>ABUP Show (UD)</span><i style="width:78.6%"></i><em>11</em></div>
+    <div class="bar u"><span>ABCasa Fair</span><i style="width:21.4%"></i><em>3</em></div>
+    <div class="bar o"><span>Showbrinq</span><i style="width:14.3%"></i><em>2</em></div>
+    <div class="bar o"><span>Celebra Show</span><i style="width:7.1%"></i><em>1</em></div>
+  </div>
+  <p class="note">Número de clientes da Expo MultiMix com participação comprovada em 2025–2026 (um cliente pode estar em mais de uma feira). Contagem mínima: a ABRIN não publica a lista de expositores em formato aberto, e 20 clientes (lote 3) ainda estavam em pesquisa quando o relatório foi fechado.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Calendário</span>
+  <h2>Feiras relevantes: 2026 e 2027</h2>
+  <div class="tl"><table>
+    <thead><tr><th>Data</th><th>Feira</th><th>Local</th><th>Segmento</th><th>Relação com a MultiMix</th></tr></thead>
+    <tbody>
+      <tr><td class="d">11–13 ago 2026</td><td>Home Show Brazil</td><td>Distrito Anhembi, SP</td><td><span class="tag u">UD / presentes</span></td><td>Importadores asiáticos e latinos: prospecção</td></tr>
+      <tr><td class="d">12–14 ago 2026</td><td>SuperNorte (ASPAS)</td><td>Hangar, Belém</td><td><span class="tag o">supermercados</span></td><td>Mesma cidade; estava a 4 dias de Belém 2026</td></tr>
+      <tr><td class="d">12–15 ago 2026</td><td>ABCasa Fair (agosto)</td><td>Expo Center Norte, SP</td><td><span class="tag u">casa / UD / festas</span></td><td>Clientes: Unitermi, Rojemac, Vasap</td></tr>
+      <tr class="mm"><td class="d">18–20 ago 2026</td><td>Expo MultiMix Belém 2026</td><td>Estação das Docas</td><td><span class="tag m">MultiMix</span></td><td>55 clientes</td></tr>
+      <tr><td class="d">14–17 fev 2027</td><td>ABUP Show Home·Gift·Têxtil·Decor</td><td>Distrito Anhembi, SP</td><td><span class="tag u">UD / decoração</span></td><td>11 clientes; 309 expositores (86 de UD)</td></tr>
+      <tr><td class="d">14–17 fev 2027</td><td>ABCasa Fair</td><td>Expo Center Norte, SP</td><td><span class="tag u">casa / UD / festas</span></td><td>Mesma semana da ABUP; dá para cobrir as duas numa viagem</td></tr>
+      <tr><td class="d">4–7 abr 2027</td><td>ABRIN</td><td>Expo Center Norte, SP</td><td><span class="tag t">brinquedos</span></td><td>14 clientes; 174 expositores em 2026</td></tr>
+      <tr><td class="d">17–20 mai 2027</td><td>APAS Show</td><td>São Paulo</td><td><span class="tag o">supermercados</span></td><td>Canal alternativo para UD e plásticos</td></tr>
+      <tr class="clash"><td class="d">30 mai–2 jun 2027</td><td>Celebra Show (ABCasa)</td><td>Expo Center Norte, SP</td><td><span class="tag u">festas / sazonais</span></td><td><span class="tag w">conflito</span> 2 dias sobrepostos com Manaus</td></tr>
+      <tr class="mm"><td class="d">1–3 jun 2027</td><td>Expo MultiMix Manaus 2027</td><td>Vasco Vasques</td><td><span class="tag m">MultiMix</span></td><td>34 clientes em 2026</td></tr>
+      <tr class="mm"><td class="d">15–17 jun 2027</td><td>Expo MultiMix Belém 2027</td><td>Estação das Docas</td><td><span class="tag m">MultiMix</span></td><td>Mudou de agosto para junho</td></tr>
+      <tr><td class="d">21–24 jun 2027</td><td>Eletrolar Show</td><td>Distrito Anhembi, SP</td><td><span class="tag u">eletro / UD</span></td><td>4 dias depois de Belém</td></tr>
+      <tr><td class="d">29 jun–1 jul 2027</td><td>Showbrinq São Luís</td><td>Multicenter, São Luís</td><td><span class="tag t">brinquedos</span></td><td>12 dias depois de Belém: circuito regional</td></tr>
+      <tr><td class="d">6–8 jul 2027</td><td>Showbrinq Fortaleza</td><td>Centro de Eventos do Ceará</td><td><span class="tag t">brinquedos</span></td><td>Tilin, Anjo já expõem</td></tr>
+      <tr><td class="d">13–15 jul 2027</td><td>Showbrinq Caruaru</td><td>Caruaru, PE</td><td><span class="tag t">brinquedos</span></td><td></td></tr>
+      <tr><td class="d">20–22 jul 2027</td><td>Showbrinq Feira de Santana</td><td>Feira de Santana, BA</td><td><span class="tag t">brinquedos</span></td><td></td></tr>
+      <tr><td class="d">20–22 jul 2027</td><td>SuperAPES (1ª edição)</td><td>Recife Expo Center</td><td><span class="tag o">supermercados</span></td><td>Nova feira B2B no Nordeste</td></tr>
+      <tr><td class="d">27–29 jul 2027</td><td>Showbrinq Goiânia</td><td>Centro de Convenções, GO</td><td><span class="tag t">brinquedos</span></td><td></td></tr>
+      <tr><td class="d">1–4 ago 2027</td><td>Escolar Office Brasil</td><td>Expo Center Norte, SP</td><td><span class="tag o">papelaria</span></td><td>Segmento ainda pouco presente na nossa base</td></tr>
+      <tr><td class="d">17–19 ago 2027</td><td>Showbrinq Piracicaba</td><td>Piracicaba, SP</td><td><span class="tag t">brinquedos</span></td><td></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">SuperNorte 2027, ABCasa Fair de agosto de 2027 e Home Show Brazil 2027 ainda não têm datas publicadas.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Próximos passos</span>
+  <h2>Oportunidades</h2>
+  <div class="cols">
+    <div class="card"><h3>Ações imediatas</h3><ul>
+      <li>Falar com os clientes de festas sobre o conflito com a Celebra Show antes de abrir as vendas de Manaus.</li>
+      <li>Levar equipe comercial à ABUP Show e à ABCasa Fair (fev) e à ABRIN (abr), com planta e condição de pré-venda para junho.</li>
+      <li>Reativar quem não voltou em 2026: Barufe, Mamutte, Mix São Paulo, Multi Flon, Semaan, Super 99 e Importadora Cascavel saíram nas duas cidades. Barufe e Multi Flon continuam ativos na ABRIN e na ABUP.</li>
+    </ul></div>
+    <div class="card"><h3>Segmentos a desenvolver</h3><ul>
+      <li><b>Festas e sazonais</b>: Plastifesta e expositores da Celebra Show.</li>
+      <li><b>Utilidades domésticas premium</b>: Tramontina, Brinox, Electrolux, Panelux, MTA Panelas (todos na ABUP 2026).</li>
+      <li><b>Papelaria e escolar</b>: Escolar Office Brasil; a BRW já é cliente.</li>
+      <li><b>Canal supermercado</b>: APAS e SuperNorte reúnem fornecedores de plásticos e UD que vendem para atacarejos do Norte.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Prospecção</span>
+  <h2>Expositores de utilidades domésticas da ABUP 2026 que ainda não são clientes</h2>
+  <p>72 empresas listadas no setor UD do mapa oficial da ABUP Show 2026. São o mesmo perfil dos nossos clientes fiéis (Usual, Salus, Luz, Plasmont, Multiflon).</p>
+  <div class="card"><ol class="pros"><li>Alegrete</li><li>Alleanza</li><li>Alumínio Oliveira</li><li>Antares Plásticos</li><li>Arthi</li><li>Axt Wood &amp; Steel</li><li>Açomix</li><li>Bettanin</li><li>Botafogo Lar &amp; Lazer</li><li>Brota Company</li><li>Cabofix</li><li>Ceraflame</li><li>Copa&amp;Cia</li><li>Deko Srl</li><li>Dello</li><li>Dup</li><li>D´Italia Panelas</li><li>Electrolux</li><li>Fbm - La Termoplastic</li><li>Germer Porcelanas</li><li>Giplás</li><li>Grupo Brinox</li><li>Home Brands</li><li>Indústria Bandeirante</li><li>Injeplastec</li><li>Injetemp</li><li>I’M In Home</li><li>Jaguar Plásticos</li><li>Jolly</li><li>Keita</li><li>Laguiole La Tour</li><li>Maxeb</li><li>Maxximo</li><li>Metaltru</li><li>Micromax Indústria</li><li>Mr. Pots</li><li>Mta Panelas</li><li>Nadir</li><li>Neoflam Brasil</li><li>Nitron</li><li>Oxford</li><li>Panelux</li><li>Pinolar</li><li>Plasdorta</li><li>Plasduran</li><li>Plastibrasil</li><li>Plastifesta</li><li>Plastsu</li><li>Plastutti</li><li>Pleion</li><li>Plásticos São Bernardo</li><li>Porcelana Monte Sião</li><li>Porto Brasil</li><li>Prana</li><li>Ruvolo Glass Company</li><li>Sanremo</li><li>Scalla Cerâmica</li><li>Schwanke</li><li>Secalux</li><li>Strauss</li><li>Taumer</li><li>Tiba</li><li>Tramontina</li><li>Triax</li><li>Uninjet</li><li>Utilaço</li><li>Utimil</li><li>Uz Utilidades</li><li>Vitazza</li><li>Weck</li><li>Zeek</li><li>Ákora</li></ol></div>
+</section>
+
+<section>
+  <span class="eyebrow">Base completa</span>
+  <h2>Clientes × edições × feiras nacionais</h2>
+  <div class="filter" role="group" aria-label="Filtrar clientes">
+    <button type="button" id="f-all" aria-pressed="true" data-v="all">Todos (94)</button>
+    <button type="button" id="f-yes" aria-pressed="false" data-v="1">Com outra feira comprovada (29)</button>
+  </div>
+  <div class="matrix"><table>
+    <thead><tr><th>Cliente</th><th class="c">MAO 25</th><th class="c">BEL 25</th><th class="c">MAO 26</th><th class="c">BEL 26</th><th>Outras feiras (comprovado)</th></tr></thead>
+    <tbody id="rows"><tr data-f="1"><td><b>Luz Aluminio / Luz Panelas</b><small>Utensílios domésticos de alumínio antiaderente (panelas, frigideiras) · Catolé do Rocha, PB</small></td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td><span class="chip abup">ABUP Show fev/2026</span></td></tr>
+<tr data-f="1"><td><b>Mimo / Zippy</b><small>Fabricação de brinquedos infantis (bonecos, jogos, quebra-cabeças) · São Paulo, SP (matriz Av. Nove</small></td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td><span class="chip abrin">ABRIN 2025</span></td></tr>
+<tr data-f="1"><td><b>Unitermi</b><small>Garrafas térmicas, produtos isotérmicos e utilidades domésticas · Paulo Lopes, SC</small></td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td><span class="chip abup">ABUP Show 2025</span><span class="chip abup">ABCasa Fair fev/2026</span></td></tr>
+<tr data-f="1"><td><b>Unitoys (Uni-Art)</b><small>Comércio atacadista de bicicletas, triciclos e veículos recreativos; b · Vinhedo, SP</small></td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td><span class="chip abrin">ABRIN mar/2026</span></td></tr>
+<tr data-f="1"><td><b>Usual (Ud)</b><small></small></td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td><span class="chip abup">ABUP Show fev/2026</span></td></tr>
+<tr data-f="1"><td><b>Usual Brinquedos E Utilidades</b><small>Fabricação de brinquedos e utilidades domésticas injetados em termoplá · Laranjal Paulista, SP</small></td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td><span class="chip abup">ABUP Show fev/2026</span></td></tr>
+<tr data-f="0"><td><b>Alvini</b><small>Fabricação de artefatos de material plástico para uso pessoal e domést · Pedreira, SP</small></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Amilplast</b><small>Comércio varejista online de utilidades domésticas e variedades · São Paulo, SP (Vila Aricanduva</small></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Nathor</b><small>Fabricação de bicicletas infantis (triciclos, balance bike) · Blumenau, SC</small></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>New Goods</b><small>Importadora de brinquedos e utilidades domésticas (atacadista) · Guarulhos, SP (Cumbica)</small></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Salus</b><small>Produtos plásticos injetados para utilidades domésticas (potes herméti · Itaquaquecetuba, SP</small></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td class="c">●</td><td><span class="chip abup">ABUP Show fev/2026</span></td></tr>
+<tr data-f="0"><td><b>Smiling Kids (Jorani)</b><small>Brinquedos infantis (regadores, brinquedos para banho e atividades ao  · Não localizada nos fontes cole</small></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Zoop Toys (Luminus)</b><small>Fabricação de brinquedos e utilidades (linha Zoop Toys) · Não confirmada nos fontes cole</small></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Arca Plast</b><small>Fabricação de utilidades domésticas em termoplásticos (plásticos para  · Horizonte, CE</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Ark Brasil</b><small>Importação e distribuição atacadista de brinquedos e produtos de verão · Duque de Caxias, RJ</small></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Aroma Tropical</b><small>Fabricação de aromatizantes de ambientes, perfumes de ambiente e produ · Itaquaquecetuba, SP</small></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class="chip abup">ABUP Show fev/2026</span></td></tr>
+<tr data-f="1"><td><b>Barufe</b><small>Comércio atacadista importador e exportador de utilidades domésticas,  · São Paulo, SP (Vila Carrao)</small></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class="chip abrin">ABRIN mar/2026</span></td></tr>
+<tr data-f="1"><td><b>Bee Toys</b><small>Fabricação de brinquedos (dinossauros, playsets, bonecos) · Não confirmada nos fontes cole</small></td><td class="c">●</td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class="chip abrin">ABRIN mar/2026</span></td></tr>
+<tr data-f="1"><td><b>Bg Plas</b><small>Fabricação de produtos de material plástico (utilidades domésticas) (d · Bauru, SP (Plasútil/BG Plástic</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class="chip abup">ABUP Show fev/2026</span></td></tr>
+<tr data-f="1"><td><b>Brinquedos Anjo</b><small>Fabricação de brinquedos infantis (bonecas, massinhas, jogos) · Laranjal Paulista, SP (Distrit</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class="chip abrin">ABRIN mar/2026</span><span class="chip oth">Showbrinq 2026</span></td></tr>
+<tr data-f="1"><td><b>Divertoys</b><small>Fabricação de brinquedos (bonecos, jogos, acessórios) · Laranjal Paulista, SP</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class="chip abrin">ABRIN mar/2026</span></td></tr>
+<tr data-f="0"><td><b>Doce Brinquedos</b><small>Brinquedos · São Paulo/SP</small></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Easy Plast</b><small>UD em plástico · Pedreira/SP</small></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Empório Das Fantasias</b><small>Artigos para festa e fantasias · Belo Horizonte/MG</small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>For-Plast</b><small>UD em plástico · Maracanaú/CE</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Grupo Panda</b><small>Estalos de salão, artigos para festas · Eng. Paulo de Frontin/RJ</small></td><td class="c">●</td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Importadora Cascavel</b><small>Importadora B2B (UD, decoração, brinquedos) · Itajaí/SC</small></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Importadora Ft</b><small>Importadora B2B (UD, decoração, brinquedos) · Itajaí/SC</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Intimate</b><small>Atacado de UD · Feira de Santana/BA</small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Irmaos Dalaneze (Adijomar)</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Mamutte</b><small>Expositores/displays para varejo · São Paulo/SP</small></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Mbrilhante (A&amp;B Comercio)</b><small>Comércio de UD</small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Merconplas</b><small>UD em plástico · Juazeiro do Norte/CE</small></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Milk Industria</b><small>Brinquedos (bonecas) · Laranjal Paulista/SP</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class="chip abrin">ABRIN mar/2026</span></td></tr>
+<tr data-f="0"><td><b>Mix Sao Paulo</b><small></small></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Multi Flon</b><small>UD antiaderente em alumínio · Flores da Cunha/RS</small></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class="chip abup">ABUP Show 2025</span><span class="chip abup">ABUP Show fev/2026</span></td></tr>
+<tr data-f="0"><td><b>Plasti.Co</b><small>Atacado UD, decoração, papelaria · São Paulo/SP</small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Plasvale</b><small>UD em plástico · Gaspar/SC</small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Samba Toys</b><small>Brinquedos</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class="chip abrin">ABRIN mar/2026</span></td></tr>
+<tr data-f="0"><td><b>Semaan Distribuidora</b><small>Distribuidor atacadista brinquedos/UD · São Paulo/SP</small></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Sid-Nyl</b><small>Brinquedos (bonecas licenciadas)</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Simonaggio</b><small></small></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td class="c"></td><td><span class="chip abup">ABUP Show fev/2026</span></td></tr>
+<tr data-f="0"><td><b>Super 99</b><small></small></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Tilin</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class="chip abrin">ABRIN mar/2026</span><span class="chip oth">Showbrinq 2026</span></td></tr>
+<tr data-f="0"><td><b>Ultraar</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Via Aroma</b><small></small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Vizzia</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Xalingo</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c">●</td><td><span class="chip abrin">ABRIN 2025</span></td></tr>
+<tr data-f="0"><td><b>Adelia</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Alumínio Cinthya</b><small>Artigos de alumínio para uso doméstico · Fortaleza/CE</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Bang Toys</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class="chip abrin">ABRIN mar/2026</span></td></tr>
+<tr data-f="1"><td><b>Bbr Toys</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class="chip abrin">ABRIN mar/2026</span></td></tr>
+<tr data-f="0"><td><b>Br Festa</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Brinque Feliz (Porto Feliz)</b><small></small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Brw</b><small>Brinquedos pedagógicos, papelaria, UD · PR</small></td><td class="c">●</td><td class="c"></td><td class="c"></td><td class="c"></td><td><span class="chip oth">ExpoTEA 2025</span></td></tr>
+<tr data-f="0"><td><b>Btoys</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Caa Brasil</b><small>Artigos de alumínio · Manaus/AM</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Class Home</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Coloria</b><small></small></td><td class="c">●</td><td class="c"></td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Da Cruz</b><small></small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Dcaza</b><small></small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Dm Brasil</b><small>Importação/distribuição de brinquedos (DM Toys) · Laranjal Paulista/SP</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Dm Toys</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Ebn Comercio</b><small></small></td><td class="c">●</td><td class="c"></td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Fabrilar</b><small></small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Fortal Imports</b><small></small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Fênix Brinquedos</b><small></small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Gava Toys</b><small></small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Goyama</b><small>Indústria de injeção plástica (utilidades domésticas) · Santana de Parnaíba/SP</small></td><td class="c">●</td><td class="c"></td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Hl Imports</b><small>Importação de brinquedos e utilidades domésticas · Minas Gerais/MG</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Ibrink</b><small>Fabricante de brinquedos (marcas Baby Brink, Rosita, Super Magia) · Lauro de Freitas/BA</small></td><td class="c">●</td><td class="c"></td><td class="c"></td><td class="c"></td><td><span class="chip oth">Celebra Show 2024</span></td></tr>
+<tr data-f="0"><td><b>Injet Sul</b><small>Brinquedos e UD em plástico injetado · São Paulo/SP</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Lp House (Samba)</b><small>Utilidades domésticas plásticas (potes, organização, cozinha) · Laranjal Paulista/SP</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class="chip abup">ABUP Show fev/2026</span></td></tr>
+<tr data-f="0"><td><b>Maral</b><small>Fabricação de brinquedos (plásticos, primeira infância, educativos) · Pomerode/SC</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Matrix</b><small>Brinquedos e utilidades plásticas · São Paulo/SP</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Mel Toys</b><small>Brinquedos · none</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Miller Brinquedos</b><small>Brinquedos espumados (Montessori, psicomotores, pedagógicos) · São Paulo/SP</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>New Baby</b><small>Brinquedos · none</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Pipoca Show Kids</b><small>Espaço infantil (buffet/salão de festas) - brinquedos para festas · Contagem/MG</small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Plasberg</b><small>Indústria de utilidades domésticas plásticas (cozinha, organização, in · Feira de Santana/BA</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Plasmont</b><small>Fabricação de produtos de material plástico (art. para uso pessoal e d · Pedreira/SP</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class="chip abup">ABUP Show 2025</span><span class="chip abup">ABUP Show fev/2026</span></td></tr>
+<tr data-f="0"><td><b>Polibrinq</b><small>Brinquedos (variados, educativos, Montessori, blocos) · Curitiba/PR</small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Polyperfil</b><small>Indústria e comércio de plásticos · none</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Q Festa</b><small>Artigos para festa, decoração, descartáveis, confeitaria · Duque de Caxias/RJ</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Qualyplas</b><small>Embalagens plásticas (filmes técnicos, sacos, stretch, PEAD/PEBD) · Americana/SP</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Rdr</b><small></small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Rei Do Balde</b><small>Brinquedos de praia (baldinhos, pás, kits de praia) · Itapema/SC</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class="chip abrin">ABRIN mar/2026</span></td></tr>
+<tr data-f="0"><td><b>Reju</b><small></small></td><td class="c">●</td><td class="c"></td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Rojemac</b><small>Utilidades domésticas e presentes (Wolff, Lyor, Woly, Giftlog) · São Paulo/SP</small></td><td class="c">●</td><td class="c"></td><td class="c"></td><td class="c"></td><td><span class="chip abup">ABCasa Fair 2026</span></td></tr>
+<tr data-f="1"><td><b>Spider</b><small>Brinquedos, UD e presentes importados · São Paulo/SP</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class="chip abrin">ABRIN mar/2026</span></td></tr>
+<tr data-f="0"><td><b>Tag Toys (Toys Advantag)</b><small>Brinquedos · none</small></td><td class="c"></td><td class="c"></td><td class="c">●</td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="1"><td><b>Vasap</b><small>Vasos e decoração em plástico reciclado · Aparecida de Goiânia/GO</small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class="chip abup">ABUP Show fev/2026</span><span class="chip abup">ABCasa Fair 2026</span></td></tr>
+<tr data-f="0"><td><b>Wellmix</b><small>Importadora de utilidades domésticas e brinquedos (marcas Wellmix, Wel · São Paulo/SP</small></td><td class="c"></td><td class="c">●</td><td class="c"></td><td class="c"></td><td><span class=none>sem evidência pública</span></td></tr>
+<tr data-f="0"><td><b>Xpert</b><small></small></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c">●</td><td><span class=none>sem evidência pública</span></td></tr></tbody>
+  </table></div>
+  <p class="note">Nomes como aparecem no financeiro, com variações unificadas (ex.: Zippy Toys = Mimo/Zippy; Irmãos Dalaneze = Adijomar). "Sem evidência pública" não significa que o cliente não expõe: só que não foi encontrada lista ou post que comprove.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Método e limites</span>
+  <h2>Como foi feito</h2>
+  <div class="src">
+    <p>1. Clientes: lançamentos de receita por feira no sistema de gestão (via integração Expo MultiMix), edições Manaus/Belém 2025 e 2026. As edições 2010–2024 não têm receitas lançadas no sistema.</p>
+    <p>2. Feiras: mapa oficial de expositores da ABUP Show 2026, Post Show Report da ABRIN 2026, sites oficiais (ABCasa, Showbrinq, APAS, Eletrolar, Escolar Office) e posts das próprias empresas. Agentes de pesquisa web complementaram segmento e sede.</p>
+    <p>3. Não foi possível ler a lista completa de expositores da ABRIN, porque ela é carregada de um sistema privado da organizadora. Buscamos cada cliente individualmente.</p>
+    <p>Fontes principais: <a href="https://abrin.com.br/">abrin.com.br</a> · <a href="https://www.abup.com.br/abupshow_anhembi/">abup.com.br</a> · <a href="https://www.abcasa.org.br/celebra-show">abcasa.org.br/celebra-show</a> · <a href="https://www.abcasa.org.br/abcasa-fair">abcasa.org.br/abcasa-fair</a> · <a href="https://www.showbrinq.com.br/">showbrinq.com.br</a> · <a href="https://apasshow.com/">apasshow.com</a> · <a href="https://eletrolarshow.com.br/en/home/">eletrolarshow.com.br</a> · <a href="https://www.eventseye.com/fairs/f-escolar-office-brasil-28046-1.html">Escolar Office 2027</a> · <a href="https://bacananews.com.br/supernorte-2026-destaca-inovacao-e-negocios-para-o-varejo-em-belem/">SuperNorte 2026</a> · <a href="https://www.apes.com.br/post/informapes-setembro-de-2026">SuperAPES</a></p>
+  </div>
+</section>
+</div>
+
+<script>
+(function(){
+  var btns=document.querySelectorAll('.filter button'), rows=document.querySelectorAll('#rows tr');
+  btns.forEach(function(b){b.addEventListener('click',function(){
+    btns.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+    var v=b.getAttribute('data-v');
+    rows.forEach(function(r){r.hidden = v!=='all' && r.getAttribute('data-f')!==v;});
+  });});
+})();
+</script>
